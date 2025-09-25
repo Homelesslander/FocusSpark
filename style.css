@@ -1,0 +1,47 @@
+*{
+    margin:0;
+    padding: 0;
+}
+
+.main{
+    width: 100%;
+    background-image: url('images/Teaching-Students-with-ADHD.jpeg');
+    background-position: center;
+    background-size: cover;
+    height: 109vh;
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+menu{ width: 400px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 70px; 
+} 
+ul {float: left; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    list-style: none;}
+
+ul li {margin: 0 25px; 
+    font-size: 14px;} 
+ul li a{
+    text-decoration: none;
+    color: black;
+    font-size: 18px;
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 6px 13px;
+    border-radius: 3px;
+    transition: .4s;
+}
+ul li a:hover{
+    background-color: lightblue;
+    color: white;
+}
