@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>About</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='aboutstyle.css') }}">
+</head>
+<body>
+    <div class= "menu">
+        
+        <ul style="list-style-type: none;">
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('about') }}">About</a></li>
+            <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+            <li><a href="{{ url_for('activities') }}">Activities</a></li>
+        </ul>
+
+    </div>
+
+    <div class="content">
+        <h1>About</h1>
+        
+        <p>Many adolescents with ADHD struggle with starting tasks, keeping track of their responsibilities and staying motivated. Additionally, traditional task managers lack engagement and feel overwhelming to individuals with ADHD. 
+        This web app introduces a gamified task management system that rewards task completion with points, streaks and progress tracking. It caters to adolescents with ADHD through visual progress and positive reinforcement, encouraging healthy habits and reducing stress. 
+        </p>
+    </div>
+
+
+</body>
+
+</html>

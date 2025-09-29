@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+<title>ADHD Webpage</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<head>      </head>
+<body>  
+    <div class="main">
+<div class="navbar">
+    <div class="icon">
+        <h2 class="logo">ADHD WEBPAGE</h2>
+    </div>
+    <div class= "menu">
+        
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('about') }}">About</a></li>
+            <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+            <li><a href="{{ url_for('activities') }}">Activities</a></li>
+        </ul>
+
+    </div>
+</div>
+<div class="front">
+        <h1>Welcome to the<br><span> ADHD Webpage</span></h1>
+        <p class="description">This platform is built to support individuals with ADHD by making task management simple, motivating, and fun.
+            <br> Through a gamified system, tasks become challenges that earn you points, streaks, and progress milestones. 
+        <br> For more information please check the About section and read the following details. </p>
+
+    </div>
+</body>
+
+</html>
+
