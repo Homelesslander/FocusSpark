@@ -1,11 +1,12 @@
 body {
   font-family: Arial, sans-serif;
   line-height: 1.6;
-  margin: 40px;
-  background-image: url('/static/images/GettyImages-2077163692-1024x683-landscape-5bcd3f27b8fafc313626c91d302e4d4d-60f5e5ef0f08a.jpg');
-  background-size: cover;
-  background-position: center;
-
+  margin: 0; 
+  background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg');
+  background-size: cover;        
+  background-position: center;   
+  background-repeat: no-repeat; 
+  background-attachment: fixed;  
   color: #333;
 }
 

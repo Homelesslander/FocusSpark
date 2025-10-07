@@ -1,107 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ADHD Task Manager</title>
-  
-  <div class= "menu">
-        
-        <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('about') }}">About</a></li>
-            <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
-            <li><a href="{{ url_for('activities') }}">Activities</a></li>
-        </ul>
 
-    </div>
+  <!-- Navigation Menu -->
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
 </head>
+
 <body>
 
-  
-  <div>
+  <div class="front">
+    <h1>Activities</h1>
+    <p class="description">
+      This section provides access to various features of the ADHD Task Manager web app. 
+      You can manage your tasks, track your progress, redeem rewards, and customize your settings.
+    </p>
 
-  
-    <div class="front">
-        <h1>Activities</h1>
-        <p class="description">This section provides access to various features of the ADHD Task Manager web app. You can manage your tasks, track your progress, redeem rewards, and customize your settings to suit your needs.</p>
-      <ul class="Tabs">
-        <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-        <li><a href="viewtasks.html">View Tasks</a></li>
-        <li><a href="progress.html">View Progress</a></li>
-        <li><a href="rewards.html">Redeem Rewards</a></li>
-        <li><a href="settings.html">Settings</a></li> 
+    <ul class="Tabs">
+      <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+      <li><a href="viewtasks.html">View Tasks</a></li>
+      <li><a href="progress.html">View Progress</a></li>
+      <li><a href="rewards.html">Redeem Rewards</a></li>
+      <li><a href="settings.html">Settings</a></li>
+    </ul>
+    <h2 id="greeting"> Hello, {{ username }}!</h2>
+  </div>
+
+  <!-- Task Input Form -->
+  <div class="task-input">
+    <form action="/add_task" method="POST">
+      <input type="text" name="task_name" placeholder="Enter task" required />
+      <input type="date" name="task_date" required />
+      <select name="importance" required>
+        <option value="Major">Major</option>
+        <option value="Medium">Medium</option>
+        <option value="Minor">Minor</option>
+      </select>
+      <button type="submit">Add Task</button>
+    </form>
+  </div>
+
+  <!-- Task Display Sections -->
+  <div class="task-sections">
+
+    <!-- Major Tasks -->
+    <div class="task-section">
+      <h2>Major Tasks</h2>
+      <ul>
+        {% for task in tasks['Major'] %}
+        <li>
+          {{ task.name }} — <small>Due: {{ task.date }}</small>
+          <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+        {% else %}
+        <li class="empty">No major tasks yet.</li>
+        {% endfor %}
+      </ul>
     </div>
+
+    <!-- Medium Tasks -->
+    <div class="task-section">
+      <h2>Medium Tasks</h2>
+      <ul>
+        {% for task in tasks['Medium'] %}
+        <li>
+          {{ task.name }} — <small>Due: {{ task.date }}</small>
+          <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+        {% else %}
+        <li class="empty">No medium tasks yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Minor Tasks -->
+    <div class="task-section">
+      <h2>Minor Tasks</h2>
+      <ul>
+        {% for task in tasks['Minor'] %}
+        <li>
+          {{ task.name }} — <small>Due: {{ task.date }}</small>
+          <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+        {% else %}
+        <li class="empty">No minor tasks yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
 
 </body>
 </html>
-<div class="task-input">
-
-
-  <!-- Task Form -->
-  <form action="/add_task" method="POST">
-    <input type="text" name="task_name" placeholder="Enter task" required />
-    <select name="importance" required>
-      <option value="Major">Major</option>
-      <option value="Medium">Medium</option>
-      <option value="Minor">Minor</option>
-    </select>
-    <button type="submit">Add Task</button>
-  </form>
-
-  <!-- Task Display -->
-  <div class="task-sections">
-
-  <!-- Major Tasks -->
-  <div class="task-section">
-    <h2>Major Tasks</h2>
-    <ul>
-      {% for task in tasks['Major'] %}
-      <li>
-        {{ task }}
-        <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
-          <button type="submit">Delete</button>
-        </form>
-      </li>
-      {% else %}
-      <li class="empty">No major tasks yet.</li>
-      {% endfor %}
-    </ul>
-  </div>
-
-  <!-- Medium Tasks -->
-  <div class="task-section">
-    <h2>Medium Tasks</h2>
-    <ul>
-      {% for task in tasks['Medium'] %}
-      <li>
-        {{ task }}
-        <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
-          <button type="submit">Delete</button>
-        </form>
-      </li>
-      {% else %}
-      <li class="empty">No medium tasks yet.</li>
-      {% endfor %}
-    </ul>
-  </div>
-
-  <!-- Minor Tasks -->
-  <div class="task-section">
-    <h2>Minor Tasks</h2>
-    <ul>
-      {% for task in tasks['Minor'] %}
-      <li>
-        {{ task }}
-        <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
-          <button type="submit">Delete</button>
-        </form>
-      </li>
-      {% else %}
-      <li class="empty">No minor tasks yet.</li>
-      {% endfor %}
-    </ul>
-  </div>
-
-</div>

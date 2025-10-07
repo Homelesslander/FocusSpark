@@ -60,7 +60,7 @@ h1 {
 }
 .task-sections {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+  grid-template-columns: repeat(3, 1fr); 
   gap: 30px;
   margin: 30px;
 }
@@ -111,4 +111,11 @@ h1 {
   color: #888;
   font-style: italic;
   text-align: center;
+}
+#greeting {
+  position: absolute;
+  top: 20px;      /* distance from top */
+  right: 40px;    /* distance from right edge */
+  font-size: 1.2em;
+  color: #2c3e50;
 }
