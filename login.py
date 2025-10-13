@@ -3,10 +3,12 @@ import sqlite3, bcrypt
 
 login_bp = Blueprint('auth', __name__)
 
-# --- Database setup ---
+
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
+
+    
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -14,13 +16,18 @@ def init_db():
             password TEXT
         )
     ''')
+
+    
+    c.execute("PRAGMA table_info(users)")
+    columns = [row[1] for row in c.fetchall()]
+    if "points" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
+
     conn.commit()
     conn.close()
 
-# Initialize database once when file is imported
 init_db()
 
-# --- Register Route ---
 @login_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -41,7 +48,7 @@ def register():
 
     return render_template('index.html')
 
-# --- Login Route ---
+
 @login_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -61,7 +68,7 @@ def login():
             return "Invalid username or password!"
     return render_template('index.html')
 
-# --- Logout Route ---
+
 @login_bp.route('/logout')
 def logout():
     session.clear()

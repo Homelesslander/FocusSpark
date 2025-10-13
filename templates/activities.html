@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ADHD Task Manager</title>
 
-  <!-- Navigation Menu -->
+  
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -35,9 +35,10 @@
       <li><a href="settings.html">Settings</a></li>
     </ul>
     <h2 id="greeting"> Hello, {{ username }}!</h2>
+    <h3>Your Points: {{ points }}</h3>
   </div>
 
-  <!-- Task Input Form -->
+  
   <div class="task-input">
     <form action="/add_task" method="POST">
       <input type="text" name="task_name" placeholder="Enter task" required />
@@ -51,16 +52,19 @@
     </form>
   </div>
 
-  <!-- Task Display Sections -->
+  
   <div class="task-sections">
 
-    <!-- Major Tasks -->
+    
     <div class="task-section">
       <h2>Major Tasks</h2>
       <ul>
         {% for task in tasks['Major'] %}
         <li>
           {{ task.name }} — <small>Due: {{ task.date }}</small>
+          <form action="{{ url_for('complete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
+            <button type="submit">✅ Complete</button>
+          </form>
           <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
             <button type="submit">Delete</button>
           </form>
@@ -71,13 +75,16 @@
       </ul>
     </div>
 
-    <!-- Medium Tasks -->
+    
     <div class="task-section">
       <h2>Medium Tasks</h2>
       <ul>
         {% for task in tasks['Medium'] %}
         <li>
           {{ task.name }} — <small>Due: {{ task.date }}</small>
+          <form action="{{ url_for('complete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
+            <button type="submit">✅ Complete</button>
+          </form>
           <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
             <button type="submit">Delete</button>
           </form>
@@ -88,13 +95,16 @@
       </ul>
     </div>
 
-    <!-- Minor Tasks -->
+    
     <div class="task-section">
       <h2>Minor Tasks</h2>
       <ul>
         {% for task in tasks['Minor'] %}
         <li>
           {{ task.name }} — <small>Due: {{ task.date }}</small>
+          <form action="{{ url_for('complete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
+            <button type="submit">✅ Complete</button>
+          </form>
           <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
             <button type="submit">Delete</button>
           </form>
