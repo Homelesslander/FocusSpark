@@ -14,7 +14,7 @@ def get_db_conn():
 
 
 def ensure_users_table():
-    """Ensure that users table exists and has a 'points' column."""
+    
     conn = get_db_conn()
     c = conn.cursor()
     
@@ -36,7 +36,7 @@ def ensure_users_table():
 
 
 def ensure_tasks_table():
-    """Ensure the tasks table exists."""
+    
     conn = get_db_conn()
     c = conn.cursor()
     c.execute('''
@@ -54,7 +54,7 @@ def ensure_tasks_table():
 
 
 def get_tasks_grouped():
-    """Return tasks grouped by importance."""
+    
     conn = get_db_conn()
     c = conn.cursor()
     c.execute("SELECT id, name, date, importance FROM tasks ORDER BY id")
@@ -95,7 +95,7 @@ def delete_task_db(task_id):
 
 
 def complete_task_and_award(task_id, username):
-    """Mark task complete and award points to user."""
+    
     conn = get_db_conn()
     c = conn.cursor()
 
