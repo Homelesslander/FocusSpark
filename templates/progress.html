@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* Minimal inline styles for the progress bar */
+    .progress-container { width: 90%; max-width: 600px; margin: 24px auto; }
+    .bar { width: 100%; background: #e6e6e6; border-radius: 8px; overflow: hidden; }
+    .bar-inner { height: 28px; background: #4caf50; width: 0%; color: white; text-align: center; line-height: 28px; }
+    .breakdown { margin-top: 12px; }
+    .breakdown ul { list-style: none; padding-left: 0; }
+  </style>
+</head>
+<body>
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <div class="progress-container">
+    <h1>Progress</h1>
+    <p>Progress for: <strong>{{ username if username else 'All users' }}</strong></p>
+
+    <div class="bar" aria-hidden="true">
+      <div id="barInner" class="bar-inner" style="width: {{ percent }}%;">{{ percent }}%</div>
+    </div>
+
+    <div class="breakdown">
+      <h3>Breakdown</h3>
+      <div>
+        <strong>Completed</strong>
+        <ul>
+          <li>Major: {{ breakdown.completed.Major }}</li>
+          <li>Medium: {{ breakdown.completed.Medium }}</li>
+          <li>Minor: {{ breakdown.completed.Minor }}</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Pending</strong>
+        <ul>
+          <li>Major: {{ breakdown.pending.Major }}</li>
+          <li>Medium: {{ breakdown.pending.Medium }}</li>
+          <li>Minor: {{ breakdown.pending.Minor }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

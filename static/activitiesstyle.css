@@ -86,12 +86,13 @@ h1 {
 .task-section li {
   margin: 8px 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  width: 100%;
 }
 
 .task-section li form {
-  margin-left: 10px;
+  margin: 5px 0;
+  display: inline-block;
 }
 
 .task-section li button {
@@ -118,4 +119,8 @@ h1 {
   right: 40px;    /* distance from right edge */
   font-size: 1.2em;
   color: #2c3e50;
+}
+.task-section ul li {
+  display: block;
+  margin-bottom: 8px;
 }

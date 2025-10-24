@@ -48,6 +48,13 @@ def ensure_tasks_table():
             user TEXT
         )
     ''')
+    # Ensure 'completed' and 'completed_at' columns exist for tracking progress without deleting rows
+    c.execute("PRAGMA table_info(tasks)")
+    existing_cols = [row[1] for row in c.fetchall()]
+    if "completed" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN completed INTEGER DEFAULT 0")
+    if "completed_at" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN completed_at TEXT")
     conn.commit()
     conn.close()
 
@@ -57,7 +64,8 @@ def get_tasks_grouped():
     
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, name, date, importance FROM tasks ORDER BY id")
+    # Only select tasks that are not completed so completed tasks disappear from the Activities page
+    c.execute("SELECT id, name, date, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY id")
     rows = c.fetchall()
     conn.close()
 
@@ -75,6 +83,59 @@ def get_tasks_grouped():
 
 
 POINTS = {"Major": 100, "Medium": 50, "Minor": 20}
+
+# Weights used to calculate progress percentage. Minor = 1.0, Medium = 1.5 (50% more),
+# Major = Medium * 1.5 = 2.25 (50% more than medium).
+WEIGHTS = {"Major": 2.25, "Medium": 1.5, "Minor": 1.0}
+
+
+def compute_progress(username=None):
+    """Compute progress percentage for a given user (or global if username is None).
+
+    Returns a dict with percent (int) and breakdown counts and weights.
+    """
+    conn = get_db_conn()
+    c = conn.cursor()
+
+    params = []
+    where = ""
+    if username:
+        where = "WHERE user = ?"
+        params = [username]
+
+    c.execute(f"SELECT importance, completed FROM tasks {where}", params)
+    rows = c.fetchall()
+    conn.close()
+
+    completed_weight = 0.0
+    pending_weight = 0.0
+    breakdown = {
+        "completed": {"Major": 0, "Medium": 0, "Minor": 0},
+        "pending": {"Major": 0, "Medium": 0, "Minor": 0},
+    }
+
+    for r in rows:
+        imp = r[0]
+        completed = r[1]
+        weight = WEIGHTS.get(imp, 1.0)
+        if completed:
+            completed_weight += weight
+            breakdown["completed"].setdefault(imp, 0)
+            breakdown["completed"][imp] += 1
+        else:
+            pending_weight += weight
+            breakdown["pending"].setdefault(imp, 0)
+            breakdown["pending"][imp] += 1
+
+    total = completed_weight + pending_weight
+    percent = int(round((completed_weight / total) * 100)) if total > 0 else 0
+
+    return {
+        "percent": percent,
+        "completed_weight": completed_weight,
+        "pending_weight": pending_weight,
+        "breakdown": breakdown,
+    }
 
 
 def insert_task_db(name, date, importance, user=None):
@@ -113,10 +174,12 @@ def complete_task_and_award(task_id, username):
             c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
 
        
+        # award points
         c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, username))
 
-        
-        c.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        # mark task as completed instead of deleting it so we can compute progress
+        completed_at = datetime.datetime.now().isoformat()
+        c.execute("UPDATE tasks SET completed = 1, completed_at = ? WHERE id = ?", (completed_at, task_id))
         conn.commit()
 
     conn.close()
@@ -165,6 +228,64 @@ def activities():
         conn.close()
 
     return render_template("activities.html", tasks=tasks, username=username, points=points)
+
+
+def clear_completed_tasks(username=None):
+    """Delete all completed tasks from the database for the given user (or all users if None)."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("DELETE FROM tasks WHERE completed = 1 AND user = ?", (username,))
+    else:
+        c.execute("DELETE FROM tasks WHERE completed = 1")
+    conn.commit()
+    conn.close()
+
+
+@app.route("/progress")
+def progress():
+    username = session.get('user') if session else None
+    prog = compute_progress(username)
+    # pass breakdown in a simple object that Jinja can access with dot notation
+    breakdown = prog.get('breakdown', {})
+    class AttrDict(dict):
+        def __getattr__(self, name):
+            return self.get(name, {})
+
+    return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
+        'completed': AttrDict(breakdown.get('completed', {})),
+        'pending': AttrDict(breakdown.get('pending', {})),
+    }), username=username)
+
+
+@app.route("/clear_completed", methods=['POST'])
+def handle_clear_completed():
+    username = session.get('user') if session else None
+    if username or request.form.get('all') == '1':
+        clear_completed_tasks(username)
+    return redirect(url_for('settings'))
+
+
+@app.route('/settings')
+def settings():
+    username = session.get('user') if session else None
+    return render_template('settings.html', username=username)
+
+
+@app.route('/reset_points', methods=['POST'])
+def reset_points():
+    username = session.get('user') if session else None
+    conn = get_db_conn()
+    c = conn.cursor()
+    # If a user is signed in, reset only their points. If not and the form includes 'all', reset everyone.
+    if username:
+        c.execute("UPDATE users SET points = 0 WHERE username = ?", (username,))
+    else:
+        if request.form.get('all') == '1':
+            c.execute("UPDATE users SET points = 0")
+    conn.commit()
+    conn.close()
+    return redirect(url_for('settings'))
 
 @app.route("/add_task", methods=["POST"])
 def add_task():

@@ -29,10 +29,10 @@
 
     <ul class="Tabs">
       <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-      <li><a href="viewtasks.html">View Tasks</a></li>
-      <li><a href="progress.html">View Progress</a></li>
+  <li><a href="viewtasks.html">View Tasks</a></li>
+  <li><a href="{{ url_for('progress') }}">View Progress</a></li>
       <li><a href="rewards.html">Redeem Rewards</a></li>
-      <li><a href="settings.html">Settings</a></li>
+  <li><a href="{{ url_for('settings') }}">Settings</a></li>
     </ul>
     <h2 id="greeting"> Hello, {{ username }}!</h2>
     <h3>Your Points: {{ points }}</h3>

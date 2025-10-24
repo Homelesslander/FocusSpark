@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <div style="max-width:700px;margin:24px auto;">
+    <h1>Settings</h1>
+    <p>Signed in as: <strong>{{ username if username else 'Not signed in' }}</strong></p>
+
+    <section>
+      <h3>Points</h3>
+      {% if username %}
+      <p>Reset your points to zero.</p>
+      <form method="post" action="{{ url_for('reset_points') }}">
+        <button type="submit">Reset my points</button>
+      </form>
+      {% else %}
+      <p>You are not signed in. If you want to reset all users' points, you can use the button below.</p>
+      <form method="post" action="{{ url_for('reset_points') }}">
+        <input type="hidden" name="all" value="1" />
+        <button type="submit">Reset all users' points</button>
+      </form>
+      {% endif %}
+    </section>
+
+    <section style="margin-top: 24px;">
+      <h3>Clear Task History</h3>
+      {% if username %}
+      <p>Permanently delete all your completed tasks. This cannot be undone.</p>
+      <form method="post" action="{{ url_for('handle_clear_completed') }}">
+        <button type="submit">Delete my completed tasks</button>
+      </form>
+      {% else %}
+      <p>You are not signed in. If you want to delete all completed tasks from the database, you can use the button below.</p>
+      <form method="post" action="{{ url_for('handle_clear_completed') }}">
+        <input type="hidden" name="all" value="1" />
+        <button type="submit">Delete all completed tasks</button>
+      </form>
+      {% endif %}
+    </section>
+
+  </div>
+</body>
+</html>
