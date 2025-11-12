@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ADHD Task Manager</title>
-
-  
+  <title>View Tasks - ADHD Task Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+</head>
+<body>
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -15,47 +16,19 @@
     </ul>
   </div>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
-</head>
-
-<body>
-
   <div class="front">
-    <h1>Activities</h1>
-    <p class="description">
-      This section provides access to various features of the ADHD Task Manager web app. 
-      You can manage your tasks, track your progress, redeem rewards, and customize your settings.
-    </p>
+    <h1>View Tasks</h1>
+    <p class="description">Here are the tasks you still need to do. Complete tasks to earn points.</p>
+  </div>
 
-    <ul class="Tabs">
-      <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-  <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-  <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-      <li><a href="rewards.html">Redeem Rewards</a></li>
-  <li><a href="{{ url_for('settings') }}">Settings</a></li>
-    </ul>
+  <!-- Place the user info inside a centered container matching Settings layout -->
+  <div style="max-width:700px; margin:24px auto;">
     <h2 id="greeting"> Hello, {{ username }}!</h2>
-    <h3>Your Points: {{ points }}</h3>
+    <h3 id="points">Your Points: {{ points }}</h3>
   </div>
 
-  
-  <div class="task-input">
-    <form action="/add_task" method="POST">
-      <input type="text" name="task_name" placeholder="Enter task" required />
-      <input type="date" name="task_date" required />
-      <select name="importance" required>
-        <option value="Major">Major</option>
-        <option value="Medium">Medium</option>
-        <option value="Minor">Minor</option>
-      </select>
-      <button type="submit">Add Task</button>
-    </form>
-  </div>
-
-  
   <div class="task-sections">
 
-    
     <div class="task-section">
       <h2>Major Tasks</h2>
       <ul>
@@ -75,7 +48,6 @@
       </ul>
     </div>
 
-    
     <div class="task-section">
       <h2>Medium Tasks</h2>
       <ul>
@@ -95,7 +67,6 @@
       </ul>
     </div>
 
-    
     <div class="task-section">
       <h2>Minor Tasks</h2>
       <ul>

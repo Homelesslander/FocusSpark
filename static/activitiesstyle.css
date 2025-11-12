@@ -120,6 +120,14 @@ h1 {
   font-size: 1.2em;
   color: #2c3e50;
 }
+#points {
+  position: absolute;
+  top: 52px;      /* place slightly below the greeting */
+  right: 40px;
+  font-size: 1.1em;
+  color: #2c3e50;
+}
+#points removed
 .task-section ul li {
   display: block;
   margin-bottom: 8px;
