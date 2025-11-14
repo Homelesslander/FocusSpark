@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Redeem Rewards</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      <li><a href="{{ url_for('redeem') }}">Redeem</a></li>
+    </ul>
+  </div>
+
+  <div style="max-width:800px;margin:24px auto;">
+    <h1>Redeem Rewards</h1>
+
+    <section>
+      <h2>Current Points</h2>
+      <p>You have <strong>{{ points }}</strong> points.</p>
+    </section>
+
+    <section>
+      <h2>Default Rewards</h2>
+      <ul>
+        {% for r in default_rewards %}
+          <li>
+            <strong>{{ r.title }}</strong> — {{ r.cost }} points
+            {% if r.claimable %}
+              <form style="display:inline" method="post" action="{{ url_for('redeem_default', reward_id=r.id) }}">
+                <button type="submit">Claim</button>
+              </form>
+            {% else %}
+              <span>(Not enough points)</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if nearest and nearest[0] == 'default' %}
+        {% set nd = nearest[1] %}
+        <p><em>Nearest default reward:</em> <strong>{{ nd.reward.title }}</strong> — you need <strong>{{ nd.points_needed }}</strong> more points. You are almost there!</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Custom Rewards</h2>
+      <ul>
+        {% if custom_rewards %}
+          {% for r in custom_rewards %}
+            <li>
+              <strong>{{ r.title }}</strong> — {{ r.cost }} points
+              {% if r.claimable %}
+                <form style="display:inline" method="post" action="{{ url_for('redeem_custom', reward_id=r.id) }}">
+                  <button type="submit">Claim</button>
+                </form>
+              {% else %}
+                <span>(Not enough points)</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        {% else %}
+          <li>No custom rewards yet.</li>
+        {% endif %}
+      </ul>
+
+      {% if nearest and nearest[0] == 'custom' %}
+        {% set nc = nearest[1] %}
+        <p><em>Nearest custom reward:</em> <strong>{{ nc.reward.title }}</strong> — you need <strong>{{ nc.points_needed }}</strong> more points. You are almost there!</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Add a Custom Reward</h2>
+      <form method="post" action="{{ url_for('add_custom_reward') }}">
+        <label>Reward name: <input name="title" required></label><br/>
+        <label>Cost (points): <input name="cost" type="number" required min="1"></label><br/>
+        <button type="submit">Add Custom Reward</button>
+      </form>
+    </section>
+  </div>
+</body>
+</html>
