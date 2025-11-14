@@ -230,6 +230,25 @@ def activities():
     return render_template("activities.html", tasks=tasks, username=username, points=points)
 
 
+@app.route('/viewtasks')
+def view_tasks():
+    """Render a focused view of pending tasks grouped by importance."""
+    tasks = get_tasks_grouped()
+    username = session.get('user') if session else None
+
+    points = 0
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT points FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row:
+            points = row['points']
+        conn.close()
+
+    return render_template('viewtasks.html', tasks=tasks, username=username, points=points)
+
+
 def clear_completed_tasks(username=None):
     """Delete all completed tasks from the database for the given user (or all users if None)."""
     conn = get_db_conn()
