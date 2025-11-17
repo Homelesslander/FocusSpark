@@ -1,3 +1,31 @@
+/* Consistent navbar positioning across pages */
+.menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 14px 24px;
+  z-index: 40;
+  background: linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.4));
+  backdrop-filter: blur(4px);
+}
+
+/* Prevent content from jumping under the fixed menu */
+body { padding-top: 76px; font-family: Arial, sans-serif; line-height: 1.6; margin: 0; color: #333; background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }
+/* Ensure the top menu is positioned consistently across pages */
+.menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px 24px;
+  z-index: 100;
+  background: linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.45));
+  backdrop-filter: blur(4px);
+}
+
+/* Reserve space so content doesn't jump under the menu */
+body { padding-top: 72px; font-family: Arial, sans-serif; line-height: 1.6; margin: 0; color: #333; background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }
 body {
   font-family: Arial, sans-serif;
   line-height: 1.6;
@@ -9,13 +37,36 @@ body {
   background-attachment: fixed;  
   color: #333;
 }
+html, body {
+  height: 100%;
+  box-sizing: border-box;
+}
+*, *:before, *:after { box-sizing: inherit; }
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  /* background image with a soft translucent overlay so cards remain readable */
+  background-image: linear-gradient(rgba(243,246,249,0.65), rgba(243,246,249,0.65)), url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+  color: #333;
+  overflow-x: hidden; /* prevent horizontal scrolling */
+}
 
-menu{ width: 400px; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    height: 70px; 
-} 
+/* navigation container for About page: subtle translucent background behind links */
+menu{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 70px;
+  padding: 8px 0;
+  background: rgba(255,255,255,0.12); /* light transparent panel behind the nav links */
+  backdrop-filter: blur(4px);
+}
 ul {float: left; 
     display: flex; 
     justify-content: center; 
@@ -67,7 +118,49 @@ strong {
   color: #e74c3c;
 }
 .content {
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: transparent;
   padding: 20px;
   border-radius: 8px;
+}
+.about-hero{
+  padding: 40px 16px; /* reduced padding so content fits on smaller viewports */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  clear: both; /* ensure hero sits below any floated menu */
+  width: 100%;
+}
+.about-hero-inner{
+  max-width: 900px;
+  margin: 0 auto; /* center the inner card reliably */
+  text-align:center;
+  background: rgba(255,255,255,0.92);
+  padding: 20px 18px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+.about-hero h1{ margin: 0 0 8px; color: #2c3e50; }
+.about-hero .lead{ margin: 0; color: #333; font-size: 1.05rem; }
+
+.content{ max-width:900px; margin:18px auto; padding:18px; }
+.intro h2{ margin-top:0; }
+.features{ display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; }
+.feature-card{ flex:1 1 240px; background: rgba(255,255,255,0.95); padding:14px; border-radius:8px; box-shadow: 0 6px 12px rgba(0,0,0,0.06); min-width: 220px; }
+.feature-card h3{ margin-top:0; color:#2c3e50; }
+.feature-card p{ margin:8px 0 0; color:#444; }
+
+/* Responsive stack */
+@media (max-width:800px){
+  .features{ flex-direction:column; }
+  .about-hero{ padding:28px 12px; }
+  .about-hero-inner{ padding:16px; }
+  .content{ padding:12px; margin:12px; }
+}
+
+/* translucent background for intro section to match hero card */
+.intro{
+  background: rgba(255,255,255,0.86);
+  padding: 18px 16px;
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
 }

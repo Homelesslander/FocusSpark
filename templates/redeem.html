@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Redeem Rewards</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      padding-top: 72px;
+      margin: 0;
+    }
+
+    .redeem-wrapper {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    
+    .redeem-container {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .redeem-main {
+      width: 100%;
+    }
+    
+    .redeem-main h1 {
+      color: #2c3e50;
+      font-size: 28px;
+      margin: 0 0 20px 0;
+      text-align: center;
+    }
+    
+    .redeem-main h2 {
+      color: #34495e;
+      font-size: 20px;
+      margin: 20px 0 15px 0;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+    
+    .redeem-main section {
+      margin-bottom: 20px;
+    }
+    
+    .redeem-main p {
+      color: #555;
+      margin: 10px 0;
+      line-height: 1.5;
+    }
+    
+    .redeem-main ul {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .redeem-main li {
+      flex: 1;
+      min-width: 150px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+      border-radius: 4px;
+      color: #333;
+      font-size: 14px;
+    }
+    
+    .redeem-main li strong {
+      color: #2c3e50;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .redeem-main button {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+      font-size: 13px;
+    }
+    
+    .redeem-main button:hover {
+      background: #229954;
+    }
+    
+    .redeem-main form {
+      margin-top: 15px;
+      max-width: 500px;
+    }
+    
+    .redeem-main label {
+      display: block;
+      margin-bottom: 8px;
+      color: #2c3e50;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .redeem-main input[type="text"],
+    .redeem-main input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    
+    .redeem-main input[type="text"]:focus,
+    .redeem-main input[type="number"]:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    
+    .redeem-sidebar {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .redeem-sidebar h3 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #2c3e50;
+      border-bottom: 3px solid #f39c12;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .redeemed-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    .redeemed-item {
+      padding: 12px;
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      border-left: 4px solid #28a745;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      font-size: 13px;
+    }
+    
+    .redeemed-title {
+      font-weight: bold;
+      color: #155724;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .redeemed-info {
+      font-size: 11px;
+      color: #2d5016;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    
+    .redeemed-points {
+      background: white;
+      color: #155724;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-weight: bold;
+      border: 1px solid #28a745;
+    }
+    
+    .no-redeemed {
+      color: #7f8c8d;
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      <li><a href="{{ url_for('redeem') }}">Redeem</a></li>
+    </ul>
+  </div>
+
+  <div class="redeem-wrapper">
+    <div class="redeem-container">
+      <div class="redeem-main">
+        <h1>Redeem Rewards</h1>
+
+        <section>
+          <h2>Current Points</h2>
+          <p>You have <strong>{{ points }}</strong> points.</p>
+        </section>
+
+        <section>
+          <h2>Default Rewards</h2>
+          <ul>
+            {% for r in default_rewards %}
+              <li>
+                <span>
+                  <strong>{{ r.title }}</strong> — {{ r.cost }} points
+                </span>
+                {% if r.claimable %}
+                  <form style="display:inline" method="post" action="{{ url_for('redeem_default', reward_id=r.id) }}">
+                    <button type="submit">Claim</button>
+                  </form>
+                {% else %}
+                  <span style="color: #e74c3c; font-size: 13px;">Not enough points</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+
+          {% if nearest and nearest[0] == 'default' %}
+            {% set nd = nearest[1] %}
+            <p><em>Nearest default reward:</em> <strong>{{ nd.reward.title }}</strong> — you need <strong>{{ nd.points_needed }}</strong> more points. You are almost there!</p>
+          {% endif %}
+        </section>
+
+        <section>
+          <h2>Custom Rewards</h2>
+          <ul>
+            {% if custom_rewards %}
+              {% for r in custom_rewards %}
+                <li>
+                  <span>
+                    <strong>{{ r.title }}</strong> — {{ r.cost }} points
+                  </span>
+                  {% if r.claimable %}
+                    <form style="display:inline" method="post" action="{{ url_for('redeem_custom', reward_id=r.id) }}">
+                      <button type="submit">Claim</button>
+                    </form>
+                  {% else %}
+                    <span style="color: #e74c3c; font-size: 13px;">Not enough points</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            {% else %}
+              <li>No custom rewards yet.</li>
+            {% endif %}
+          </ul>
+
+          {% if nearest and nearest[0] == 'custom' %}
+            {% set nc = nearest[1] %}
+            <p><em>Nearest custom reward:</em> <strong>{{ nc.reward.title }}</strong> — you need <strong>{{ nc.points_needed }}</strong> more points. You are almost there!</p>
+          {% endif %}
+        </section>
+
+        <section>
+          <h2>Add a Custom Reward</h2>
+          <form method="post" action="{{ url_for('add_custom_reward') }}">
+            <label>Reward name:</label>
+            <input type="text" name="title" required />
+            <label>Cost (points):</label>
+            <input type="number" name="cost" required min="1" />
+            <button type="submit">Add Custom Reward</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <!-- Sidebar with redeemed rewards -->
+    <aside class="redeem-sidebar">
+      <h3>🎉 Your Rewards</h3>
+      {% if redeemed_rewards %}
+        <ul class="redeemed-list">
+          {% for reward in redeemed_rewards %}
+          <li class="redeemed-item">
+            <span class="redeemed-title">{{ reward.title }}</span>
+            <div class="redeemed-info">
+              <span class="redeemed-points">{{ reward.cost }} pts</span>
+              <span>{{ reward.redeemed_at }}</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="no-redeemed">No rewards claimed yet.<br/>Start earning points!</p>
+      {% endif %}
+    </aside>
+
+  </div>
+</body>
+</html>

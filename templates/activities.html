@@ -16,6 +16,8 @@
   </div>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
 </head>
 
 <body>
@@ -29,12 +31,13 @@
 
     <ul class="Tabs">
       <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-  <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-  <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-      <li><a href="rewards.html">Redeem Rewards</a></li>
-  <li><a href="{{ url_for('settings') }}">Settings</a></li>
+      <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+      <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+      <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+      <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+      <li><a href="{{ url_for('settings') }}">Settings</a></li>
     </ul>
-    <h2 id="greeting"> Hello, {{ username }}!</h2>
+    <h2 id="greeting">Hello, {{ username }}!</h2>
     <h3>Your Points: {{ points }}</h3>
   </div>
 
@@ -52,21 +55,62 @@
     </form>
   </div>
 
+  <!-- Main content container with sidebar -->
+  <div class="activities-container">
   
+  <!-- Main tasks area -->
+  <div class="activities-main">
   <div class="task-sections">
 
-    
+    <!-- MAJOR TASKS SECTION -->
     <div class="task-section">
-      <h2>Major Tasks</h2>
+      <h2>Major Tasks <span class="task-count">({{ tasks['Major']|length }})</span></h2>
       <ul>
         {% for task in tasks['Major'] %}
         <li>
-          {{ task.name }} — <small>Due: {{ task.date }}</small>
-          <form action="{{ url_for('complete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
-            <button type="submit">✅ Complete</button>
-          </form>
-          <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
-            <button type="submit">Delete</button>
+          <div class="task-header">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="task-date">Due: {{ task.date }}</span>
+          </div>
+          
+          <div class="task-actions">
+            <form action="{{ url_for('complete_task', importance='Major', task_index=loop.index0) }}" method="post" onsubmit="handleCompletion(event, 'Major')">
+              <button type="submit">✅ Complete</button>
+            </form>
+            <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post">
+              <button type="submit">Delete</button>
+            </form>
+            <button type="button" class="edit-btn" onclick="openEditModal('{{ task.id }}', '{{ task.name }}', '{{ task.date }}', 'Major')">✏️ Edit</button>
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
+              <button type="submit" class="auto-breakdown-btn">🤖 Auto-Breakdown</button>
+            </form>
+          </div>
+          
+          {% if task.subtasks %}
+          <div class="subtasks">
+            <h4 onclick="toggleSubtasks(this)">
+              <span>Subtasks ({{ task.subtasks|length }})</span>
+              <span class="subtasks-toggle">▼</span>
+            </h4>
+            <ul class="subtasks-list" style="display:none;">
+              {% for subtask in task.subtasks %}
+              <li class="{% if subtask.completed %}completed{% endif %}">
+                <form action="{{ url_for('complete_subtask', subtask_id=subtask.id) }}" method="post">
+                  <button type="submit" class="subtask-check">{% if subtask.completed %}✅{% else %}☐{% endif %}</button>
+                </form>
+                <span>{{ subtask.name }}</span>
+                <form action="{{ url_for('delete_subtask', subtask_id=subtask.id) }}" method="post">
+                  <button type="submit" class="delete-btn">✕</button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
+            <input type="text" name="subtask_name" placeholder="Add subtask..." required />
+            <button type="submit">+ Add</button>
           </form>
         </li>
         {% else %}
@@ -75,18 +119,55 @@
       </ul>
     </div>
 
-    
+    <!-- MEDIUM TASKS SECTION -->
     <div class="task-section">
-      <h2>Medium Tasks</h2>
+      <h2>Medium Tasks <span class="task-count">({{ tasks['Medium']|length }})</span></h2>
       <ul>
         {% for task in tasks['Medium'] %}
         <li>
-          {{ task.name }} — <small>Due: {{ task.date }}</small>
-          <form action="{{ url_for('complete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
-            <button type="submit">✅ Complete</button>
-          </form>
-          <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
-            <button type="submit">Delete</button>
+          <div class="task-header">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="task-date">Due: {{ task.date }}</span>
+          </div>
+          
+          <div class="task-actions">
+            <form action="{{ url_for('complete_task', importance='Medium', task_index=loop.index0) }}" method="post" onsubmit="handleCompletion(event, 'Medium')">
+              <button type="submit">✅ Complete</button>
+            </form>
+            <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post">
+              <button type="submit">Delete</button>
+            </form>
+            <button type="button" class="edit-btn" onclick="openEditModal('{{ task.id }}', '{{ task.name }}', '{{ task.date }}', 'Medium')">✏️ Edit</button>
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
+              <button type="submit" class="auto-breakdown-btn">🤖 Auto-Breakdown</button>
+            </form>
+          </div>
+          
+          {% if task.subtasks %}
+          <div class="subtasks">
+            <h4 onclick="toggleSubtasks(this)">
+              <span>Subtasks ({{ task.subtasks|length }})</span>
+              <span class="subtasks-toggle">▼</span>
+            </h4>
+            <ul class="subtasks-list" style="display:none;">
+              {% for subtask in task.subtasks %}
+              <li class="{% if subtask.completed %}completed{% endif %}">
+                <form action="{{ url_for('complete_subtask', subtask_id=subtask.id) }}" method="post">
+                  <button type="submit" class="subtask-check">{% if subtask.completed %}✅{% else %}☐{% endif %}</button>
+                </form>
+                <span>{{ subtask.name }}</span>
+                <form action="{{ url_for('delete_subtask', subtask_id=subtask.id) }}" method="post">
+                  <button type="submit" class="delete-btn">✕</button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
+            <input type="text" name="subtask_name" placeholder="Add subtask..." required />
+            <button type="submit">+ Add</button>
           </form>
         </li>
         {% else %}
@@ -95,18 +176,55 @@
       </ul>
     </div>
 
-    
+    <!-- MINOR TASKS SECTION -->
     <div class="task-section">
-      <h2>Minor Tasks</h2>
+      <h2>Minor Tasks <span class="task-count">({{ tasks['Minor']|length }})</span></h2>
       <ul>
         {% for task in tasks['Minor'] %}
         <li>
-          {{ task.name }} — <small>Due: {{ task.date }}</small>
-          <form action="{{ url_for('complete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
-            <button type="submit">✅ Complete</button>
-          </form>
-          <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
-            <button type="submit">Delete</button>
+          <div class="task-header">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="task-date">Due: {{ task.date }}</span>
+          </div>
+          
+          <div class="task-actions">
+            <form action="{{ url_for('complete_task', importance='Minor', task_index=loop.index0) }}" method="post" onsubmit="handleCompletion(event, 'Minor')">
+              <button type="submit">✅ Complete</button>
+            </form>
+            <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post">
+              <button type="submit">Delete</button>
+            </form>
+            <button type="button" class="edit-btn" onclick="openEditModal('{{ task.id }}', '{{ task.name }}', '{{ task.date }}', 'Minor')">✏️ Edit</button>
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
+              <button type="submit" class="auto-breakdown-btn">🤖 Auto-Breakdown</button>
+            </form>
+          </div>
+          
+          {% if task.subtasks %}
+          <div class="subtasks">
+            <h4 onclick="toggleSubtasks(this)">
+              <span>Subtasks ({{ task.subtasks|length }})</span>
+              <span class="subtasks-toggle">▼</span>
+            </h4>
+            <ul class="subtasks-list" style="display:none;">
+              {% for subtask in task.subtasks %}
+              <li class="{% if subtask.completed %}completed{% endif %}">
+                <form action="{{ url_for('complete_subtask', subtask_id=subtask.id) }}" method="post">
+                  <button type="submit" class="subtask-check">{% if subtask.completed %}✅{% else %}☐{% endif %}</button>
+                </form>
+                <span>{{ subtask.name }}</span>
+                <form action="{{ url_for('delete_subtask', subtask_id=subtask.id) }}" method="post">
+                  <button type="submit" class="delete-btn">✕</button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
+            <input type="text" name="subtask_name" placeholder="Add subtask..." required />
+            <button type="submit">+ Add</button>
           </form>
         </li>
         {% else %}
@@ -115,7 +233,121 @@
       </ul>
     </div>
 
+    <!-- Calendar moved to its own page at /calendar -->
+
   </div>
+  </div> <!-- End activities-main -->
+
+  <!-- Sidebar with upcoming tasks -->
+  <aside class="activities-sidebar">
+    <div class="upcoming-tasks-sidebar">
+      <h3>📅 This Week's Tasks</h3>
+      {% if upcoming_tasks %}
+      <ul class="upcoming-tasks-list">
+        {% for task in upcoming_tasks %}
+        <li>
+          <span class="task-item-name">{{ task.name }}</span>
+          <span class="task-item-date">Due: {{ task.date }}</span>
+          <span class="task-item-importance {{ task.importance }}">{{ task.importance }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="no-tasks">No tasks due this week. Great job! 🎉</p>
+      {% endif %}
+    </div>
+  </aside>
+
+  </div> <!-- End activities-container -->
+
+  <script>
+    function toggleSubtasks(header) {
+      const subtasksList = header.parentElement.querySelector('.subtasks-list');
+      const toggle = header.querySelector('.subtasks-toggle');
+      
+      if (subtasksList.style.display === 'none') {
+        subtasksList.style.display = 'flex';
+        toggle.textContent = '▲';
+      } else {
+        subtasksList.style.display = 'none';
+        toggle.textContent = '▼';
+      }
+    }
+
+    function openEditModal(taskId, taskName, taskDate, importance) {
+      document.getElementById('editTaskId').value = taskId;
+      document.getElementById('editTaskName').value = taskName;
+      document.getElementById('editTaskDate').value = taskDate;
+      document.getElementById('editTaskImportance').value = importance;
+      document.getElementById('editModal').classList.add('show');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('show');
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target === modal) {
+        closeEditModal();
+      }
+    }
+
+    function handleCompletion(event, importance) {
+      event.preventDefault();
+      
+      // Trigger celebration
+      celebrateTaskCompletion(importance);
+      
+      // Submit form after a short delay to show celebration
+      setTimeout(() => {
+        event.target.submit();
+      }, 500);
+    }
+  </script>
+
+  <!-- Edit Task Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Task</h2>
+        <button type="button" class="close-modal" onclick="closeEditModal()">✕</button>
+      </div>
+      <form id="editForm" action="" method="POST" class="edit-form">
+        <div>
+          <label for="editTaskName">Task Name:</label>
+          <input type="text" id="editTaskName" name="task_name" required />
+        </div>
+        <div>
+          <label for="editTaskDate">Due Date:</label>
+          <input type="date" id="editTaskDate" name="task_date" required />
+        </div>
+        <div>
+          <label for="editTaskImportance">Importance:</label>
+          <select id="editTaskImportance" name="importance" required>
+            <option value="Major">Major</option>
+            <option value="Medium">Medium</option>
+            <option value="Minor">Minor</option>
+          </select>
+        </div>
+        <div class="edit-form-buttons">
+          <button type="submit" class="btn-save">Save Changes</button>
+          <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <input type="hidden" id="editTaskId" />
+
+  <script>
+    // Update form action when opening modal
+    const originalOpenEditModal = openEditModal;
+    openEditModal = function(taskId, taskName, taskDate, importance) {
+      originalOpenEditModal(taskId, taskName, taskDate, importance);
+      document.getElementById('editForm').action = `/edit_task/${taskId}`;
+    };
+  </script>
 
 </body>
 </html>

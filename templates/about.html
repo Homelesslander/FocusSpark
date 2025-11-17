@@ -1,30 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>About</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='aboutstyle.css') }}">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>About</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='aboutstyle.css') }}">
 </head>
 <body>
-    <div class= "menu">
-        
+    <div class="menu">
         <ul style="list-style-type: none;">
             <li><a href="{{ url_for('home') }}">Home</a></li>
             <li><a href="{{ url_for('about') }}">About</a></li>
             <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
             <li><a href="{{ url_for('activities') }}">Activities</a></li>
         </ul>
-
     </div>
 
-    <div class="content">
-        <h1>About</h1>
-        
-        <p>Many adolescents with ADHD struggle with starting tasks, keeping track of their responsibilities and staying motivated. Additionally, traditional task managers lack engagement and feel overwhelming to individuals with ADHD. 
-        This web app introduces a gamified task management system that rewards task completion with points, streaks and progress tracking. It caters to adolescents with ADHD through visual progress and positive reinforcement, encouraging healthy habits and reducing stress. 
-        </p>
-    </div>
+    <!-- Hero -->
+    <header class="about-hero">
+        <div class="about-hero-inner">
+            <h1>About this project</h1>
+            <p class="lead">A small, friendly web app designed to help people with ADHD manage tasks through gentle gamification and clear visual progress.</p>
+        </div>
+    </header>
 
+    <main class="content">
+        <section class="intro">
+            <h2>Why this exists</h2>
+            <p>Many adolescents with ADHD struggle with starting tasks, keeping track of responsibilities, and staying motivated. Traditional task managers can feel overwhelming and fail to provide the encouragement that helps form habits. This project applies simple game mechanics — points, streaks and progress indicators — to make completing tasks clearer and more rewarding.</p>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3>Simple task lists</h3>
+                <p>Quickly add tasks, set importance, and see what matters most today.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Progress tracking</h3>
+                <p>Earn points and watch your progress increase — small wins add up.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Safe and private</h3>
+                <p>Minimal personal information required. You control your tasks and points.</p>
+            </div>
+        </section>
+
+    </main>
 
 </body>
-
 </html>

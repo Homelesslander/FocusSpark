@@ -130,5 +130,572 @@ h1 {
 #points removed
 .task-section ul li {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border-left: 4px solid #007acc;
+}
+
+.task-section li .task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.task-section li .task-name {
+  font-weight: bold;
+  font-size: 1em;
+  margin-right: 10px;
+  flex: 1;
+}
+
+.task-section li .task-date {
+  font-size: 0.85em;
+  color: #666;
+  margin-right: 10px;
+}
+
+.task-section li .task-actions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.task-section li button {
+  padding: 6px 10px;
+  border: none;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.task-section li button:hover {
+  background-color: #c0392b;
+}
+
+.auto-breakdown-btn {
+  background-color: #27ae60 !important;
+}
+
+.auto-breakdown-btn:hover {
+  background-color: #229954 !important;
+}
+
+.edit-btn {
+  background-color: #3498db !important;
+}
+
+.edit-btn:hover {
+  background-color: #2980b9 !important;
+}
+
+.subtasks {
+  margin-top: 12px;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+}
+
+.subtasks h4 {
+  margin: 0 0 10px 0;
+  color: #007acc;
+  font-size: 0.95em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.subtasks h4:hover {
+  color: #0056b3;
+}
+
+.subtasks-toggle {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.subtasks ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fafafa;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.subtasks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e8f4f8;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  border: 1px solid #b3e5fc;
+}
+
+.subtasks li.completed {
+  background: #d4edda;
+  border-color: #82c91e;
+  text-decoration: line-through;
+  color: #666;
+}
+
+.subtask-check {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1em;
+  color: inherit;
+}
+
+.subtask-check:hover {
+  background: none;
+  color: #27ae60;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  padding: 2px 6px;
+  font-size: 0.75em;
+  margin-left: auto;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+.subtasks form {
+  display: inline;
+  margin: 0;
+}
+
+.add-subtask-form {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.add-subtask-form input {
+  flex: 1;
+  min-width: 150px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.add-subtask-form button {
+  padding: 6px 10px;
+  background-color: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.add-subtask-form button:hover {
+  background-color: #0056b3;
+}
+
+.task-section li.empty {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  background: transparent;
+  border: none;
+  padding: 15px;
+}
+
+/* Sidebar Styles */
+.upcoming-tasks-sidebar {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  margin: 30px;
+  max-width: 350px;
+  border-left: 5px solid #007acc;
+}
+
+.upcoming-tasks-sidebar h3 {
+  color: #007acc;
+  font-size: 1.2em;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upcoming-tasks-sidebar .no-tasks {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.upcoming-tasks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.upcoming-tasks-list li {
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border-left: 3px solid #007acc;
+  transition: all 0.3s ease;
+}
+
+.upcoming-tasks-list li:hover {
+  background: #e8f4f8;
+  transform: translateX(5px);
+}
+
+.task-item-name {
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.task-item-date {
+  font-size: 0.85em;
+  color: #666;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.task-item-importance {
+  display: inline-block;
+  font-size: 0.75em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.task-item-importance.Major {
+  background: #e74c3c;
+  color: white;
+}
+
+.task-item-importance.Medium {
+  background: #f39c12;
+  color: white;
+}
+
+.task-item-importance.Minor {
+  background: #27ae60;
+  color: white;
+}
+
+/* Layout with sidebar */
+.activities-container {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+}
+
+.activities-main {
+  flex: 1;
+}
+
+.activities-sidebar {
+  flex-shrink: 0;
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+}
+
+@media (max-width: 1400px) {
+  .activities-container {
+    flex-direction: column;
+  }
+  
+  .activities-sidebar {
+    position: relative;
+    top: auto;
+  }
+  
+  .upcoming-tasks-sidebar {
+    max-width: 100%;
+  }
+}
+
+/* Edit Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  color: #007acc;
+  margin: 0;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-modal:hover {
+  color: #333;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.edit-form label {
+  font-weight: bold;
+  color: #333;
+  font-size: 0.95em;
+}
+
+.edit-form input[type="text"],
+.edit-form input[type="date"],
+.edit-form select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+.edit-form input[type="text"]:focus,
+.edit-form input[type="date"]:focus,
+.edit-form select:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 5px rgba(0, 122, 204, 0.3);
+}
+
+.edit-form-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.edit-form-buttons button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95em;
+}
+
+.edit-form-buttons .btn-save {
+  background-color: #27ae60;
+  color: white;
+}
+
+.edit-form-buttons .btn-save:hover {
+  background-color: #229954;
+}
+
+.edit-form-buttons .btn-cancel {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.edit-form-buttons .btn-cancel:hover {
+  background-color: #7f8c8d;
+}
+
+/* Celebration Effects */
+.sparkle {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle, #FFD700, #FFA500);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+@keyframes colorBurstAnimation {
+  0% {
+    background: linear-gradient(45deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF);
+    background-size: 200% 200%;
+    transform: scale(1);
+  }
+  50% {
+    background-size: 400% 400%;
+    transform: scale(1.1);
+  }
+  100% {
+    background-size: 200% 200%;
+    transform: scale(1);
+  }
+}
+
+.color-burst {
+  animation: colorBurstAnimation 1s ease-out;
+  background: linear-gradient(45deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 9997;
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+}
+
+.achievement-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 30px 50px;
+  border-radius: 15px;
+  font-size: 1.8em;
+  font-weight: bold;
+  z-index: 10000;
+  animation: slideInDown 0.5s ease-out;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.achievement-notification.fade-out {
+  animation: slideOutUp 0.5s ease-in forwards;
+}
+
+.achievement-major {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #333;
+  text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
+  border: 3px solid #FF6B35;
+}
+
+.achievement-medium {
+  background: linear-gradient(135deg, #4D96FF, #00D9FF);
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  border: 3px solid #FF6B6B;
+}
+
+.achievement-minor {
+  background: linear-gradient(135deg, #6BCB77, #4D96FF);
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  border: 3px solid #6BCB77;
+}
+
+@keyframes badgeReveal {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.golden-badge {
+  display: inline-block;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle at 35% 35%, #FFD700, #FFA500, #FF6B35);
+  border-radius: 50%;
+  animation: badgeReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 
+              inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+              inset 2px 2px 5px rgba(255, 255, 255, 0.3);
+  font-size: 3em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+}
+
+.shimmer-effect {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+  background-size: 200% 100%;
 }

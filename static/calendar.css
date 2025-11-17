@@ -1,0 +1,121 @@
+/* Calendar Section Styles */
+.calendar-section {
+  margin-top: 40px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.calendar-section h2 {
+  color: #2c3e50;
+  font-size: 22px;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 3px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.calendar-day {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  border: 1px solid #d0d8e0;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.calendar-day:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.calendar-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #3498db;
+}
+
+.calendar-day-name {
+  font-weight: bold;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.calendar-day-date {
+  color: #7f8c8d;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.calendar-day-tasks {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calendar-task {
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  font-weight: 500;
+  word-wrap: break-word;
+}
+
+.calendar-task-major {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.calendar-task-medium {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+.calendar-task-minor {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.task-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.task-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-empty {
+  color: #95a5a6;
+  font-size: 12px;
+  text-align: center;
+  padding: 10px;
+  font-style: italic;
+}
