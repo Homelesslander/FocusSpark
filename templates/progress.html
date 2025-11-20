@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Progress</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='plant.css') }}">
   <style>
     
     .progress-container { width: 90%; max-width: 600px; margin: 24px auto; }
@@ -12,6 +13,82 @@
     .bar-inner { height: 28px; background: #4caf50; width: 0%; color: white; text-align: center; line-height: 28px; }
     .breakdown { margin-top: 12px; }
     .breakdown ul { list-style: none; padding-left: 0; }
+    
+    /* Streak Section Styles */
+    .streak-section {
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+    }
+    
+    .streak-section h2 {
+      color: #e65100;
+      margin-top: 0;
+      margin-bottom: 16px;
+      text-align: center;
+      font-size: 24px;
+    }
+    
+    .streak-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .streak-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .streak-number {
+      font-size: 42px;
+      font-weight: bold;
+      color: #ff6f00;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    
+    .streak-label {
+      font-size: 13px;
+      color: #424242;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      letter-spacing: 0.5px;
+    }
+    
+    .streak-text {
+      font-size: 12px;
+      color: #757575;
+      margin: 0;
+      font-style: italic;
+    }
+    
+    .streak-message {
+      background: white;
+      border-left: 4px solid #ff6f00;
+      padding: 12px 16px;
+      border-radius: 6px;
+      color: #e65100;
+      font-weight: 500;
+      text-align: center;
+      margin: 0;
+    }
+    
+    @media (max-width: 600px) {
+      .streak-stats {
+        grid-template-columns: 1fr;
+      }
+      
+      .streak-number {
+        font-size: 36px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -27,6 +104,126 @@
   <div class="progress-container">
     <h1>Progress</h1>
     <p>Progress for: <strong>{{ username if username else 'All users' }}</strong></p>
+
+    <!-- Daily Streak Section -->
+    <div class="streak-section">
+      <h2>🔥 Daily Streak</h2>
+      <div class="streak-stats">
+        <div class="streak-card current-streak">
+          <div class="streak-number">{{ streak.current }}</div>
+          <p class="streak-label">Current Streak</p>
+          <p class="streak-text">Keep it going!</p>
+        </div>
+        <div class="streak-card longest-streak">
+          <div class="streak-number">{{ streak.longest }}</div>
+          <p class="streak-label">Longest Streak</p>
+          <p class="streak-text">Your best record</p>
+        </div>
+      </div>
+      <p class="streak-message">
+        {% if streak.current == 0 %}
+          Complete a task today to start your streak! 💪
+        {% elif streak.current == 1 %}
+          Great start! Come back tomorrow to continue your streak! 🚀
+        {% elif streak.current < 7 %}
+          Amazing! {{ streak.current }} days in a row! Keep building! 🎯
+        {% elif streak.current < 30 %}
+          Incredible! {{ streak.current }} days of consistency! You're unstoppable! 🌟
+        {% else %}
+          LEGENDARY! {{ streak.current }} days straight! You're a true champion! 👑
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Virtual Plant Growth Visualization -->
+    <div class="plant-section">
+      <h2>Your Growth Plant 🌱</h2>
+      <p class="plant-caption">Your plant grows as you complete tasks!</p>
+      <div class="plant-container">
+        <div class="plant" style="--growth-stage: {{ [0, 1, 2, 3, 4, 5][(percent // 20)] if percent else 0 }};">
+          <div class="plant-pot"></div>
+          <div class="plant-soil"></div>
+          <div class="plant-stage-0">
+            <div class="seed"></div>
+          </div>
+          <div class="plant-stage-1">
+            <div class="sprout"></div>
+          </div>
+          <div class="plant-stage-2">
+            <div class="small-plant">
+              <div class="stem"></div>
+              <div class="leaf left"></div>
+              <div class="leaf right"></div>
+            </div>
+          </div>
+          <div class="plant-stage-3">
+            <div class="medium-plant">
+              <div class="stem"></div>
+              <div class="leaf left-1"></div>
+              <div class="leaf right-1"></div>
+              <div class="leaf left-2"></div>
+              <div class="leaf right-2"></div>
+            </div>
+          </div>
+          <div class="plant-stage-4">
+            <div class="large-plant">
+              <div class="stem"></div>
+              <div class="leaf left-1"></div>
+              <div class="leaf right-1"></div>
+              <div class="leaf left-2"></div>
+              <div class="leaf right-2"></div>
+              <div class="leaf left-3"></div>
+              <div class="leaf right-3"></div>
+            </div>
+          </div>
+          <div class="plant-stage-5">
+            <div class="flower-plant">
+              <div class="stem"></div>
+              <div class="leaf left-1"></div>
+              <div class="leaf right-1"></div>
+              <div class="leaf left-2"></div>
+              <div class="leaf right-2"></div>
+              <div class="leaf left-3"></div>
+              <div class="leaf right-3"></div>
+              <div class="flower">🌸</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="plant-progress-text">Completion: <strong>{{ percent }}%</strong></p>
+      <p class="plant-stage-info">
+        {% if percent == 0 %}
+          Stage: Seed 🌾 — Every journey starts with a single task. You've got this! 💪
+        {% elif percent < 20 %}
+          Stage: Seed 🌾 — You're at {{ percent }}% — Keep watering (completing tasks)! You're building momentum! 🌱
+        {% elif percent < 40 %}
+          Stage: Sprout 🌱 — Awesome! You're at {{ percent }}% — Your plant is growing and so are you! 🎉
+        {% elif percent < 60 %}
+          Stage: Young Plant 🌿 — You reached {{ percent }}% of your goal — Getting stronger every day! 💪
+        {% elif percent < 80 %}
+          Stage: Mature Plant 🪴 — Incredible progress at {{ percent }}%! Almost there! You're crushing it! 🚀
+        {% elif percent < 100 %}
+          Stage: Blooming 🌻 — Amazing! You're at {{ percent }}% — Nearly perfect! Keep up the fantastic work! ✨
+        {% else %}
+          Stage: Full Bloom 🌸 — You reached 100%! INCREDIBLE! You did it! Absolutely amazing work! 🌟🎊
+        {% endif %}
+      </p>
+      <p class="plant-encouragement-msg">
+        {% if percent == 0 %}
+          <strong>Let's grow together!</strong> Start by completing your first task.
+        {% elif percent < 25 %}
+          <strong>Great start!</strong> You're planting the seeds of success. Keep it up! 🌱
+        {% elif percent < 50 %}
+          <strong>You're doing great!</strong> Your efforts are paying off. Stay focused! 📈
+        {% elif percent < 75 %}
+          <strong>You're unstoppable!</strong> Look how far you've come. Don't stop now! 💪
+        {% elif percent < 100 %}
+          <strong>Almost at the finish line!</strong> You're so close — give it one more push! 🏁
+        {% else %}
+          <strong>🎉 LEGENDARY STATUS UNLOCKED! 🎉</strong> You completed everything! You are unstoppable, amazing, and brilliant! 🌟
+        {% endif %}
+      </p>
+    </div>
 
     <div class="bar" aria-hidden="true">
       <div id="barInner" class="bar-inner" style="width: {{ percent }}%;">{{ percent }}%</div>

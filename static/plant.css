@@ -1,0 +1,405 @@
+/* Plant Growth Visualization Styles */
+
+.plant-section {
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.plant-section h2 {
+  color: #2e7d32;
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.plant-caption {
+  color: #558b2f;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.plant-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 300px;
+  margin: 20px 0;
+  position: relative;
+}
+
+/* Plant base styles */
+.plant {
+  position: relative;
+  width: 200px;
+  height: 280px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.plant-pot {
+  position: absolute;
+  bottom: 0;
+  width: 120px;
+  height: 80px;
+  background: linear-gradient(135deg, #d7ccc8 0%, #bcaaa4 100%);
+  border-radius: 0 0 12px 12px;
+  box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.plant-soil {
+  position: absolute;
+  bottom: 12px;
+  width: 110px;
+  height: 30px;
+  background: #8d6e63;
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Plant stages - hidden by default, shown based on completion */
+.plant-stage-0,
+.plant-stage-1,
+.plant-stage-2,
+.plant-stage-3,
+.plant-stage-4,
+.plant-stage-5 {
+  position: absolute;
+  bottom: 45px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
+  pointer-events: none;
+}
+
+/* Show correct stage based on growth-stage variable */
+.plant-stage-0 { opacity: calc(1 - min(var(--growth-stage, 0), 1)); }
+.plant-stage-1 { opacity: calc(max(0, min(var(--growth-stage, 0) - 0, 1))); }
+.plant-stage-2 { opacity: calc(max(0, min(var(--growth-stage, 0) - 1, 1))); }
+.plant-stage-3 { opacity: calc(max(0, min(var(--growth-stage, 0) - 2, 1))); }
+.plant-stage-4 { opacity: calc(max(0, min(var(--growth-stage, 0) - 3, 1))); }
+.plant-stage-5 { opacity: calc(max(0, min(var(--growth-stage, 0) - 4, 1))); }
+
+/* Seed */
+.seed {
+  width: 12px;
+  height: 12px;
+  background: #795548;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Sprout */
+.sprout {
+  width: 20px;
+  height: 40px;
+  position: relative;
+}
+
+.sprout::before,
+.sprout::after {
+  content: '';
+  position: absolute;
+  background: #81c784;
+  border-radius: 50%;
+}
+
+.sprout::before {
+  width: 12px;
+  height: 20px;
+  left: -8px;
+  bottom: 10px;
+  transform: rotate(-20deg);
+}
+
+.sprout::after {
+  width: 16px;
+  height: 32px;
+  left: 2px;
+  bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #66bb6a 0%, #81c784 100%);
+}
+
+/* Small plant (Stage 2) */
+.small-plant {
+  position: relative;
+  height: 60px;
+  width: 30px;
+}
+
+.small-plant .stem {
+  width: 4px;
+  height: 60px;
+  background: #4caf50;
+  margin: 0 auto;
+  border-radius: 2px;
+}
+
+.small-plant .leaf {
+  position: absolute;
+  width: 14px;
+  height: 18px;
+  background: #81c784;
+  border-radius: 50% 0;
+}
+
+.small-plant .leaf.left {
+  left: -8px;
+  top: 20px;
+  transform: rotate(-45deg);
+}
+
+.small-plant .leaf.right {
+  right: -8px;
+  top: 20px;
+  transform: rotate(45deg) scaleX(-1);
+}
+
+/* Medium plant (Stage 3) */
+.medium-plant {
+  position: relative;
+  height: 90px;
+  width: 50px;
+}
+
+.medium-plant .stem {
+  width: 5px;
+  height: 90px;
+  background: linear-gradient(180deg, #4caf50 0%, #45a049 100%);
+  margin: 0 auto;
+  border-radius: 2px;
+}
+
+.medium-plant .leaf {
+  position: absolute;
+  width: 16px;
+  height: 20px;
+  background: #81c784;
+  border-radius: 50% 0;
+}
+
+.medium-plant .leaf.left-1 {
+  left: -10px;
+  top: 15px;
+  transform: rotate(-50deg);
+}
+
+.medium-plant .leaf.right-1 {
+  right: -10px;
+  top: 15px;
+  transform: rotate(50deg) scaleX(-1);
+}
+
+.medium-plant .leaf.left-2 {
+  left: -12px;
+  top: 45px;
+  transform: rotate(-45deg);
+}
+
+.medium-plant .leaf.right-2 {
+  right: -12px;
+  top: 45px;
+  transform: rotate(45deg) scaleX(-1);
+}
+
+/* Large plant (Stage 4) */
+.large-plant {
+  position: relative;
+  height: 120px;
+  width: 70px;
+}
+
+.large-plant .stem {
+  width: 6px;
+  height: 120px;
+  background: linear-gradient(180deg, #4caf50 0%, #388e3c 100%);
+  margin: 0 auto;
+  border-radius: 3px;
+}
+
+.large-plant .leaf {
+  position: absolute;
+  width: 18px;
+  height: 22px;
+  background: #66bb6a;
+  border-radius: 50% 0;
+}
+
+.large-plant .leaf.left-1 {
+  left: -12px;
+  top: 10px;
+  transform: rotate(-55deg);
+}
+
+.large-plant .leaf.right-1 {
+  right: -12px;
+  top: 10px;
+  transform: rotate(55deg) scaleX(-1);
+}
+
+.large-plant .leaf.left-2 {
+  left: -14px;
+  top: 40px;
+  transform: rotate(-50deg);
+}
+
+.large-plant .leaf.right-2 {
+  right: -14px;
+  top: 40px;
+  transform: rotate(50deg) scaleX(-1);
+}
+
+.large-plant .leaf.left-3 {
+  left: -12px;
+  top: 70px;
+  transform: rotate(-45deg);
+}
+
+.large-plant .leaf.right-3 {
+  right: -12px;
+  top: 70px;
+  transform: rotate(45deg) scaleX(-1);
+}
+
+/* Flower plant (Stage 5) */
+.flower-plant {
+  position: relative;
+  height: 140px;
+  width: 80px;
+}
+
+.flower-plant .stem {
+  width: 6px;
+  height: 140px;
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+  margin: 0 auto;
+  border-radius: 3px;
+}
+
+.flower-plant .leaf {
+  position: absolute;
+  width: 18px;
+  height: 22px;
+  background: #66bb6a;
+  border-radius: 50% 0;
+}
+
+.flower-plant .leaf.left-1 {
+  left: -14px;
+  top: 5px;
+  transform: rotate(-55deg);
+}
+
+.flower-plant .leaf.right-1 {
+  right: -14px;
+  top: 5px;
+  transform: rotate(55deg) scaleX(-1);
+}
+
+.flower-plant .leaf.left-2 {
+  left: -16px;
+  top: 35px;
+  transform: rotate(-50deg);
+}
+
+.flower-plant .leaf.right-2 {
+  right: -16px;
+  top: 35px;
+  transform: rotate(50deg) scaleX(-1);
+}
+
+.flower-plant .leaf.left-3 {
+  left: -14px;
+  top: 70px;
+  transform: rotate(-45deg);
+}
+
+.flower-plant .leaf.right-3 {
+  right: -14px;
+  top: 70px;
+  transform: rotate(45deg) scaleX(-1);
+}
+
+.flower-plant .flower {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 32px;
+  animation: flower-bloom 0.8s ease-in-out;
+}
+
+@keyframes flower-bloom {
+  0% {
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.plant-progress-text {
+  font-size: 18px;
+  color: #2e7d32;
+  font-weight: bold;
+  margin: 16px 0 8px 0;
+}
+
+.plant-stage-info {
+  font-size: 14px;
+  color: #558b2f;
+  margin: 8px 0 0 0;
+  font-style: italic;
+}
+
+.plant-encouragement-msg {
+  font-size: 15px;
+  color: #1b5e20;
+  margin: 12px 0 0 0;
+  font-weight: 500;
+  padding: 12px 16px;
+  background: rgba(76, 175, 80, 0.1);
+  border-left: 4px solid #4caf50;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .plant-container {
+    min-height: 250px;
+  }
+
+  .plant {
+    width: 160px;
+    height: 240px;
+  }
+
+  .plant-pot {
+    width: 100px;
+    height: 70px;
+  }
+
+  .plant-soil {
+    width: 90px;
+  }
+
+  .plant-section {
+    padding: 16px;
+  }
+
+  .flower-plant .flower {
+    font-size: 24px;
+  }
+}

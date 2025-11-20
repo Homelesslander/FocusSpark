@@ -208,6 +208,29 @@ def ensure_redemptions_table():
     conn.close()
 
 
+def ensure_streaks_table():
+    """Create the `streaks` table for tracking daily task completion streaks.
+
+    Stores the current streak count, last completion date, and highest streak
+    achieved for each user. Used on the Progress and Activities pages.
+    """
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS streaks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            current_streak INTEGER DEFAULT 0,
+            last_completion_date TEXT,
+            longest_streak INTEGER DEFAULT 0,
+            FOREIGN KEY (username) REFERENCES users(username)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
 def get_tasks_grouped():
     
     conn = get_db_conn()
@@ -385,7 +408,90 @@ def clear_subtasks_db(task_id):
     conn.close()
 
 
+def update_user_streak(username):
+    """Update the user's daily streak when they complete a task.
+    
+    If the user completed a task today → streak continues.
+    If last completion was yesterday → streak increases by 1.
+    If last completion was before yesterday → streak resets to 1.
+    """
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    today = datetime.datetime.now().date().isoformat()
+    
+    # Get or create streak record
+    c.execute("SELECT current_streak, last_completion_date, longest_streak FROM streaks WHERE username = ?", (username,))
+    row = c.fetchone()
+    
+    if not row:
+        # New user - initialize streak
+        c.execute("INSERT INTO streaks (username, current_streak, last_completion_date, longest_streak) VALUES (?, 1, ?, 1)",
+                  (username, today))
+        conn.commit()
+        conn.close()
+        return 1
+    
+    current_streak = row['current_streak'] or 0
+    last_date = row['last_completion_date']
+    longest_streak = row['longest_streak'] or 0
+    
+    # Calculate yesterday's date
+    yesterday = (datetime.datetime.now().date() - datetime.timedelta(days=1)).isoformat()
+    
+    # Determine new streak
+    if last_date == today:
+        # Already completed today - don't change streak
+        new_streak = current_streak
+    elif last_date == yesterday:
+        # Completed yesterday - continue the streak
+        new_streak = current_streak + 1
+    else:
+        # Missed a day - reset to 1
+        new_streak = 1
+    
+    # Update longest streak if new streak is better
+    new_longest = max(longest_streak, new_streak)
+    
+    # Update streak record
+    c.execute("UPDATE streaks SET current_streak = ?, last_completion_date = ?, longest_streak = ? WHERE username = ?",
+              (new_streak, today, new_longest, username))
+    conn.commit()
+    conn.close()
+    
+    return new_streak
+
+
+def get_user_streak(username):
+    """Return the user's current and longest streak.
+    
+    Returns dict with 'current' and 'longest' keys.
+    If no streak exists, returns {'current': 0, 'longest': 0}.
+    """
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT current_streak, longest_streak FROM streaks WHERE username = ?", (username,))
+    row = c.fetchone()
+    conn.close()
+    
+    if not row:
+        return {'current': 0, 'longest': 0}
+    
+    return {
+        'current': row['current_streak'] or 0,
+        'longest': row['longest_streak'] or 0
+    }
+
+
 def complete_task_and_award(task_id, username):
+    """Mark a task completed and award points to the user.
+
+    This is the function responsible for assigning points based on task
+    importance and updating the user's `points` field. It also marks the
+    task as completed (and saves `completed_at`) so progress can be computed.
+    Called when a task is completed from the Activities UI.
+    Also updates the user's daily streak.
+    """
     
     conn = get_db_conn()
     c = conn.cursor()
@@ -411,6 +517,9 @@ def complete_task_and_award(task_id, username):
         completed_at = datetime.datetime.now().isoformat()
         c.execute("UPDATE tasks SET completed = 1, completed_at = ? WHERE id = ?", (completed_at, task_id))
         conn.commit()
+        
+        # Update user's daily streak
+        update_user_streak(username)
 
     conn.close()
 
@@ -426,6 +535,7 @@ ensure_tasks_table()
 ensure_custom_rewards_table()
 ensure_subtasks_table()
 ensure_redemptions_table()
+ensure_streaks_table()
 
 
 
@@ -449,12 +559,18 @@ def symptoms():
 
 @app.route("/activities")
 def activities():
+    """Render the main Activities page.
+
+    Loads grouped tasks, calendar snippet data, user points and upcoming tasks
+    to render the activities dashboard where users add/edit/complete tasks.
+    """
     tasks = get_tasks_grouped()
     calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
     upcoming_tasks = get_upcoming_tasks(username) if username else []
 
     points = 0
+    streak = {'current': 0, 'longest': 0}
     if username:
         conn = get_db_conn()
         c = conn.cursor()
@@ -463,8 +579,9 @@ def activities():
         if row:
             points = row['points']
         conn.close()
+        streak = get_user_streak(username)
 
-    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta)
+    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta)
 
 
 @app.route('/calendar')
@@ -520,6 +637,11 @@ def clear_completed_tasks(username=None):
 
 @app.route("/progress")
 def progress():
+    """Render the progress page displaying completion percent and breakdown.
+
+    Uses `compute_progress` to calculate a weighted progress percentage.
+    Also passes streak data for display.
+    """
     username = session.get('user') if session else None
     prog = compute_progress(username)
     # pass breakdown in a simple object that Jinja can access with dot notation
@@ -527,11 +649,15 @@ def progress():
     class AttrDict(dict):
         def __getattr__(self, name):
             return self.get(name, {})
+    
+    streak = {'current': 0, 'longest': 0}
+    if username:
+        streak = get_user_streak(username)
 
     return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
         'completed': AttrDict(breakdown.get('completed', {})),
         'pending': AttrDict(breakdown.get('pending', {})),
-    }), username=username)
+    }), username=username, streak=streak)
 
 
 @app.route("/clear_completed", methods=['POST'])

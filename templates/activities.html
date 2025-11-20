@@ -18,7 +18,57 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
-</head>
+  
+  <style>
+    /* User Stats Section */
+    .user-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .stat-item h3 {
+      margin: 0;
+      color: #2c3e50;
+    }
+    
+    .streak-display {
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.15);
+    }
+    
+    .streak-display h3 {
+      font-size: 16px;
+      color: #e65100;
+      margin-top: 0 !important;
+      margin-bottom: 8px !important;
+    }
+    
+    .streak-current {
+      font-size: 28px;
+      font-weight: bold;
+      color: #ff6f00;
+      margin: 0 0 4px 0;
+      line-height: 1;
+    }
+    
+    .streak-best {
+      font-size: 12px;
+      color: #bf360c;
+      margin: 0;
+      font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+      .user-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 
 <body>
 
@@ -38,7 +88,16 @@
       <li><a href="{{ url_for('settings') }}">Settings</a></li>
     </ul>
     <h2 id="greeting">Hello, {{ username }}!</h2>
-    <h3>Your Points: {{ points }}</h3>
+    <div class="user-stats">
+      <div class="stat-item">
+        <h3>Your Points: {{ points }}</h3>
+      </div>
+      <div class="stat-item streak-display">
+        <h3>🔥 Daily Streak</h3>
+        <p class="streak-current">{{ streak.current }} days</p>
+        <p class="streak-best">Best: {{ streak.longest }} days</p>
+      </div>
+    </div>
   </div>
 
   

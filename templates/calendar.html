@@ -36,57 +36,57 @@
     <h3>Your Points: {{ points }}</h3>
   </div>
 
-  <div class="activities-container">
-    <div class="activities-main">
-      <div class="calendar-section">
-        <h2>📆 Task Calendar</h2>
-        <div class="calendar-grid">
-          {% set current_date = today %}
-          {% for day_offset in range(14) %}
-            {% set day = current_date.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=day_offset) %}
-            {% set date_str = day.strftime('%Y-%m-%d') %}
-            <div class="calendar-day">
-              <div class="calendar-day-header">
-                <span class="calendar-day-name">{{ day.strftime('%a') }}</span>
-                <span class="calendar-day-date">{{ day.strftime('%m/%d') }}</span>
-              </div>
-              <div class="calendar-day-tasks">
-                {% if calendar_tasks.get(date_str) %}
-                  {% for task in calendar_tasks[date_str] %}
-                  <div class="calendar-task calendar-task-{{ task.importance|lower }}">
-                    <span class="task-badge">{{ task.importance[0] }}</span>
-                    <span class="task-title">{{ task.name }}</span>
-                  </div>
-                  {% endfor %}
-                {% else %}
-                  <div class="calendar-empty">No tasks</div>
-                {% endif %}
-              </div>
+  <div class="calendar-main-container">
+    <div class="calendar-section">
+      <h2>📆 Task Calendar</h2>
+      <p class="calendar-section-subtitle">Your two-week task overview</p>
+      <div class="calendar-grid">
+        {% set current_date = today %}
+        {% for day_offset in range(14) %}
+          {% set day = current_date.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=day_offset) %}
+          {% set date_str = day.strftime('%Y-%m-%d') %}
+          <div class="calendar-day">
+            <div class="calendar-day-header">
+              <span class="calendar-day-name">{{ day.strftime('%a') }}</span>
+              <span class="calendar-day-date">{{ day.strftime('%m/%d') }}</span>
             </div>
-          {% endfor %}
-        </div>
+            <div class="calendar-day-tasks">
+              {% if calendar_tasks.get(date_str) %}
+                {% for task in calendar_tasks[date_str] %}
+                <div class="calendar-task calendar-task-{{ task.importance|lower }}">
+                  <span class="task-badge">{{ task.importance[0] }}</span>
+                  <span class="task-title">{{ task.name }}</span>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="calendar-empty">No tasks</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
       </div>
     </div>
-
-    <aside class="activities-sidebar">
-      <div class="upcoming-tasks-sidebar">
-        <h3>📅 This Week's Tasks</h3>
-        {% if upcoming_tasks %}
-        <ul class="upcoming-tasks-list">
-          {% for task in upcoming_tasks %}
-          <li>
-            <span class="task-item-name">{{ task.name }}</span>
-            <span class="task-item-date">Due: {{ task.date }}</span>
-            <span class="task-item-importance {{ task.importance }}">{{ task.importance }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="no-tasks">No tasks due this week. Great job! 🎉</p>
-        {% endif %}
-      </div>
-    </aside>
   </div>
+
+  <!-- Upcoming Tasks Sidebar -->
+  <aside class="calendar-sidebar">
+    <div class="upcoming-tasks-sidebar">
+      <h3>📅 This Week's Tasks</h3>
+      {% if upcoming_tasks %}
+      <ul class="upcoming-tasks-list">
+        {% for task in upcoming_tasks %}
+        <li>
+          <span class="task-item-name">{{ task.name }}</span>
+          <span class="task-item-date">Due: {{ task.date }}</span>
+          <span class="task-item-importance {{ task.importance }}">{{ task.importance }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="no-tasks">No tasks due this week. Great job! 🎉</p>
+      {% endif %}
+    </div>
+  </aside>
 
 </body>
 </html>
