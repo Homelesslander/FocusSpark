@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parent Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+</head>
+<body>
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      <li><a href="{{ url_for('settings') }}">Settings</a></li>
+    </ul>
+  </div>
+
+  <div style="max-width:1000px;margin:24px auto;padding:16px;">
+    <h1>Parent Dashboard</h1>
+    <p>Welcome, {{ username }}. Manage your child's account and add custom rewards on their behalf.</p>
+
+    <section style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="upcoming-tasks-sidebar">
+        <h3>Children</h3>
+        {% if children %}
+          <ul style="list-style:none;padding:0;margin:0;">
+            {% for c in children %}
+              <li style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <strong>{{ c.username }}</strong>
+                  <div style="font-size:0.9rem;color:#666;">Points: {{ c.points }}</div>
+                </div>
+                <div>
+                  <a href="{{ url_for('view_tasks') }}?user={{ c.username }}" style="text-decoration:none;">View</a>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="no-tasks">No children assigned yet.</p>
+        {% endif %}
+
+        <form action="{{ url_for('parent_add_child') }}" method="post" style="margin-top:12px;display:flex;gap:8px;">
+          <input name="child_username" placeholder="Child username" required style="flex:1;padding:8px;border-radius:6px;border:1px solid #ddd;" />
+          <button type="submit" class="btn-add">Assign</button>
+        </form>
+      </div>
+
+      <div class="upcoming-tasks-sidebar">
+        <h3>Create Custom Reward for Child</h3>
+        <form action="{{ url_for('parent_add_custom_reward_child') }}" method="post" style="display:flex;flex-direction:column;gap:8px;">
+          <label>Child Username</label>
+          <input name="child_username" placeholder="Child username" required style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+          <label>Reward Title</label>
+          <input name="title" placeholder="Reward title" required style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+          <label>Cost (points)</label>
+          <input name="cost" type="number" min="1" placeholder="Cost" required style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+          <button type="submit" class="btn-add">Create Reward</button>
+        </form>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

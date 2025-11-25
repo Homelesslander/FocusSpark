@@ -17,10 +17,11 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
   
   <style>
-    /* User Stats Section */
+   
     .user-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -73,29 +74,101 @@
 <body>
 
   <div class="front">
-    <h1>Activities</h1>
-    <p class="description">
-      This section provides access to various features of the ADHD Task Manager web app. 
-      You can manage your tasks, track your progress, redeem rewards, and customize your settings.
-    </p>
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1>Activities</h1>
+        <p class="description">
+          This section provides access to various features of the Webpage. 
+          You can manage your tasks, track your progress, redeem rewards, and customize your settings.
+        </p>
 
-    <ul class="Tabs">
-      <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-      <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-      <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-      <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-      <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-      <li><a href="{{ url_for('settings') }}">Settings</a></li>
-    </ul>
-    <h2 id="greeting">Hello, {{ username }}!</h2>
-    <div class="user-stats">
-      <div class="stat-item">
-        <h3>Your Points: {{ points }}</h3>
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if is_parent %}
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          {% endif %}
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting">Hello, {{ username }}!</h2>
       </div>
-      <div class="stat-item streak-display">
-        <h3>🔥 Daily Streak</h3>
-        <p class="streak-current">{{ streak.current }} days</p>
-        <p class="streak-best">Best: {{ streak.longest }} days</p>
+
+      <div class="front-header-right">
+        <!-- header right left intentionally minimal; stats moved to corner-stats -->
+      </div>
+    </div>
+
+    <!-- page note removed per user request -->
+
+    <!-- Fixed corner panel for This Week's Tasks (moved to top-right) -->
+    <div class="corner-upcoming" aria-label="This week's tasks">
+      <div class="corner-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:relative;">
+        <strong style="font-size:0.95rem">This Week</strong>
+        <button id="cornerToggleBtn" aria-expanded="true" style="background:transparent;border:1px solid #e6e6e6;padding:6px 8px;border-radius:8px;cursor:pointer">Hide</button>
+        <div class="corner-handle" aria-hidden="true" title="This Week">📅</div>
+      </div>
+      <div class="corner-content collapsible" id="cornerContent">
+        <div class="upcoming-tasks-sidebar">
+          <h3 style="margin-top:0;">📅 This Week's Tasks</h3>
+          {% if upcoming_tasks %}
+          <ul class="upcoming-tasks-list">
+            {% for task in upcoming_tasks %}
+            <li>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <span class="task-item-name">{{ task.name }}</span>
+                <span class="task-item-date" style="font-size:0.85rem;color:#666;">Due: {{ task.date }}</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="no-tasks">No tasks due this week. Great job!</p>
+          {% endif %}
+          <!-- Next week tasks removed — showing this week's tasks only -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Corner stats (moved out of header) - slides in from the left -->
+    <div class="corner-stats collapsed" id="cornerStats" aria-hidden="false">
+      <div class="corner-stats-handle" id="cornerStatsHandle" title="Show stats"></div>
+      <div class="corner-stats-content collapsible" id="cornerStatsContent">
+        <div class="top-panel points">
+          <div class="panel-title">🪙 Points</div>
+          <div class="points-value" id="pointsCount">{{ points }}</div>
+        </div>
+        <div class="top-panel streak">
+          <div class="panel-title">🔥 Streak</div>
+          <div class="streak-current">{{ streak.current if streak else 0 }} days</div>
+          <div class="streak-best">Best: {{ streak.longest if streak and streak.longest is not none else 0 }} days</div>
+        </div>
+        <div class="top-panel focus">
+          <div class="panel-title">⏱️ Focus Mode</div>
+            <div class="timer-settings" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+              <label for="focusDurationSelect" style="font-size:0.9rem;color:#444;margin:0 4px 0 0">Duration</label>
+              <select id="focusDurationSelect" aria-label="Focus duration">
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
+                <option value="25" selected>25 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="custom">Custom</option>
+              </select>
+              <input id="focusCustomInput" type="number" min="1" placeholder="mins" style="width:72px;display:none;padding:6px;border-radius:6px;border:1px solid #ddd" />
+            </div>
+            <div class="timer-display">
+              <div id="timerLabel">25:00</div>
+              <div class="timer-controls">
+                <button id="startPauseBtn" class="timer-btn">Start</button>
+                <button id="resetBtn" class="timer-btn">Reset</button>
+              </div>
+            </div>
+          <div class="focus-tips">Tip: work for short bursts. Use breaks to recharge. ✨</div>
+        </div>
       </div>
     </div>
   </div>
@@ -105,23 +178,24 @@
     <form action="/add_task" method="POST">
       <input type="text" name="task_name" placeholder="Enter task" required />
       <input type="date" name="task_date" required />
+      <input type="time" name="task_time" />
       <select name="importance" required>
         <option value="Major">Major</option>
         <option value="Medium">Medium</option>
         <option value="Minor">Minor</option>
       </select>
-      <button type="submit">Add Task</button>
+      <button type="submit" class="btn-add" aria-label="Add task"><span class="btn-icon">➕</span><span class="btn-text">Add Task</span></button>
     </form>
   </div>
 
-  <!-- Main content container with sidebar -->
+  
   <div class="activities-container">
   
-  <!-- Main tasks area -->
+  
   <div class="activities-main">
   <div class="task-sections">
 
-    <!-- MAJOR TASKS SECTION -->
+    
     <div class="task-section">
       <h2>Major Tasks <span class="task-count">({{ tasks['Major']|length }})</span></h2>
       <ul>
@@ -129,19 +203,19 @@
         <li>
           <div class="task-header">
             <span class="task-name">{{ task.name }}</span>
-            <span class="task-date">Due: {{ task.date }}</span>
+            <span class="task-date">{% if task.date %}Due: {{ task.date }}{% if task.time %} at {{ task.time }}{% endif %}{% else %}No due date{% endif %}</span>
           </div>
           
           <div class="task-actions">
             <form action="{{ url_for('complete_task', importance='Major', task_index=loop.index0) }}" method="post" onsubmit="handleCompletion(event, 'Major')">
-              <button type="submit">✅ Complete</button>
+              <button type="submit" class="btn-complete" aria-label="Complete task"><span class="btn-icon">🎯</span><span class="btn-text">Complete</span></button>
             </form>
             <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post">
-              <button type="submit">Delete</button>
+              <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" onclick="openEditModal('{{ task.id }}', '{{ task.name }}', '{{ task.date }}', 'Major')">✏️ Edit</button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Major"}|tojson }}' onclick="openEditModalFromButton(this)"><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
             <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
-              <button type="submit" class="auto-breakdown-btn">🤖 Auto-Breakdown</button>
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
             </form>
           </div>
           
@@ -169,7 +243,7 @@
           
           <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
             <input type="text" name="subtask_name" placeholder="Add subtask..." required />
-            <button type="submit">+ Add</button>
+            <button type="submit" class="btn-add-subtask" aria-label="Add subtask"><span class="btn-icon">➕</span><span class="btn-text">Add</span></button>
           </form>
         </li>
         {% else %}
@@ -186,19 +260,19 @@
         <li>
           <div class="task-header">
             <span class="task-name">{{ task.name }}</span>
-            <span class="task-date">Due: {{ task.date }}</span>
+            <span class="task-date">{% if task.date %}Due: {{ task.date }}{% if task.time %} at {{ task.time }}{% endif %}{% else %}No due date{% endif %}</span>
           </div>
           
           <div class="task-actions">
             <form action="{{ url_for('complete_task', importance='Medium', task_index=loop.index0) }}" method="post" onsubmit="handleCompletion(event, 'Medium')">
-              <button type="submit">✅ Complete</button>
+              <button type="submit" class="btn-complete" aria-label="Complete task"><span class="btn-icon">🎯</span><span class="btn-text">Complete</span></button>
             </form>
             <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post">
-              <button type="submit">Delete</button>
+              <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" onclick="openEditModal('{{ task.id }}', '{{ task.name }}', '{{ task.date }}', 'Medium')">✏️ Edit</button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Medium"}|tojson }}' onclick="openEditModalFromButton(this)"><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
             <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
-              <button type="submit" class="auto-breakdown-btn">🤖 Auto-Breakdown</button>
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
             </form>
           </div>
           
@@ -235,7 +309,7 @@
       </ul>
     </div>
 
-    <!-- MINOR TASKS SECTION -->
+    
     <div class="task-section">
       <h2>Minor Tasks <span class="task-count">({{ tasks['Minor']|length }})</span></h2>
       <ul>
@@ -248,14 +322,14 @@
           
           <div class="task-actions">
             <form action="{{ url_for('complete_task', importance='Minor', task_index=loop.index0) }}" method="post" onsubmit="handleCompletion(event, 'Minor')">
-              <button type="submit">✅ Complete</button>
+              <button type="submit" class="btn-complete" aria-label="Complete task"><span class="btn-icon">🎯</span><span class="btn-text">Complete</span></button>
             </form>
             <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post">
-              <button type="submit">Delete</button>
+              <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" onclick="openEditModal('{{ task.id }}', '{{ task.name }}', '{{ task.date }}', 'Minor')">✏️ Edit</button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Minor"}|tojson }}' onclick="openEditModalFromButton(this)"><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
             <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
-              <button type="submit" class="auto-breakdown-btn">🤖 Auto-Breakdown</button>
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
             </form>
           </div>
           
@@ -297,29 +371,191 @@
   </div>
   </div> <!-- End activities-main -->
 
-  <!-- Sidebar with upcoming tasks -->
-  <aside class="activities-sidebar">
-    <div class="upcoming-tasks-sidebar">
-      <h3>📅 This Week's Tasks</h3>
-      {% if upcoming_tasks %}
-      <ul class="upcoming-tasks-list">
-        {% for task in upcoming_tasks %}
-        <li>
-          <span class="task-item-name">{{ task.name }}</span>
-          <span class="task-item-date">Due: {{ task.date }}</span>
-          <span class="task-item-importance {{ task.importance }}">{{ task.importance }}</span>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="no-tasks">No tasks due this week. Great job! 🎉</p>
-      {% endif %}
-    </div>
-  </aside>
-
   </div> <!-- End activities-container -->
 
   <script>
+    // Simple focus timer (Pomodoro-like)
+    // restore user-selected duration (minutes) or default 25
+    const storedDuration = localStorage.getItem('focusDuration');
+    const defaultMinutes = storedDuration ? parseInt(storedDuration, 10) : 25;
+    let timerSeconds = defaultMinutes * 60;
+    let timerInterval = null;
+    const timerLabel = document.getElementById('timerLabel');
+    const startPauseBtn = document.getElementById('startPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const durationSelect = document.getElementById('focusDurationSelect');
+    const customInput = document.getElementById('focusCustomInput');
+
+    // initialize select value from storedDuration
+    if(durationSelect){
+      if(storedDuration && ['15','20','25','30','45'].includes(storedDuration)){
+        durationSelect.value = storedDuration;
+      } else if(storedDuration){
+        durationSelect.value = 'custom';
+        customInput.style.display = 'inline-block';
+        customInput.value = storedDuration;
+      }
+    }
+
+    // helper to update timerSeconds from select/input and persist
+    function updateDurationFromUI(){
+      if(!durationSelect) return;
+      const v = durationSelect.value;
+      let mins = 25;
+      if(v === 'custom'){
+        const cv = parseInt(customInput.value,10);
+        mins = (isNaN(cv) || cv <= 0) ? 25 : cv;
+      } else {
+        mins = parseInt(v,10) || 25;
+      }
+      timerSeconds = mins * 60;
+      localStorage.setItem('focusDuration', String(mins));
+      updateTimer();
+    }
+
+    if(durationSelect){
+      durationSelect.addEventListener('change', (e)=>{
+        if(e.target.value === 'custom'){
+          customInput.style.display = 'inline-block';
+          customInput.focus();
+        } else {
+          customInput.style.display = 'none';
+        }
+        updateDurationFromUI();
+      });
+    }
+    if(customInput){
+      customInput.addEventListener('change', updateDurationFromUI);
+      customInput.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') updateDurationFromUI(); });
+    }
+
+    function formatTime(s) {
+      const m = Math.floor(s/60).toString().padStart(2,'0');
+      const sec = (s%60).toString().padStart(2,'0');
+      return `${m}:${sec}`;
+    }
+
+    function updateTimer() {
+      timerLabel.textContent = formatTime(timerSeconds);
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      startPauseBtn.textContent = 'Pause';
+      timerInterval = setInterval(() => {
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          startPauseBtn.textContent = 'Start';
+          celebrateTaskCompletion('');
+          return;
+        }
+        timerSeconds -= 1;
+        updateTimer();
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        startPauseBtn.textContent = 'Start';
+      }
+    }
+
+    startPauseBtn && startPauseBtn.addEventListener('click', () => {
+      if (timerInterval) pauseTimer(); else startTimer();
+    });
+
+    resetBtn && resetBtn.addEventListener('click', () => {
+      pauseTimer();
+      // Reset to the currently selected/persisted focus duration
+      // updateDurationFromUI will read the select/custom input and set `timerSeconds`
+      updateDurationFromUI();
+      updateTimer();
+    });
+
+    updateTimer();
+
+    // Suggestions UI
+    const suggestBtn = document.getElementById('suggestBtn');
+    const energySelect = document.getElementById('energySelect');
+    const suggestionsArea = document.getElementById('suggestionsArea');
+
+    function renderSuggestions(list){
+      if(!list || list.length===0){
+        suggestionsArea.innerHTML = '<div class="no-quests">No suggestions right now.</div>';
+        return;
+      }
+      suggestionsArea.innerHTML = '';
+      list.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'quest-card';
+        card.style.padding = '8px';
+        card.style.marginBottom = '8px';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong>${s.name}</strong><div style="font-size:0.9rem;color:#666;">${s.importance} • Due: ${s.date || 'No date'}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:120px;">
+              <button class="btn-complete-suggest" data-id="${s.id}" style="background:linear-gradient(90deg,#00a8ff,#00e5ff);color:#022;padding:8px;border-radius:6px;border:none;">Start</button>
+              <button class="btn-ignore" style="background:linear-gradient(90deg,#ff5252,#ff8a80);color:white;padding:8px;border-radius:6px;border:none;">Ignore</button>
+            </div>
+          </div>
+        `;
+        suggestionsArea.appendChild(card);
+      });
+
+      // wire up complete buttons
+      document.querySelectorAll('.btn-complete-suggest').forEach(b => {
+        b.addEventListener('click', async (ev) => {
+          const id = ev.currentTarget.getAttribute('data-id');
+          try{
+            const res = await fetch(`/complete_task_by_id/${id}`, {method:'POST'});
+            const json = await res.json();
+            if(json.success){
+              // small confirmation then reload
+              ev.currentTarget.textContent = 'Done ✓';
+              setTimeout(()=> location.reload(), 600);
+            } else {
+              alert('Could not complete: ' + (json.error||''));
+            }
+          }catch(e){
+            alert('Network error');
+          }
+        });
+      });
+    }
+
+    suggestBtn && suggestBtn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      const energy = energySelect.value;
+      suggestionsArea.innerHTML = '<div class="no-quests">Finding best matches...</div>';
+      try{
+        const res = await fetch('/suggest_tasks', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({energy})
+        });
+        const data = await res.json();
+        renderSuggestions(data.suggestions || []);
+      }catch(err){
+        suggestionsArea.innerHTML = '<div class="no-quests">Error fetching suggestions.</div>';
+      }
+    });
+
+    // Collapsible suggest panel toggle
+    const suggestToggleBtn = document.getElementById('suggestToggleBtn');
+    const energyPanel = document.getElementById('energyPanel');
+    if(suggestToggleBtn && energyPanel){
+      suggestToggleBtn.addEventListener('click', (ev)=>{
+        const collapsed = energyPanel.classList.toggle('collapsed');
+        suggestToggleBtn.textContent = collapsed ? 'Show' : 'Hide';
+        suggestToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+      });
+    }
+
     function toggleSubtasks(header) {
       const subtasksList = header.parentElement.querySelector('.subtasks-list');
       const toggle = header.querySelector('.subtasks-toggle');
@@ -333,12 +569,26 @@
       }
     }
 
-    function openEditModal(taskId, taskName, taskDate, importance) {
+    function openEditModal(taskId, taskName, taskDate, taskTime, importance) {
       document.getElementById('editTaskId').value = taskId;
       document.getElementById('editTaskName').value = taskName;
       document.getElementById('editTaskDate').value = taskDate;
+      // set time if provided (empty string allowed)
+      const timeInput = document.getElementById('editTaskTime');
+      if(timeInput){ timeInput.value = taskTime || ''; }
       document.getElementById('editTaskImportance').value = importance;
       document.getElementById('editModal').classList.add('show');
+    }
+
+    function openEditModalFromButton(btn){
+      try{
+        const data = JSON.parse(btn.getAttribute('data-task') || '{}');
+        openEditModal(data.id, data.name || '', data.date || '', data.time || '', data.importance || 'Major');
+        // set form action (in case override isn't applied yet)
+        document.getElementById('editForm').action = `/edit_task/${data.id}`;
+      }catch(e){
+        console.error('Could not open edit modal', e);
+      }
     }
 
     function closeEditModal() {
@@ -365,6 +615,84 @@
     }
   </script>
 
+  <script>
+    // Corner stats toggle (remember state in localStorage) - slides from left
+    (function(){
+      const handle = document.getElementById('cornerStatsHandle');
+      const collapsible = document.getElementById('cornerStatsContent');
+      const container = document.getElementById('cornerStats');
+      if(!collapsible || !container) return;
+
+      const key = 'cornerStatsCollapsed';
+      const stored = localStorage.getItem(key);
+      if(stored === '1'){
+        collapsible.classList.add('collapsed');
+        container.classList.add('collapsed');
+      } else {
+        collapsible.classList.remove('collapsed');
+        container.classList.remove('collapsed');
+      }
+
+      function toggleCornerStats(){
+        const collapsed = collapsible.classList.toggle('collapsed');
+        container.classList.toggle('collapsed', collapsed);
+        if(collapsed){
+          localStorage.setItem(key,'1');
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+
+      if(handle) handle.addEventListener('click', toggleCornerStats);
+      // also reveal on hover while collapsed (handled by CSS :hover), no JS needed
+    })();
+  </script>
+
+  <script>
+    // Corner upcoming toggle (remember state in localStorage)
+    (function(){
+      const btn = document.getElementById('cornerToggleBtn');
+      const content = document.getElementById('cornerContent');
+      const panel = document.querySelector('.corner-upcoming');
+      const handle = panel && panel.querySelector('.corner-handle');
+      if(!btn || !content || !panel) return;
+
+      // restore state
+      const key = 'cornerUpcomingCollapsed';
+      const stored = localStorage.getItem(key);
+      if(stored === '1'){
+        content.classList.add('collapsed');
+        panel.classList.add('collapsed');
+        btn.textContent = 'Show';
+        btn.setAttribute('aria-expanded','false');
+      } else {
+        content.classList.remove('collapsed');
+        panel.classList.remove('collapsed');
+        btn.textContent = 'Hide';
+        btn.setAttribute('aria-expanded','true');
+      }
+
+      function toggleCorner(){
+        const collapsed = content.classList.toggle('collapsed');
+        panel.classList.toggle('collapsed', collapsed);
+        if(collapsed){
+          btn.textContent = 'Show';
+          btn.setAttribute('aria-expanded','false');
+          localStorage.setItem(key,'1');
+        } else {
+          btn.textContent = 'Hide';
+          btn.setAttribute('aria-expanded','true');
+          localStorage.removeItem(key);
+        }
+      }
+
+      btn.addEventListener('click', toggleCorner);
+      if(handle){
+        handle.addEventListener('click', toggleCorner);
+      }
+    })();
+  </script>
+
   <!-- Edit Task Modal -->
   <div id="editModal" class="modal">
     <div class="modal-content">
@@ -381,6 +709,10 @@
           <label for="editTaskDate">Due Date:</label>
           <input type="date" id="editTaskDate" name="task_date" required />
         </div>
+          <div>
+            <label for="editTaskTime">Due Time (optional):</label>
+            <input type="time" id="editTaskTime" name="task_time" />
+          </div>
         <div>
           <label for="editTaskImportance">Importance:</label>
           <select id="editTaskImportance" name="importance" required>
@@ -402,8 +734,8 @@
   <script>
     // Update form action when opening modal
     const originalOpenEditModal = openEditModal;
-    openEditModal = function(taskId, taskName, taskDate, importance) {
-      originalOpenEditModal(taskId, taskName, taskDate, importance);
+    openEditModal = function(taskId, taskName, taskDate, taskTime, importance) {
+      originalOpenEditModal(taskId, taskName, taskDate, taskTime, importance);
       document.getElementById('editForm').action = `/edit_task/${taskId}`;
     };
   </script>

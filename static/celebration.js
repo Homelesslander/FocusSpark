@@ -53,7 +53,8 @@ function createConfetti() {
       y: Math.random() * canvas.height - canvas.height,
       size: Math.random() * 8 + 4,
       speedX: Math.random() * 4 - 2,
-      speedY: Math.random() * 5 + 5,
+      // slower vertical speed so confetti lingers longer on-screen
+      speedY: Math.random() * 3 + 3,
       color: `hsl(${Math.random() * 360}, 100%, 50%)`,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: Math.random() * 0.2 - 0.1
@@ -69,7 +70,8 @@ function createConfetti() {
       
       p.y += p.speedY;
       p.x += p.speedX;
-      p.speedY += 0.1; // gravity
+      // gentler gravity so pieces fall more slowly and remain visible
+      p.speedY += 0.05;
       p.rotation += p.rotationSpeed;
 
       if (p.y > canvas.height) {
@@ -98,7 +100,7 @@ function createConfetti() {
 // Create sparkle effect for Minor tasks
 function createSparkles(x, y) {
   const sparkles = [];
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 25; i++) {
     const sparkle = document.createElement('div');
     sparkle.className = 'sparkle';
     sparkle.style.left = x + 'px';
@@ -112,7 +114,8 @@ function createSparkles(x, y) {
     let life = 1;
 
     const animate = () => {
-      life -= 0.02;
+      // slower decay so sparkles remain longer
+      life -= 0.01;
       sparkle.style.opacity = life;
       sparkle.style.transform = `translate(${vx}px, ${vy}px) scale(${life})`;
       
@@ -141,9 +144,10 @@ function createColorBurst(element) {
   burst.style.height = element.offsetHeight + 'px';
   document.body.appendChild(burst);
 
+  // keep burst visible a bit longer
   setTimeout(() => {
     document.body.removeChild(burst);
-  }, 1000);
+  }, 2000);
 }
 
 // Show achievement notification
@@ -153,12 +157,21 @@ function showAchievementNotification(message, importance) {
   notification.textContent = message;
   document.body.appendChild(notification);
 
+  // Display durations per importance level (ms)
+  const DISPLAY_DURATIONS = {
+    Major: 8000,
+    Medium: 5000,
+    Minor: 3500
+  };
+  const fadeDuration = 700; // fade-out time
+  const displayFor = DISPLAY_DURATIONS[importance] || 4000;
+
   setTimeout(() => {
     notification.classList.add('fade-out');
     setTimeout(() => {
-      document.body.removeChild(notification);
-    }, 500);
-  }, 3000);
+      if (notification.parentElement) document.body.removeChild(notification);
+    }, fadeDuration);
+  }, displayFor);
 }
 
 // Play sound effect

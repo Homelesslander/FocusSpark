@@ -1,0 +1,287 @@
+/* ADHD-friendly adaptive styles: clear CTA, larger touch targets, progress visuals */
+:root{
+  --accent:#ffb703;
+  --accent-2:#fb8500;
+  --muted:#f6f6f6;
+  --card-bg:#ffffff;
+  --danger:#e63946;
+  --panel-width:320px;
+}
+
+/* Ensure the top menu and main front content are centered on the page */
+.menu{display:flex;justify-content:center;align-items:center}
+.menu ul{float:none;margin:0;padding:0}
+
+
+/* Layout tweaks */
+.front{max-width:1200px;margin:0 auto;padding:22px 18px 10px 18px;padding-right:18px}
+.activities-container{display:grid;grid-template-columns: 1fr;gap:20px;padding:18px;max-width:1200px;margin:0 auto}
+.activities-main{min-width:0;position:relative;z-index:0}
+.activities-sidebar{width:320px;position:relative;top:auto;align-self:start;z-index:0}
+
+.front h1{font-size:2.2rem;color:var(--accent-2);margin:6px 0 6px}
+.description{max-width:900px;margin:6px 0 14px;color:#333;line-height:1.5}
+
+/* Top horizontal panels for summary stats */
+.top-panels{display:flex;gap:14px;align-items:stretch;margin:8px 0 18px}
+.top-panels.top-panels-right{flex-direction:row;align-items:flex-start}
+.top-panel{background:#fff;padding:12px 14px;border-radius:10px;border:1px solid #f0f0f0;min-width:180px;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.top-panel h4{margin:0;color:#333;font-size:0.95rem}
+.top-panel .points-value{font-size:1.4rem;font-weight:800;color:var(--accent-2)}
+.top-panel .streak-current{font-size:1.25rem;font-weight:700;color:#ff6f00}
+.top-panel .streak-best{font-size:0.85rem;color:#bf360c}
+.focus-panel .timer-display{display:flex;gap:8px;align-items:center}
+
+@media(max-width:900px){
+  .top-panels{flex-direction:column;align-items:stretch}
+  .top-panel{min-width:unset}
+}
+
+/* header two-column layout */
+.front-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.front-header-left{max-width:64%;display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 auto}
+.front-header-left h1{align-self:center}
+.front-header-right{min-width:260px;position:relative}
+.top-panels.top-panels-right{flex-direction:column;gap:12px}
+.top-panels.top-panels-right .top-panel{min-width:280px}
+
+.activities-container{display:grid;grid-template-columns: 1fr;gap:20px;padding:18px;max-width:1200px;margin:0 auto;align-items:start}
+
+/* Only fix the right panels on wide screens to avoid horizontal overflow on smaller windows */
+@media(min-width:1400px){
+  /* keep main content centered — avoid large reserved padding which visually offsets content */
+  .front{padding-right:18px}
+  .front-header-right{position:fixed;top:72px;right:20px;width:var(--panel-width);z-index:60}
+  .top-panels.top-panels-right{flex-direction:column;gap:12px}
+  .top-panels.top-panels-right .top-panel{min-width:var(--panel-width)}
+}
+
+@media(max-width:1000px){
+  .front-header{flex-direction:column}
+  /* revert fixed panels to normal flow on smaller screens */
+  .front-header-right{position:relative;min-width:unset;width:auto}
+  .activities-container{padding-right:0}
+}
+
+/* Tabs (centered under header) */
+.Tabs{display:flex;gap:28px;list-style:none;padding:8px 0;margin:10px 0 18px;justify-content:center}
+.description{margin-left:0;}
+.Tabs li a{color:#333;text-decoration:none;padding:8px 14px;border-radius:8px;transition:all .18s;display:inline-block}
+.Tabs li a:hover{background:rgba(251,133,0,0.08);color:var(--accent-2)}
+
+/* Task input accessibility */
+.task-input{max-width:1100px;margin:18px auto;padding:12px}
+.task-input form{display:flex;gap:10px;flex-wrap:wrap;padding:12px;background:linear-gradient(180deg,#fff,#f7f7f7);border-radius:10px;border:1px solid #eee;align-items:center}
+.task-input input[type=text],.task-input input[type=date],.task-input select{padding:12px;border-radius:8px;border:1px solid #ddd;font-size:1rem;min-width:160px}
+.task-input button{background:var(--accent);border:none;color:#111;padding:12px 18px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(251,133,0,0.18)}
+.task-input button:hover{transform:translateY(-2px)}
+
+/* Button icon and colorful variants */
+.btn-icon{display:inline-block;margin-right:8px;font-size:1.1rem;line-height:1}
+.btn-text{vertical-align:middle}
+
+.btn-add{background:linear-gradient(90deg,#00c853,#b2ff59);color:#012;box-shadow:0 8px 20px rgba(0,200,83,0.18)}
+.btn-add:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,200,83,0.25)}
+
+.btn-complete{background:linear-gradient(90deg,#00a8ff,#00e5ff);color:#022;box-shadow:0 8px 20px rgba(0,168,255,0.18)}
+.btn-complete:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,168,255,0.25)}
+
+.btn-delete{background:linear-gradient(90deg,#ff5252,#ff8a80);color:#210;box-shadow:0 8px 20px rgba(255,82,82,0.16)}
+.btn-delete:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(255,82,82,0.24)}
+
+.edit-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;color:white;background:linear-gradient(90deg,#7c4dff,#b388ff);box-shadow:0 8px 20px rgba(124,77,255,0.16)}
+.edit-btn:hover{transform:translateY(-3px)}
+
+.auto-breakdown-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;color:white;background:linear-gradient(90deg,#ffb300,#ffd54f);box-shadow:0 8px 20px rgba(255,179,0,0.14)}
+.auto-breakdown-btn:hover{transform:translateY(-3px)}
+
+.btn-add-subtask{background:linear-gradient(90deg,#00c853,#b2ff59);border:none;padding:8px 10px;border-radius:8px;color:#012;display:inline-flex;align-items:center;gap:6px}
+.btn-add-subtask:hover{transform:translateY(-2px)}
+
+/* Subtle pulsing for attention */
+@keyframes pulse-attn{0%{box-shadow:0 0 0 rgba(255,215,0,0.0)}50%{box-shadow:0 8px 20px rgba(255,215,0,0.12)}100%{box-shadow:0 0 0 rgba(255,215,0,0.0)}}
+.task-input .btn-add{animation: pulse-attn 3s ease-in-out infinite}
+
+/* Tasks as cards for focus */
+.task-sections{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;min-width:0}
+.task-section{background:var(--card-bg);padding:18px;border-radius:12px;border:1px solid #f0f0f0;min-height:120px}
+.task-section h2{font-size:1.2rem;margin-bottom:12px;color:var(--accent-2);text-align:center}
+
+.task-section ul{list-style:none;padding:0;margin:0}
+.task-section li{background:#fff;padding:12px;border-radius:8px;margin-bottom:10px;display:flex;flex-direction:column;border-left:6px solid var(--accent);box-shadow:0 4px 12px rgba(0,0,0,0.03);overflow-wrap:break-word}
+
+/* Prevent sidebar overlapping by ensuring main column stays above sticky sidebar if any overlap occurs */
+.activities-container{align-items:start;grid-template-columns: 1fr}
+.task-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.task-name{font-weight:700;font-size:1.05rem}
+.task-date{font-size:0.85rem;color:#666}
+
+.task-actions{display:flex;gap:8px;margin-top:10px}
+.task-actions button{flex:1;padding:10px;border-radius:8px;border:none;font-weight:700;cursor:pointer}
+.task-actions form{flex:1}
+
+.task-actions button[type=submit], .task-actions .btn-complete{background:var(--accent-2);color:white}
+.task-actions .delete-btn, .task-actions .btn-abandon{background:var(--danger);color:white}
+.task-actions .edit-btn{background:#0077b6;color:white}
+.task-actions .auto-breakdown-btn{background:#6c757d;color:white}
+
+/* Subtasks style */
+.subtasks-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.subtasks-list li{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;background:#fafafa}
+.subtasks-list li.completed{opacity:0.7;text-decoration:line-through}
+.subtask-check{background:transparent;border:none;font-size:1.1rem}
+
+/* Sidebar */
+.activities-sidebar{position:sticky;top:90px;align-self:start}
+.upcoming-tasks-sidebar{background:#fff;padding:14px;border-radius:10px;border:1px solid #eee}
+.upcoming-tasks-sidebar h3{margin:0 0 8px;font-size:1.05rem;color:#3a3a3a}
+
+/* Sidebar stacked panels to reduce visual jumble */
+.sidebar-panel{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.sidebar-stat{background:#fff;padding:12px;border-radius:10px;border:1px solid #f0f0f0;text-align:center}
+.sidebar-stat h4{margin:0;font-size:0.95rem;color:#333}
+.points-value{font-size:1.6rem;font-weight:700;color:var(--accent-2);margin-top:6px}
+.focus-mode-panel{background:linear-gradient(90deg,#fff8eb,#fff3d6);padding:12px;border-radius:10px;border:1px solid #ffedd5}
+.focus-mode-panel h4{margin:0 0 8px}
+.timer-display{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+.timer-display #timerLabel{font-weight:700;font-size:1.1rem}
+.timer-controls{display:flex;gap:8px}
+.timer-btn{background:#ffb300;border:none;padding:6px 10px;border-radius:6px;color:#fff}
+.focus-tips{font-size:0.85rem;color:#666;margin-top:8px}
+.energy-panel{background:#fff;padding:10px;border-radius:10px;border:1px solid #f0f0f0}
+.energy-panel h4{margin:0 0 8px}
+
+/* Collapsible panel styles */
+.collapsible{overflow:hidden;transition:max-height .28s ease, padding .22s ease, opacity .22s ease}
+.collapsible.collapsed{max-height:0;padding-top:0;padding-bottom:0;opacity:0}
+.collapsible:not(.collapsed){max-height:420px;padding:10px;opacity:1}
+
+/* Corner panel specific tweaks */
+.corner-upcoming{position:fixed;right:16px;top:120px;width:220px;z-index:55;left:auto;max-height:40vh;overflow:auto}
+.corner-upcoming .corner-header{background:transparent;padding:4px 6px}
+.corner-upcoming .upcoming-tasks-sidebar{padding:10px;margin:0}
+.corner-upcoming .upcoming-tasks-sidebar h3{margin:0 0 6px}
+.corner-upcoming .no-tasks{margin:6px 0 0}
+
+/* Collapsible handle and hover-reveal for corner panel (now on right) */
+.corner-upcoming{transition:transform .22s ease, box-shadow .22s ease}
+.corner-upcoming .corner-handle{
+.corner-upcoming .corner-handle{
+  position:absolute;right:-64px;top:6px;background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #eee;color:var(--accent-2);font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,0.08);cursor:pointer;transform:translateX(6px);transition:transform .18s ease, opacity .18s ease}
+.corner-upcoming.collapsed{transform:translateX(200px)}
+.corner-upcoming.collapsed .corner-handle{transform:translateX(0);opacity:1}
+.corner-upcoming:hover{transform:translateX(0);box-shadow:0 10px 30px rgba(0,0,0,0.12)}
+.corner-upcoming:hover .upcoming-tasks-sidebar{box-shadow:0 12px 40px rgba(0,0,0,0.12)}
+
+/* Ensure handle is hidden on small screens where panel is not present */
+@media(max-width:1200px){
+  .corner-upcoming .corner-handle{display:none}
+}
+
+/* Corner stats (moved to right and laid out horizontally) */
+.corner-stats{position:fixed;right:16px;top:120px;z-index:70;transition:transform .22s ease, box-shadow .22s ease;max-height:40vh;overflow:auto;display:flex;flex-direction:row;gap:12px;align-items:flex-start;padding:6px}
+.corner-stats.collapsed{transform:translateX(220px)}
+.corner-stats .corner-stats-handle{position:absolute;left:-56px;top:6px;display:flex;align-items:center;justify-content:center;width:48px;height:40px;border-radius:8px;background:#fff;border:1px solid #eee;box-shadow:0 6px 16px rgba(0,0,0,0.08);cursor:pointer;color:var(--accent-2);font-weight:700}
+.corner-stats .corner-stats-content{display:flex;flex-direction:row;gap:12px;align-items:flex-start}
+.corner-stats .top-panel{background:#fff;padding:10px;border-radius:10px;border:1px solid #eee;min-width:140px}
+.corner-stats .panel-title{font-weight:700;margin-bottom:6px}
+.corner-stats .points-value{font-size:1.6rem;color:var(--accent-2);font-weight:800}
+.corner-stats .streak-current{font-weight:700;color:#ff6f00}
+.corner-stats .timer-display{display:flex;align-items:center;gap:8px}
+@media(max-width:1200px){
+  .corner-stats{display:none}
+}
+
+/* Make the handle pop slightly on hover/focus to indicate interactivity */
+.corner-upcoming .corner-handle:hover, .corner-upcoming .corner-handle:focus{
+  transform:translateX(2px) scale(1.02);
+  box-shadow:0 12px 28px rgba(0,0,0,0.14);
+}
+
+/* Top-right panels collapse styling */
+.front-header-right .collapsible{transition:max-height .28s ease, opacity .2s ease}
+.front-header-right .collapsible.collapsed{max-height:0;padding:0;opacity:0}
+.front-header-right .collapsible:not(.collapsed){max-height:1000px;opacity:1}
+.top-panels.top-panels-right .top-panel{box-shadow:0 1px 0 rgba(0,0,0,0.04)}
+
+/* reveal collapsed top-panels on hover (peek preview) */
+.front-header-right:hover .collapsible{max-height:1000px;opacity:1}
+.front-header-right .top-panel .panel-title{font-weight:700;margin-bottom:6px}
+.top-panel .points-value{font-size:1.6rem;color:var(--accent-2);font-weight:800}
+.top-panel .streak-current{font-size:1.15rem;font-weight:700;color:#ff6f00}
+.top-panel .streak-best{font-size:0.85rem;color:#bf360c}
+.top-panel.focus .timer-display{display:flex;align-items:center;gap:8px}
+.top-panel.focus #timerLabel{font-weight:800;color:var(--accent-2)}
+.topPanelsToggle{background:#fff;border:1px solid #e6e6e6;padding:6px 8px;border-radius:8px;cursor:pointer}
+.front-header-right{position:relative}
+
+/* collapsed small state for top-right panels — shows only a small handle */
+.front-header-right.collapsed{width:48px;overflow:visible}
+.top-panels-handle{position:absolute;left:-56px;top:0;display:flex;align-items:center;justify-content:center;width:48px;height:40px;border-radius:8px;background:#fff;border:1px solid #eee;box-shadow:0 6px 16px rgba(0,0,0,0.08);cursor:pointer;color:var(--accent-2);font-weight:700}
+.front-header-right.collapsed .collapsible{max-height:0;opacity:0;pointer-events:none}
+.front-header-right.collapsed:hover .collapsible{max-height:1000px;opacity:1;pointer-events:auto}
+.top-panels-handle:hover{transform:translateX(-2px);box-shadow:0 10px 28px rgba(0,0,0,0.12)}
+
+/* make top-panels appear as a small peek when collapsed */
+.front-header-right .collapsible.collapsed{pointer-events:none}
+.front-header-right .collapsible.collapsed .top-panel{opacity:0.9}
+
+/* reduce side width on small screens */
+@media(max-width:1100px){
+  .activities-container{grid-template-columns:1fr}
+  .activities-sidebar{width:100%;order:2;position:relative;top:0}
+}
+.upcoming-tasks-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px dashed #f0f0f0}
+
+.focus-mode{background:linear-gradient(90deg,#fff8eb,#fff3d6);border-radius:10px;padding:12px;border:1px solid #ffedd5}
+.timer-display{display:flex;flex-direction:column;align-items:center;gap:8px}
+#timerLabel{font-size:1.6rem;font-weight:800;color:var(--accent-2)}
+.timer-controls{display:flex;gap:8px}
+.timer-btn{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
+.focus-tips{font-size:0.9rem;color:#6b6b6b;margin-top:8px}
+
+/* Larger targets for ADHD users */
+button, input[type=submit], .task-actions button{min-height:44px}
+
+/* Reduce overall page clutter by limiting max widths inside cards */
+.quest-card{max-width:100%;}
+
+/* Slightly smaller desktop padding on header to reduce white space */
+@media(min-width:1200px){
+  .front{padding-top:12px}
+}
+
+/* Reduced motion for calmer UI (prefers-reduced-motion support) */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important}
+}
+
+@media(max-width:1100px){
+  .task-sections{grid-template-columns:repeat(2,1fr)}
+  .activities-container{grid-template-columns:1fr}
+}
+
+@media(max-width:800px){
+  .task-sections{grid-template-columns:1fr}
+  .activities-container{grid-template-columns:1fr}
+  .activities-sidebar{width:100%;order:2}
+  .front{padding:12px}
+  .Tabs{gap:12px}
+}
+
+/* Smooth transitions for task card repositioning */
+.task-section{transition:transform .24s ease, margin .24s ease, box-shadow .24s ease;will-change:transform,margin}
+.task-sections{transition:all .24s ease}
+.task-section li{transition:all .22s ease}
+
+/* Ensure cards cannot float over the sidebar accidentally */
+.task-section, .task-section ul, .task-section li {position:relative}
+
+/* Fixed corner panel on the top-left for quick glance */
+.corner-upcoming{position:fixed;left:18px;top:140px;width:260px;z-index:55}
+.corner-upcoming .upcoming-tasks-sidebar{padding:12px}
+
+@media(max-width:1200px){
+  /* hide the fixed corner on narrower screens to prevent overlap */
+  .corner-upcoming{display:none}
+}
