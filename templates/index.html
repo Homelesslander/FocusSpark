@@ -23,37 +23,48 @@
             <div id="definitionBox" class="definition-box">
                 <p>This platform is built to support individuals by making task management simple, motivating, and fun. Through a gamified system, tasks become challenges that earn you points, streaks, and progress milestones.</p>
             </div>
+
+            <!-- small prompt box -> scroll to auth section -->
+            <div class="scroll-box">
+                <a class="scroll-link" href="#authSection">Scroll to Register or Login Below ↓</a>
+            </div>
         </main>
 
         <div class="auth-wrapper">
             <div class="auth-container">
                 <!-- Register on the left, Login on the right -->
-                <div id="registerBox" class="register-box fade-in">
-                    <h2>Register</h2>
-                    <form action="{{ url_for('auth.register') }}" method="POST">
-                        <label>Username:</label>
-                        <input type="text" name="username" required>
-                        <label>Password:</label>
-                        <input type="password" name="password" required>
-                        <label>Role:</label>
-                        <select name="role">
-                            <option value="child" selected>Child</option>
-                            <option value="parent">Parent / Guardian</option>
-                        </select>
-                        <button type="submit">Register</button>
-                    </form>
-                </div>
+                    <div id="authSection" class="auth-bubbles">
+                        <div class="bubble login-bubble">
+                            <div id="loginBox" class="login-box sleek-card">
+                                <h2>Login</h2>
+                                <form action="{{ url_for('auth.login') }}" method="POST">
+                                    <label>Username:</label>
+                                    <input type="text" name="username" required>
+                                    <label>Password:</label>
+                                    <input type="password" name="password" required>
+                                    <button type="submit">Login</button>
+                                </form>
+                            </div>
+                        </div>
 
-                <div id="loginBox" class="login-box fade-in">
-                    <h2>Login</h2>
-                    <form action="{{ url_for('auth.login') }}" method="POST">
-                        <label>Username:</label>
-                        <input type="text" name="username" required>
-                        <label>Password:</label>
-                        <input type="password" name="password" required>
-                        <button type="submit">Login</button>
-                    </form>
-                </div>
+                        <div class="bubble register-bubble">
+                            <div id="registerBox" class="register-box sleek-card">
+                                <h2>Register</h2>
+                                <form action="{{ url_for('auth.register') }}" method="POST">
+                                    <label>Username:</label>
+                                    <input type="text" name="username" required>
+                                    <label>Password:</label>
+                                    <input type="password" name="password" required>
+                                    <label>Role:</label>
+                                    <select name="role">
+                                        <option value="child" selected>Child</option>
+                                        <option value="parent">Parent / Guardian</option>
+                                    </select>
+                                    <button type="submit">Register</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
             </div>
         </div>
 
