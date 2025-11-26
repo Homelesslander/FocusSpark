@@ -918,6 +918,22 @@ def reset_rewards():
     conn.close()
     return redirect(url_for('settings'))
 
+
+@app.route('/reset_custom_rewards', methods=['POST'])
+def reset_custom_rewards():
+    """Delete custom rewards added by the current user (or all users if `all=1`)."""
+    username = session.get('user') if session else None
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("DELETE FROM custom_rewards WHERE username = ?", (username,))
+    else:
+        if request.form.get('all') == '1':
+            c.execute("DELETE FROM custom_rewards")
+    conn.commit()
+    conn.close()
+    return redirect(url_for('settings'))
+
 @app.route("/add_task", methods=["POST"])
 def add_task():
     task_name = request.form.get("task_name")
