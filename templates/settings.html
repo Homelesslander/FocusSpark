@@ -53,6 +53,22 @@
     </section>
 
     <section style="margin-top:24px;">
+      <h3>Active Rewards</h3>
+      {% if username %}
+      <p>Remove all your currently active rewards (this will clear any timed rewards you have running).</p>
+      <form method="post" action="{{ url_for('reset_rewards') }}">
+        <button type="submit">Reset my active rewards</button>
+      </form>
+      {% else %}
+      <p>Not signed in. To clear all users' active rewards, use the button below.</p>
+      <form method="post" action="{{ url_for('reset_rewards') }}">
+        <input type="hidden" name="all" value="1" />
+        <button type="submit">Reset all users' active rewards</button>
+      </form>
+      {% endif %}
+    </section>
+
+    <section style="margin-top:24px;">
       <h3>Email Reminders</h3>
       {% if username %}
       <p>Enter your email and choose how often you'd like to receive reminders about upcoming tasks.</p>
