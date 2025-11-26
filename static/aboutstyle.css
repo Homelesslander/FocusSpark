@@ -129,6 +129,8 @@ strong {
   border-radius: 8px;
 }
 .about-hero{
+  /* ensure the hero card sits comfortably below the fixed nav bar */
+  margin-top: 40px;
   padding: 40px 16px; /* reduced padding so content fits on smaller viewports */
   display:flex;
   align-items:center;
