@@ -20,9 +20,24 @@
     .settings-box p { color: #444; }
     .settings-box button { background: #fb8500; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
     .settings-box button:hover { background: #ff8c42; }
+    /* Background image for settings page with blur */
+    .settings-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
+      background-size: cover;
+      background-position: center center;
+      filter: blur(6px) saturate(1.05);
+      opacity: 0.85;
+      z-index: -1;
+      pointer-events: none;
+    }
+    /* Ensure page content sits above background */
+    .settings-page-content { position: relative; z-index: 1; }
   </style>
 </head>
 <body>
+  <div class="settings-bg" aria-hidden="true"></div>
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -56,7 +71,7 @@
     </div>
   </div>
 
-  <div style="max-width:700px;margin:24px auto;">
+  <div class="settings-page-content" style="max-width:700px;margin:24px auto;">
     <p>Signed in as: <strong>{{ username if username else 'Not signed in' }}</strong></p>
 
     <section class="settings-box">

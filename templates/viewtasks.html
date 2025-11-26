@@ -8,8 +8,14 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+  </style>
 </head>
 <body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -110,6 +116,7 @@
       </div>
     </div> <!-- End activities-main -->
   </div> <!-- End activities-container -->
-
+  </div>
+</div>
 </body>
 </html>

@@ -11,6 +11,20 @@
   <style>
     
     .progress-container { width: 90%; max-width: 900px; margin: 24px auto; }
+    /* Blurred background for activity pages */
+    .page-bg {
+      position: fixed;
+      inset: 0 0 0 0;
+      background-image: url("{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}");
+      background-size: cover;
+      background-position: center;
+      filter: blur(6px) saturate(110%);
+      opacity: 0.62;
+      z-index: -1;
+    }
+    .page-content { position: relative; z-index: 1; }
+
+    /* Tabs styling is provided by global CSS `activitiesstyle.css` */
     .bar { width: 100%; background: linear-gradient(90deg, #fff7e6 0%, #fff 100%); border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid rgba(251,133,0,0.12); margin-bottom: 20px; }
     .bar-inner { height: 36px; background: linear-gradient(90deg, #fb8500 0%, #f39c12 100%); width: 0%; color: #000; text-align: center; line-height: 36px; border-radius: 8px; transition: width 0.6s ease; font-weight: 700; }
     .breakdown { margin-top: 12px; }
@@ -94,6 +108,8 @@
   </style>
 </head>
 <body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -125,6 +141,8 @@
         <div id="points">Your Points: {{ points }}</div>
       </div>
     </div>
+  </div>
+
   </div>
 
   <div class="progress-container">
@@ -254,6 +272,7 @@
 
     
   </div>
-
+</div>
+</div>
 </body>
 </html>
