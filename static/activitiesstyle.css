@@ -1,20 +1,34 @@
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
-    color: #333;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f6f8fb;
+  color: #333;
 }
-menu{ width: 400px; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    height: 70px; 
-} 
-ul {float: left; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    list-style: none;}
+menu{ width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 70px;
+  background: transparent;
+  margin-top: 8px;
+}
+menu ul {
+  display: flex;
+  gap: 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+}
+ul {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
 ul li {margin: 0 25px; 
     font-size: 14px;} 
@@ -28,8 +42,14 @@ ul li a{
     transition: .4s;
 }
 ul li a:hover{
-    background-color: lightblue;
-    color: white;
+  background: rgba(251,133,0,0.08);
+  color: #fb8500;
+}
+
+/* Active state matching the Tabs style */
+.Tabs li a.active, .menu ul li a.active, ul li a.active{
+  background: rgba(251,133,0,0.12);
+  color: #fb8500;
 }
 h1 {
   font-size: 2.5em;
@@ -46,23 +66,53 @@ h1 {
   top: 20px; 
   left: 30px;
 }
-.tabs {
-    list-style-type: none;
-    padding: 0;
-    display: flex;
-    gap: 15px;
-    margin-top: 20px;
-    margin-left: 30px;
+/* Centered title/description when inside the front header */
+.front-header-left .page-title {
+  text-align: center;
+  margin: 8px 0 0 0;
+  position: static;
+  top: auto;
+  left: auto;
+  font-size: 2rem;
+}
+.front-header-left .page-title { color: #fb8500; }
+.front-header-left .description {
+  position: static;
+  top: auto;
+  left: auto;
+  text-align: center;
+  color: #4b5563;
+  margin-top: 6px;
+}
+.tabs, .Tabs {
+  list-style-type: none;
+  padding: 0;
+  display: flex;
+  gap: 18px;
+  margin-top: 14px;
+  margin-left: 0;
+  justify-content: center;
 }
 .task-input {
   clear: both;
-  margin: 20px 30px;
+  margin: 20px auto;
+  max-width: 1100px;
+  padding: 0 16px;
+}
+.activities-container {
+  max-width: 1200px;
+  margin: 36px auto 30px auto;
+  padding: 0 16px;
+}
+.activities-main {
+  width: 100%;
 }
 .task-sections {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); 
+  grid-template-columns: repeat(3, 1fr);
   gap: 30px;
-  margin: 30px;
+  margin: 24px auto;
+  align-items: start;
 }
 
 .task-section {
@@ -74,8 +124,9 @@ h1 {
 
 .task-section h2 {
   text-align: center;
-  margin-bottom: 15px;
-  color: #007acc;
+  margin-bottom: 18px;
+  color: #fb8500;
+  font-size: 1.2rem;
 }
 
 .task-section ul {
@@ -114,34 +165,40 @@ h1 {
   text-align: center;
 }
 #greeting {
-  position: absolute;
-  top: 20px;      /* distance from top */
-  right: 40px;    /* distance from right edge */
-  font-size: 1.2em;
+  position: static;
+  top: auto;
+  right: auto;
+  font-size: 1.1rem;
   color: #2c3e50;
+  text-align: center;
+  margin: 8px 0 0 0;
 }
 #points {
-  position: absolute;
-  top: 52px;      /* place slightly below the greeting */
-  right: 40px;
-  font-size: 1.1em;
+  position: static;
+  top: auto;
+  right: auto;
+  font-size: 1rem;
   color: #2c3e50;
+  text-align: center;
+  margin-top: 6px;
 }
 #points removed
 .task-section ul li {
   display: block;
-  margin-bottom: 15px;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  border-left: 4px solid #007acc;
+  margin-bottom: 18px;
+  padding: 18px;
+  background: #ffffff;
+  border-radius: 10px;
+  border-left: 6px solid rgba(0,122,204,0.12);
+  box-shadow: 0 6px 18px rgba(20,30,40,0.04);
+  font-size: 1.02rem;
 }
 
 .task-section li .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
