@@ -11,6 +11,31 @@
     height: 109vh;
 }
 
+/* Homepage-only blurred background using the image 'about tab.jpg' */
+.home-page::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image: url('/static/images/about tab.jpg');
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    filter: blur(8px) saturate(1.05);
+    transform: scale(1.02);
+}
+.home-page::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    /* much more transparent overlay so the image isn't washed out */
+    background: linear-gradient(rgba(248,249,250,0.06), rgba(248,249,250,0.06));
+}
+
+/* make sure the old homepage-specific main background doesn't show through on the home page */
+.home-page .main { background-image: none !important; }
+
 .navbar {
     display: flex;
     align-items: center;

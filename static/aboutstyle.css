@@ -13,7 +13,6 @@
 }
 
 /* Prevent content from jumping under the fixed menu */
-body { padding-top: 64px; font-family: Arial, sans-serif; line-height: 1.6; margin: 0; color: #333; background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }
 /* Ensure the top menu is positioned consistently across pages */
 .menu {
   position: fixed;
@@ -29,16 +28,10 @@ body { padding-top: 64px; font-family: Arial, sans-serif; line-height: 1.6; marg
 }
 
 /* Reserve space so content doesn't jump under the menu */
-body { padding-top: 64px; font-family: Arial, sans-serif; line-height: 1.6; margin: 0; color: #333; background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }
 body {
   font-family: Arial, sans-serif;
   line-height: 1.6;
   margin: 0; 
-  background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg');
-  background-size: cover;        
-  background-position: center;   
-  background-repeat: no-repeat; 
-  background-attachment: fixed;  
   color: #333;
 }
 html, body {
@@ -46,18 +39,30 @@ html, body {
   box-sizing: border-box;
 }
 *, *:before, *:after { box-sizing: inherit; }
-body {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  margin: 0;
-  /* background image with a soft translucent overlay so cards remain readable */
-  background-image: linear-gradient(rgba(243,246,249,0.65), rgba(243,246,249,0.65)), url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg');
+/* place the full-screen blurred about image behind everything using a pseudo-element */
+.about-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2; /* behind page content */
+  background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: scroll;
+  filter: blur(8px) saturate(1.06);
+  transform: scale(1.02); /* helps hide blurred edges on narrow viewports */
+}
+
+/* translucent overlay above the background image so text/cards remain readable */
+.about-page { 
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0; 
   color: #333;
   overflow-x: hidden; /* prevent horizontal scrolling */
+  /* keep a soft translucent overlay (cards remain readable) */
+  background-image: linear-gradient(rgba(243,246,249,0.65), rgba(243,246,249,0.65));
+  background-attachment: scroll;
 }
 
 /* navigation container for About page: subtle translucent background behind links */
