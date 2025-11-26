@@ -160,7 +160,6 @@ def ensure_tasks_table():
 
 
 def ensure_custom_rewards_table():
-    
     conn = get_db_conn()
     c = conn.cursor()
     c.execute('''
@@ -168,9 +167,20 @@ def ensure_custom_rewards_table():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             title TEXT NOT NULL,
-            cost INTEGER NOT NULL
+            cost INTEGER NOT NULL,
+            duration_minutes INTEGER DEFAULT 0
         )
     ''')
+    conn.commit()
+    conn.close()
+
+    # ensure duration column exists for older DBs
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("PRAGMA table_info(custom_rewards)")
+    cols = [r[1] for r in c.fetchall()]
+    if 'duration_minutes' not in cols:
+        c.execute("ALTER TABLE custom_rewards ADD COLUMN duration_minutes INTEGER DEFAULT 0")
     conn.commit()
     conn.close()
 
@@ -206,9 +216,19 @@ def ensure_redemptions_table():
             title TEXT NOT NULL,
             cost INTEGER NOT NULL,
             redeemed_at TEXT NOT NULL,
+            expires_at TEXT,
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
+    conn.commit()
+    conn.close()
+    # ensure expires_at column exists for older DBs
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("PRAGMA table_info(redemptions)")
+    cols = [r[1] for r in c.fetchall()]
+    if 'expires_at' not in cols:
+        c.execute("ALTER TABLE redemptions ADD COLUMN expires_at TEXT")
     conn.commit()
     conn.close()
 
@@ -584,6 +604,18 @@ def activities():
     tasks = get_tasks_grouped()
     calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
+    # determine whether the current user is a parent (used to show parent-specific UI)
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
     # this week (0-7 days)
     upcoming_tasks = get_upcoming_tasks(username, days=7) if username else []
     # next week: days 8-14
@@ -603,7 +635,7 @@ def activities():
         conn.close()
         streak = get_user_streak(username)
 
-    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta)
+    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
 @app.route('/calendar')
@@ -870,6 +902,22 @@ def reset_points():
     conn.close()
     return redirect(url_for('settings'))
 
+
+@app.route('/reset_rewards', methods=['POST'])
+def reset_rewards():
+    """Remove active redeemed rewards for the current user (or all users if not signed in and `all=1`)."""
+    username = session.get('user') if session else None
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("DELETE FROM redemptions WHERE username = ?", (username,))
+    else:
+        if request.form.get('all') == '1':
+            c.execute("DELETE FROM redemptions")
+    conn.commit()
+    conn.close()
+    return redirect(url_for('settings'))
+
 @app.route("/add_task", methods=["POST"])
 def add_task():
     task_name = request.form.get("task_name")
@@ -904,7 +952,19 @@ def complete_task(importance, task_index):
     if importance in grouped and 0 <= task_index < len(grouped[importance]) and username:
         task_id = grouped[importance][task_index].get('id')
         if task_id:
-            complete_task_and_award(task_id, username)
+            # Always award points to the task's owner if set; otherwise award to the current user.
+            conn = get_db_conn()
+            c = conn.cursor()
+            c.execute("SELECT user FROM tasks WHERE id = ?", (task_id,))
+            trow = c.fetchone()
+            conn.close()
+
+            target_username = username
+            if trow and 'user' in trow.keys() and trow['user']:
+                # prefer the task's assigned user
+                target_username = trow['user']
+
+            complete_task_and_award(task_id, target_username)
     return redirect(url_for("activities"))
 
 
@@ -970,12 +1030,11 @@ def delete_subtask(subtask_id):
 
 
 DEFAULT_REWARDS = [
-    
-    (1, "5 minute phone break", 20),
-    (2, "30 minute TV", 60),
-    (3, "Snack of choice", 40),
-    (4, "Buy something small", 150),
-    (5, "Game time 1 hour", 100),
+    (1, "5 minute phone break", 20, 5),
+    (2, "30 minute TV", 60, 30),
+    (3, "Snack of choice", 40, 10),
+    (4, "Buy something small", 150, 10),
+    (5, "Game time 1 hour", 100, 60),
 ]
 
 def get_user_points(username):
@@ -1046,11 +1105,12 @@ def deduct_points(username, amount):
 def get_default_rewards_for_display(username):
     points = get_user_points(username)
     rewards = []
-    for rid, title, cost in DEFAULT_REWARDS:
+    for rid, title, cost, duration in DEFAULT_REWARDS:
         rewards.append({
             'id': rid,
             'title': title,
             'cost': cost,
+            'duration_minutes': duration,
             'claimable': points >= cost
         })
     return rewards
@@ -1058,16 +1118,16 @@ def get_default_rewards_for_display(username):
 def get_custom_rewards_for_user(username):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost FROM custom_rewards WHERE username = ? ORDER BY cost ASC", (username,))
+    c.execute("SELECT id, title, cost, duration_minutes FROM custom_rewards WHERE username = ? ORDER BY cost ASC", (username,))
     rows = c.fetchall()
     conn.close()
-    return [{'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'claimable': get_user_points(username) >= r['cost']} for r in rows]
+    return [{'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'duration_minutes': r['duration_minutes'] if 'duration_minutes' in r.keys() else 0, 'claimable': get_user_points(username) >= r['cost']} for r in rows]
 
-def log_redemption(username, reward_type, reward_id, title, cost):
+def log_redemption(username, reward_type, reward_id, title, cost, expires_at=None):
     conn = get_db_conn()
     c = conn.cursor()
     redeemed_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    c.execute("INSERT INTO redemptions (username, reward_type, reward_id, title, cost, redeemed_at) VALUES (?, ?, ?, ?, ?, ?)", (username, reward_type, reward_id, title, cost, redeemed_at))
+    c.execute("INSERT INTO redemptions (username, reward_type, reward_id, title, cost, redeemed_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (username, reward_type, reward_id, title, cost, redeemed_at, expires_at))
     conn.commit()
     conn.close()
 
@@ -1075,10 +1135,30 @@ def get_redeemed_rewards(username):
     """Get all redeemed rewards for a user, ordered by most recent first."""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost, redeemed_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 10", (username,))
-    rewards = [{'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at']} for r in c.fetchall()]
+    c.execute("SELECT id, title, cost, redeemed_at, expires_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 50", (username,))
+    rows = c.fetchall()
     conn.close()
-    return rewards
+
+    active = []
+    now = datetime.datetime.now()
+    for r in rows:
+        expires = r['expires_at'] if 'expires_at' in r.keys() else None
+        # keep reward if no expires_at (permanent) or expires in the future
+        if not expires:
+            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': None})
+            continue
+        try:
+            exp_dt = datetime.datetime.fromisoformat(expires)
+        except Exception:
+            # fallback to parsing common format
+            try:
+                exp_dt = datetime.datetime.strptime(expires, '%Y-%m-%d %H:%M:%S')
+            except Exception:
+                continue
+        if exp_dt > now:
+            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': exp_dt.isoformat()})
+
+    return active
 
 def nearest_reward_info(rewards, username):
     """Given a list of reward dicts (with cost), return the nearest non-claimable reward and pts needed."""
@@ -1134,10 +1214,13 @@ def redeem_default(reward_id):
     matched = next((r for r in DEFAULT_REWARDS if r[0] == reward_id), None)
     if not matched:
         return "Unknown reward", 400
-    _, title, cost = matched
+    _, title, cost, duration = matched
     if not deduct_points(username, cost):
         return "Not enough points", 400
-    log_redemption(username, 'default', reward_id, title, cost)
+    expires_at = None
+    if duration and duration > 0:
+        expires_at = (datetime.datetime.now() + datetime.timedelta(minutes=duration)).isoformat()
+    log_redemption(username, 'default', reward_id, title, cost, expires_at)
     
     return redirect(url_for('redeem'))
 
@@ -1149,16 +1232,20 @@ def redeem_custom(reward_id):
         return redirect(url_for('home'))
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost FROM custom_rewards WHERE id = ? AND username = ?", (reward_id, username))
+    c.execute("SELECT id, title, cost, duration_minutes FROM custom_rewards WHERE id = ? AND username = ?", (reward_id, username))
     r = c.fetchone()
     conn.close()
     if not r:
         return "Reward not found", 404
     title = r['title']
     cost = r['cost']
+    duration = r['duration_minutes'] if 'duration_minutes' in r.keys() else 0
     if not deduct_points(username, cost):
         return "Not enough points", 400
-    log_redemption(username, 'custom', reward_id, title, cost)
+    expires_at = None
+    if duration and duration > 0:
+        expires_at = (datetime.datetime.now() + datetime.timedelta(minutes=duration)).isoformat()
+    log_redemption(username, 'custom', reward_id, title, cost, expires_at)
     return redirect(url_for('redeem'))
 
 @app.route('/redeem/add_custom', methods=['POST'])
@@ -1168,18 +1255,104 @@ def add_custom_reward():
         return redirect(url_for('home'))
     title = request.form.get('title', '').strip()
     cost = request.form.get('cost', '').strip()
+    duration_raw = request.form.get('duration', '').strip() or '0'
     try:
         cost = int(cost)
+        duration = int(duration_raw)
     except:
         return "Invalid cost", 400
     if not title or cost <= 0:
         return "Invalid input", 400
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("INSERT INTO custom_rewards (username, title, cost) VALUES (?, ?, ?)", (username, title, cost))
+    c.execute("INSERT INTO custom_rewards (username, title, cost, duration_minutes) VALUES (?, ?, ?, ?)", (username, title, cost, duration))
     conn.commit()
     conn.close()
     return redirect(url_for('redeem'))
+
+
+@app.route('/parent_dashboard')
+def parent_dashboard():
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+
+    # ensure user is a parent
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (username,))
+    row = c.fetchone()
+    # sqlite3.Row does not implement .get(); use indexing by column name
+    if not row or row['role'] != 'parent':
+        conn.close()
+        return redirect(url_for('activities'))
+
+    # list children assigned to this parent
+    c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
+    children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+    conn.close()
+    return render_template('parent_dashboard.html', username=username, children=children)
+
+
+@app.route('/parent/add_child', methods=['POST'])
+def parent_add_child():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+
+    child_username = request.form.get('child_username', '').strip()
+    if not child_username:
+        return redirect(url_for('parent_dashboard'))
+
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id FROM users WHERE username = ?", (child_username,))
+    if not c.fetchone():
+        conn.close()
+        return "Child not found", 404
+
+    c.execute("UPDATE users SET parent_username = ? WHERE username = ?", (parent, child_username))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('parent_dashboard'))
+
+
+@app.route('/parent/add_custom_reward_child', methods=['POST'])
+def parent_add_custom_reward_child():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+
+    child_username = request.form.get('child_username', '').strip()
+    title = request.form.get('title', '').strip()
+    cost_raw = request.form.get('cost', '').strip()
+    try:
+        cost = int(cost_raw)
+    except Exception:
+        return "Invalid cost", 400
+
+    duration_raw = request.form.get('duration', '').strip() or '0'
+    try:
+        duration = int(duration_raw)
+    except Exception:
+        return "Invalid duration", 400
+
+    if not child_username or not title or cost <= 0:
+        return "Invalid input", 400
+
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT parent_username FROM users WHERE username = ?", (child_username,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return "Child not found", 404
+
+    # optionally verify parent owns this child (if assigned). We'll allow creation even if unassigned.
+    c.execute("INSERT INTO custom_rewards (username, title, cost, duration_minutes) VALUES (?, ?, ?, ?)", (child_username, title, cost, duration))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('parent_dashboard'))
 
 
 
