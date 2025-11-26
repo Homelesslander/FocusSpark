@@ -52,6 +52,89 @@
       {% endif %}
     </section>
 
+    <section style="margin-top:24px;">
+      <h3>Active Rewards</h3>
+      {% if username %}
+      <p>Remove all your currently active rewards (this will clear any timed rewards you have running).</p>
+      <form method="post" action="{{ url_for('reset_rewards') }}">
+        <button type="submit">Reset my active rewards</button>
+      </form>
+      {% else %}
+      <p>Not signed in. To clear all users' active rewards, use the button below.</p>
+      <form method="post" action="{{ url_for('reset_rewards') }}">
+        <input type="hidden" name="all" value="1" />
+        <button type="submit">Reset all users' active rewards</button>
+      </form>
+      {% endif %}
+    </section>
+
+    <section style="margin-top:24px;">
+      <h3>Email Reminders</h3>
+      {% if username %}
+      <p>Enter your email and choose how often you'd like to receive reminders about upcoming tasks.</p>
+      <form method="post" action="{{ url_for('update_settings') }}">
+        <div style="margin-bottom:8px;">
+          <label for="email">Email address:</label><br />
+          <input type="email" id="email" name="email" value="{{ email or '' }}" placeholder="you@example.com" style="width:100%;max-width:360px;" />
+        </div>
+        <div style="margin-bottom:8px;">
+          <label><input type="checkbox" name="reminders_enabled" {% if reminders_enabled %}checked{% endif %}/> Enable email reminders</label>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label for="reminder_frequency">Frequency:</label>
+          <select id="reminder_frequency" name="reminder_frequency">
+            <option value="daily" {% if reminder_frequency=='daily' %}selected{% endif %}>Daily</option>
+            <option value="weekly" {% if reminder_frequency=='weekly' %}selected{% endif %}>Weekly</option>
+          </select>
+        </div>
+        <button type="submit">Save email settings</button>
+      </form>
+      <p style="font-size:0.9rem;color:#666;margin-top:8px;">Note: Configure SMTP using environment variables: <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, and optional <code>FROM_EMAIL</code>.</p>
+
+      <div style="margin-top:10px;">
+        <strong>Email verification:</strong>
+        {% if email %}
+          {% if email_verified %}
+            <span style="color:green;margin-left:8px;">Verified ✓</span>
+          {% else %}
+            <form method="post" action="{{ url_for('auth.send_verification') }}" style="display:inline;margin-left:8px;">
+              <button type="submit">Send verification email</button>
+            </form>
+            <span style="color:#666;margin-left:8px;">(check your inbox)</span>
+          {% endif %}
+        {% else %}
+          <span style="color:#666;margin-left:8px;">Set your email above to enable verification</span>
+        {% endif %}
+      </div>
+      {% else %}
+      <p>Sign in to configure email reminders.</p>
+      {% endif %}
+    </section>
+
+    <section style="margin-top:24px;">
+      <h3>Account</h3>
+      {% if username %}
+      <p>Change your password.</p>
+      <form method="post" action="{{ url_for('auth.change_password') }}">
+        <div style="margin-bottom:8px;">
+          <label for="current_password">Current password</label><br />
+          <input type="password" id="current_password" name="current_password" required />
+        </div>
+        <div style="margin-bottom:8px;">
+          <label for="new_password">New password</label><br />
+          <input type="password" id="new_password" name="new_password" required />
+        </div>
+        <div style="margin-bottom:8px;">
+          <label for="confirm_password">Confirm new password</label><br />
+          <input type="password" id="confirm_password" name="confirm_password" required />
+        </div>
+        <button type="submit">Change password</button>
+      </form>
+      {% else %}
+      <p>Sign in to change your account settings.</p>
+      {% endif %}
+    </section>
+
   </div>
 </body>
 </html>

@@ -1,12 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from login import login_bp
 import sqlite3
 import datetime
+import os
+import smtplib
+import ssl
+import threading
+import time
 
 DB_PATH = 'database.db'
 
-
-# Task breakdown patterns for automatically decomposing tasks
 TASK_BREAKDOWN_PATTERNS = {
     "write": [
         "Plan content/outline",
@@ -81,18 +84,10 @@ TASK_BREAKDOWN_PATTERNS = {
 
 
 def auto_breakdown_task(task_name):
-    """
-    Automatically break down a task into subtasks based on keywords.
-    Returns a list of subtask names.
-    """
     task_lower = task_name.lower()
-    
-    # Check for matching keywords
     for keyword, steps in TASK_BREAKDOWN_PATTERNS.items():
         if keyword in task_lower:
             return steps
-    
-    # Generic breakdown for tasks that don't match patterns
     return [
         "Plan approach",
         "Gather resources",
@@ -125,6 +120,13 @@ def ensure_users_table():
     columns = [row[1] for row in c.fetchall()]
     if "points" not in columns:
         c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
+    # Add optional email and reminder preferences columns if missing
+    if "email" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if "reminders_enabled" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
+    if "reminder_frequency" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'weekly'")
 
     conn.commit()
     conn.close()
@@ -139,23 +141,25 @@ def ensure_tasks_table():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             date TEXT,
+            time TEXT,
             importance TEXT NOT NULL,
             user TEXT
         )
     ''')
-    # Ensure 'completed' and 'completed_at' columns exist for tracking progress without deleting rows
+   
     c.execute("PRAGMA table_info(tasks)")
     existing_cols = [row[1] for row in c.fetchall()]
     if "completed" not in existing_cols:
         c.execute("ALTER TABLE tasks ADD COLUMN completed INTEGER DEFAULT 0")
     if "completed_at" not in existing_cols:
         c.execute("ALTER TABLE tasks ADD COLUMN completed_at TEXT")
+    if "time" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN time TEXT")
     conn.commit()
     conn.close()
 
 
 def ensure_custom_rewards_table():
-    
     conn = get_db_conn()
     c = conn.cursor()
     c.execute('''
@@ -163,9 +167,20 @@ def ensure_custom_rewards_table():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             title TEXT NOT NULL,
-            cost INTEGER NOT NULL
+            cost INTEGER NOT NULL,
+            duration_minutes INTEGER DEFAULT 0
         )
     ''')
+    conn.commit()
+    conn.close()
+
+    # ensure duration column exists for older DBs
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("PRAGMA table_info(custom_rewards)")
+    cols = [r[1] for r in c.fetchall()]
+    if 'duration_minutes' not in cols:
+        c.execute("ALTER TABLE custom_rewards ADD COLUMN duration_minutes INTEGER DEFAULT 0")
     conn.commit()
     conn.close()
 
@@ -201,9 +216,19 @@ def ensure_redemptions_table():
             title TEXT NOT NULL,
             cost INTEGER NOT NULL,
             redeemed_at TEXT NOT NULL,
+            expires_at TEXT,
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
+    conn.commit()
+    conn.close()
+    # ensure expires_at column exists for older DBs
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("PRAGMA table_info(redemptions)")
+    cols = [r[1] for r in c.fetchall()]
+    if 'expires_at' not in cols:
+        c.execute("ALTER TABLE redemptions ADD COLUMN expires_at TEXT")
     conn.commit()
     conn.close()
 
@@ -235,8 +260,8 @@ def get_tasks_grouped():
     
     conn = get_db_conn()
     c = conn.cursor()
-    # Only select tasks that are not completed so completed tasks disappear from the Activities page
-    c.execute("SELECT id, name, date, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY id")
+    
+    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY id")
     rows = c.fetchall()
     conn.close()
 
@@ -246,7 +271,6 @@ def get_tasks_grouped():
         if imp not in grouped:
             grouped.setdefault(imp, [])
         
-        # Get subtasks for this task
         conn_subtasks = get_db_conn()
         c_subtasks = conn_subtasks.cursor()
         c_subtasks.execute("SELECT id, name, completed FROM subtasks WHERE parent_task_id = ?", (r['id'],))
@@ -257,10 +281,11 @@ def get_tasks_grouped():
             "id": r['id'],
             "name": r['name'],
             "date": r['date'],
+            "time": r['time'] if 'time' in r.keys() else None,
             "subtasks": subtasks
         })
     
-    # Sort tasks within each importance category by due date (earliest first)
+    
     for imp in grouped:
         grouped[imp].sort(key=lambda x: x['date'] if x['date'] else '9999-12-31')
     
@@ -271,11 +296,11 @@ def get_calendar_tasks():
     """Get tasks organized by date for calendar view"""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, name, date, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY date")
+    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY date")
     rows = c.fetchall()
     conn.close()
     
-    # Organize tasks by date
+    
     tasks_by_date = {}
     for r in rows:
         date = r['date']
@@ -284,7 +309,8 @@ def get_calendar_tasks():
         tasks_by_date[date].append({
             'id': r['id'],
             'name': r['name'],
-            'importance': r['importance']
+            'importance': r['importance'],
+            'time': r['time'] if 'time' in r.keys() else None
         })
     
     return tasks_by_date
@@ -292,8 +318,7 @@ def get_calendar_tasks():
 
 POINTS = {"Major": 100, "Medium": 50, "Minor": 20}
 
-# Weights used to calculate progress percentage. Minor = 1.0, Medium = 1.5 (50% more),
-# Major = Medium * 1.5 = 2.25 (50% more than medium).
+
 WEIGHTS = {"Major": 2.25, "Medium": 1.5, "Minor": 1.0}
 
 
@@ -382,6 +407,15 @@ def insert_task_db(name, date, importance, user=None):
     conn.close()
 
 
+def insert_task_db_with_time(name, date, time_str, importance, user=None):
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("INSERT INTO tasks (name, date, time, importance, user) VALUES (?, ?, ?, ?, ?)",
+              (name, date, time_str, importance, user))
+    conn.commit()
+    conn.close()
+
+
 def delete_task_db(task_id):
     conn = get_db_conn()
     c = conn.cursor()
@@ -395,6 +429,15 @@ def edit_task_db(task_id, name, date, importance):
     c = conn.cursor()
     c.execute("UPDATE tasks SET name = ?, date = ?, importance = ? WHERE id = ?", 
               (name, date, importance, task_id))
+    conn.commit()
+    conn.close()
+
+
+def edit_task_db_with_time(task_id, name, date, time_str, importance):
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ? WHERE id = ?", 
+              (name, date, time_str, importance, task_id))
     conn.commit()
     conn.close()
 
@@ -420,12 +463,12 @@ def update_user_streak(username):
     
     today = datetime.datetime.now().date().isoformat()
     
-    # Get or create streak record
+   
     c.execute("SELECT current_streak, last_completion_date, longest_streak FROM streaks WHERE username = ?", (username,))
     row = c.fetchone()
     
     if not row:
-        # New user - initialize streak
+        
         c.execute("INSERT INTO streaks (username, current_streak, last_completion_date, longest_streak) VALUES (?, 1, ?, 1)",
                   (username, today))
         conn.commit()
@@ -436,24 +479,22 @@ def update_user_streak(username):
     last_date = row['last_completion_date']
     longest_streak = row['longest_streak'] or 0
     
-    # Calculate yesterday's date
+    
     yesterday = (datetime.datetime.now().date() - datetime.timedelta(days=1)).isoformat()
     
-    # Determine new streak
+    
     if last_date == today:
-        # Already completed today - don't change streak
+        
         new_streak = current_streak
     elif last_date == yesterday:
-        # Completed yesterday - continue the streak
+       
         new_streak = current_streak + 1
     else:
-        # Missed a day - reset to 1
+       
         new_streak = 1
     
-    # Update longest streak if new streak is better
     new_longest = max(longest_streak, new_streak)
     
-    # Update streak record
     c.execute("UPDATE streaks SET current_streak = ?, last_completion_date = ?, longest_streak = ? WHERE username = ?",
               (new_streak, today, new_longest, username))
     conn.commit()
@@ -510,15 +551,12 @@ def complete_task_and_award(task_id, username):
             c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
 
        
-        # award points
         c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, username))
 
-        # mark task as completed instead of deleting it so we can compute progress
         completed_at = datetime.datetime.now().isoformat()
         c.execute("UPDATE tasks SET completed = 1, completed_at = ? WHERE id = ?", (completed_at, task_id))
         conn.commit()
         
-        # Update user's daily streak
         update_user_streak(username)
 
     conn.close()
@@ -543,8 +581,7 @@ ensure_streaks_table()
 @app.route("/")
 def home():
     username = session.get('user') if session else None
-    upcoming_tasks = get_upcoming_tasks(username) if username else []
-    return render_template("index.html", upcoming_tasks=upcoming_tasks, username=username)
+    return render_template("index.html", username=username)
 
 
 @app.route("/about")
@@ -567,7 +604,24 @@ def activities():
     tasks = get_tasks_grouped()
     calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
-    upcoming_tasks = get_upcoming_tasks(username) if username else []
+    # determine whether the current user is a parent (used to show parent-specific UI)
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    # this week (0-7 days)
+    upcoming_tasks = get_upcoming_tasks(username, days=7) if username else []
+    # next week: days 8-14
+    upcoming_all_14 = get_upcoming_tasks(username, days=14) if username else []
+    today = datetime.datetime.now().date()
+    upcoming_tasks_next = [t for t in upcoming_all_14 if t.get('date') and datetime.datetime.fromisoformat(t['date']).date() > (today + datetime.timedelta(days=7))]
 
     points = 0
     streak = {'current': 0, 'longest': 0}
@@ -581,7 +635,7 @@ def activities():
         conn.close()
         streak = get_user_streak(username)
 
-    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta)
+    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
 @app.route('/calendar')
@@ -644,7 +698,6 @@ def progress():
     """
     username = session.get('user') if session else None
     prog = compute_progress(username)
-    # pass breakdown in a simple object that Jinja can access with dot notation
     breakdown = prog.get('breakdown', {})
     class AttrDict(dict):
         def __getattr__(self, name):
@@ -671,7 +724,168 @@ def handle_clear_completed():
 @app.route('/settings')
 def settings():
     username = session.get('user') if session else None
-    return render_template('settings.html', username=username)
+    email = None
+    reminders_enabled = 0
+    reminder_frequency = 'weekly'
+    email_verified = 0
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("PRAGMA table_info(users)")
+        cols = [r[1] for r in c.fetchall()]
+        if 'email' in cols:
+            c.execute("SELECT email, reminders_enabled, reminder_frequency, email_verified FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row:
+                email = row['email']
+                reminders_enabled = row['reminders_enabled'] or 0
+                reminder_frequency = row['reminder_frequency'] or 'weekly'
+                email_verified = row['email_verified'] or 0
+        conn.close()
+    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified)
+
+
+@app.route('/settings/update', methods=['POST'])
+def update_settings():
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('settings'))
+
+    email = request.form.get('email', '').strip() or None
+    reminders_enabled = 1 if request.form.get('reminders_enabled') == 'on' else 0
+    reminder_frequency = request.form.get('reminder_frequency', 'weekly')
+
+    conn = get_db_conn()
+    c = conn.cursor()
+    # ensure columns exist (in case DB predates migration)
+    c.execute("PRAGMA table_info(users)")
+    cols = [r[1] for r in c.fetchall()]
+    if 'email' not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if 'reminders_enabled' not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
+    if 'reminder_frequency' not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'weekly'")
+
+    c.execute("UPDATE users SET email = ?, reminders_enabled = ?, reminder_frequency = ? WHERE username = ?",
+              (email, reminders_enabled, reminder_frequency, username))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('settings'))
+
+
+# --- Email reminders implementation ---
+def _get_smtp_config():
+    return {
+        'host': os.environ.get('SMTP_HOST', ''),
+        'port': int(os.environ.get('SMTP_PORT', '465')),
+        'user': os.environ.get('SMTP_USER', ''),
+        'pass': os.environ.get('SMTP_PASS', ''),
+        'from_addr': os.environ.get('FROM_EMAIL', os.environ.get('SMTP_USER', 'no-reply@example.com'))
+    }
+
+
+def send_email(to_addr, subject, body):
+    cfg = _get_smtp_config()
+    if not cfg['host'] or not cfg['user'] or not cfg['pass']:
+        print('SMTP not configured; skipping email to', to_addr)
+        return False
+
+    message = f"From: {cfg['from_addr']}\r\nTo: {to_addr}\r\nSubject: {subject}\r\n\r\n{body}"
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(cfg['host'], cfg['port'], context=context) as server:
+            server.login(cfg['user'], cfg['pass'])
+            server.sendmail(cfg['from_addr'], [to_addr], message.encode('utf-8'))
+        print('Sent reminder to', to_addr)
+        return True
+    except Exception as e:
+        print('Error sending email to', to_addr, e)
+        return False
+
+
+def build_reminder_for_user(username, tasks):
+    if not tasks:
+        return None
+    lines = [f"Hi {username},", "\nHere are your upcoming tasks:\n"]
+    for t in tasks:
+        date = t.get('date') or 'No date'
+        lines.append(f"- {t.get('name')} (Due: {date}) Importance: {t.get('importance')}")
+    lines.append("\nOpen your tasks: http://localhost:5050/activities")
+    return '\n'.join(lines)
+
+
+def send_reminders(dry_run=True):
+    """Query users who enabled reminders and send emails based on their frequency.
+
+    If `dry_run` is True, do not actually send emails; return a report list instead.
+    Returns list of report dicts for each user considered.
+    """
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT username, email, reminders_enabled, reminder_frequency FROM users WHERE reminders_enabled = 1 AND email IS NOT NULL AND email != ''")
+    rows = c.fetchall()
+    report = []
+    for r in rows:
+        username = r['username']
+        email = r['email']
+        freq = r['reminder_frequency'] or 'weekly'
+
+        days = 7 if freq == 'weekly' else 1
+        tasks = get_upcoming_tasks(username, days=days)
+        if not tasks:
+            report.append({'username': username, 'email': email, 'tasks': 0, 'sent': False, 'note': 'no upcoming tasks'})
+            continue
+        body = build_reminder_for_user(username, tasks)
+        subject = f"Reminder: {len(tasks)} upcoming task(s)"
+        if dry_run:
+            report.append({'username': username, 'email': email, 'tasks': len(tasks), 'sent': False, 'note': 'dry-run'})
+        else:
+            ok = send_email(email, subject, body)
+            report.append({'username': username, 'email': email, 'tasks': len(tasks), 'sent': bool(ok), 'note': None if ok else 'send-failed'})
+
+    conn.close()
+    return report
+
+
+def _reminder_worker(interval_seconds=60*60):
+    """Background thread that runs send_reminders periodically."""
+    print('Reminder worker started; interval', interval_seconds)
+    while True:
+        try:
+            # run actual sends (not dry-run) in background worker
+            send_reminders(dry_run=False)
+        except Exception as e:
+            print('Error in reminder worker:', e)
+        time.sleep(interval_seconds)
+
+
+def start_reminder_scheduler():
+    # Start the background thread to run reminders periodically.
+    # Some Flask environments may not provide `before_first_request`,
+    # so this function can be called manually from the __main__ block.
+    interval = int(os.environ.get('REMINDER_INTERVAL_SECONDS', str(60*60)))
+    t = threading.Thread(target=_reminder_worker, args=(interval,), daemon=True)
+    t.start()
+
+
+@app.route('/debug/send_reminders', methods=['GET', 'POST'])
+def debug_send_reminders():
+    # allow in debug mode or with a secret query param
+    secret_ok = os.environ.get('REMINDER_DEBUG_SECRET') and request.args.get('secret') == os.environ.get('REMINDER_DEBUG_SECRET')
+    if not app.debug and not secret_ok:
+        return "Not allowed", 403
+
+    dry = True
+    if request.method == 'POST':
+        # POST without dry param will perform actual send; use ?dry=0 for immediate send
+        dry = request.args.get('dry', '1') != '0'
+    else:
+        dry = request.args.get('dry', '1') != '0'
+
+    report = send_reminders(dry_run=dry)
+    return jsonify({'dry_run': dry, 'report': report})
 
 
 @app.route('/reset_points', methods=['POST'])
@@ -679,7 +893,6 @@ def reset_points():
     username = session.get('user') if session else None
     conn = get_db_conn()
     c = conn.cursor()
-    # If a user is signed in, reset only their points. If not and the form includes 'all', reset everyone.
     if username:
         c.execute("UPDATE users SET points = 0 WHERE username = ?", (username,))
     else:
@@ -689,14 +902,35 @@ def reset_points():
     conn.close()
     return redirect(url_for('settings'))
 
+
+@app.route('/reset_rewards', methods=['POST'])
+def reset_rewards():
+    """Remove active redeemed rewards for the current user (or all users if not signed in and `all=1`)."""
+    username = session.get('user') if session else None
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("DELETE FROM redemptions WHERE username = ?", (username,))
+    else:
+        if request.form.get('all') == '1':
+            c.execute("DELETE FROM redemptions")
+    conn.commit()
+    conn.close()
+    return redirect(url_for('settings'))
+
 @app.route("/add_task", methods=["POST"])
 def add_task():
     task_name = request.form.get("task_name")
     task_date = request.form.get("task_date")
+    task_time = request.form.get("task_time")
     importance = request.form.get("importance")
 
     if task_name and task_date and importance in ("Major", "Medium", "Minor"):
-        insert_task_db(task_name, task_date, importance, session.get('user') if session else None)
+        # allow optional time
+        if task_time:
+            insert_task_db_with_time(task_name, task_date, task_time, importance, session.get('user') if session else None)
+        else:
+            insert_task_db(task_name, task_date, importance, session.get('user') if session else None)
 
     return redirect(url_for("activities"))
 
@@ -718,7 +952,19 @@ def complete_task(importance, task_index):
     if importance in grouped and 0 <= task_index < len(grouped[importance]) and username:
         task_id = grouped[importance][task_index].get('id')
         if task_id:
-            complete_task_and_award(task_id, username)
+            # Always award points to the task's owner if set; otherwise award to the current user.
+            conn = get_db_conn()
+            c = conn.cursor()
+            c.execute("SELECT user FROM tasks WHERE id = ?", (task_id,))
+            trow = c.fetchone()
+            conn.close()
+
+            target_username = username
+            if trow and 'user' in trow.keys() and trow['user']:
+                # prefer the task's assigned user
+                target_username = trow['user']
+
+            complete_task_and_award(task_id, target_username)
     return redirect(url_for("activities"))
 
 
@@ -736,7 +982,6 @@ def auto_breakdown_task_route(parent_task_id):
     conn = get_db_conn()
     c = conn.cursor()
     
-    # Get the parent task name
     c.execute("SELECT name FROM tasks WHERE id = ?", (parent_task_id,))
     task_row = c.fetchone()
     conn.close()
@@ -744,13 +989,11 @@ def auto_breakdown_task_route(parent_task_id):
     if not task_row:
         return redirect(url_for("activities"))
     
-    # Clear existing subtasks first
     clear_subtasks_db(parent_task_id)
     
     task_name = task_row['name']
     subtasks = auto_breakdown_task(task_name)
     
-    # Insert all subtasks
     for subtask in subtasks:
         insert_subtask_db(parent_task_id, subtask)
     
@@ -762,10 +1005,14 @@ def edit_task(task_id):
     """Edit an existing task"""
     task_name = request.form.get("task_name")
     task_date = request.form.get("task_date")
+    task_time = request.form.get("task_time")
     importance = request.form.get("importance")
     
     if task_name and task_date and importance in ("Major", "Medium", "Minor"):
-        edit_task_db(task_id, task_name, task_date, importance)
+        if task_time is not None:
+            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance)
+        else:
+            edit_task_db(task_id, task_name, task_date, importance)
     
     return redirect(url_for("activities"))
 
@@ -783,12 +1030,11 @@ def delete_subtask(subtask_id):
 
 
 DEFAULT_REWARDS = [
-    
-    (1, "5 minute phone break", 20),
-    (2, "30 minute TV", 60),
-    (3, "Snack of choice", 40),
-    (4, "Buy something small", 150),
-    (5, "Game time 1 hour", 100),
+    (1, "5 minute phone break", 20, 5),
+    (2, "30 minute TV", 60, 30),
+    (3, "Snack of choice", 40, 10),
+    (4, "Buy something small", 150, 10),
+    (5, "Game time 1 hour", 100, 60),
 ]
 
 def get_user_points(username):
@@ -813,7 +1059,7 @@ def get_upcoming_tasks(username=None, days=7):
     
     if username:
         c.execute("""
-            SELECT id, name, date, importance 
+            SELECT id, name, date, time, importance 
             FROM tasks 
             WHERE user = ? 
             AND (completed = 0 OR completed IS NULL)
@@ -822,7 +1068,7 @@ def get_upcoming_tasks(username=None, days=7):
         """, (username, today.isoformat(), future_date.isoformat()))
     else:
         c.execute("""
-            SELECT id, name, date, importance, user 
+            SELECT id, name, date, time, importance, user 
             FROM tasks 
             WHERE (completed = 0 OR completed IS NULL)
             AND date BETWEEN ? AND ?
@@ -845,7 +1091,6 @@ def add_points(username, amount):
 def deduct_points(username, amount):
     conn = get_db_conn()
     c = conn.cursor()
-    # ensure non-negative
     c.execute("SELECT points FROM users WHERE username = ?", (username,))
     r = c.fetchone()
     current = r['points'] if r and r['points'] is not None else 0
@@ -860,11 +1105,12 @@ def deduct_points(username, amount):
 def get_default_rewards_for_display(username):
     points = get_user_points(username)
     rewards = []
-    for rid, title, cost in DEFAULT_REWARDS:
+    for rid, title, cost, duration in DEFAULT_REWARDS:
         rewards.append({
             'id': rid,
             'title': title,
             'cost': cost,
+            'duration_minutes': duration,
             'claimable': points >= cost
         })
     return rewards
@@ -872,16 +1118,16 @@ def get_default_rewards_for_display(username):
 def get_custom_rewards_for_user(username):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost FROM custom_rewards WHERE username = ? ORDER BY cost ASC", (username,))
+    c.execute("SELECT id, title, cost, duration_minutes FROM custom_rewards WHERE username = ? ORDER BY cost ASC", (username,))
     rows = c.fetchall()
     conn.close()
-    return [{'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'claimable': get_user_points(username) >= r['cost']} for r in rows]
+    return [{'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'duration_minutes': r['duration_minutes'] if 'duration_minutes' in r.keys() else 0, 'claimable': get_user_points(username) >= r['cost']} for r in rows]
 
-def log_redemption(username, reward_type, reward_id, title, cost):
+def log_redemption(username, reward_type, reward_id, title, cost, expires_at=None):
     conn = get_db_conn()
     c = conn.cursor()
     redeemed_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    c.execute("INSERT INTO redemptions (username, reward_type, reward_id, title, cost, redeemed_at) VALUES (?, ?, ?, ?, ?, ?)", (username, reward_type, reward_id, title, cost, redeemed_at))
+    c.execute("INSERT INTO redemptions (username, reward_type, reward_id, title, cost, redeemed_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (username, reward_type, reward_id, title, cost, redeemed_at, expires_at))
     conn.commit()
     conn.close()
 
@@ -889,10 +1135,30 @@ def get_redeemed_rewards(username):
     """Get all redeemed rewards for a user, ordered by most recent first."""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost, redeemed_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 10", (username,))
-    rewards = [{'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at']} for r in c.fetchall()]
+    c.execute("SELECT id, title, cost, redeemed_at, expires_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 50", (username,))
+    rows = c.fetchall()
     conn.close()
-    return rewards
+
+    active = []
+    now = datetime.datetime.now()
+    for r in rows:
+        expires = r['expires_at'] if 'expires_at' in r.keys() else None
+        # keep reward if no expires_at (permanent) or expires in the future
+        if not expires:
+            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': None})
+            continue
+        try:
+            exp_dt = datetime.datetime.fromisoformat(expires)
+        except Exception:
+            # fallback to parsing common format
+            try:
+                exp_dt = datetime.datetime.strptime(expires, '%Y-%m-%d %H:%M:%S')
+            except Exception:
+                continue
+        if exp_dt > now:
+            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': exp_dt.isoformat()})
+
+    return active
 
 def nearest_reward_info(rewards, username):
     """Given a list of reward dicts (with cost), return the nearest non-claimable reward and pts needed."""
@@ -900,7 +1166,6 @@ def nearest_reward_info(rewards, username):
     non_claimable = [r for r in rewards if not r.get('claimable')]
     if not non_claimable:
         return None
-    # nearest by cost difference
     nearest = min(non_claimable, key=lambda r: r['cost'] - points)
     return {
         'reward': nearest,
@@ -949,10 +1214,13 @@ def redeem_default(reward_id):
     matched = next((r for r in DEFAULT_REWARDS if r[0] == reward_id), None)
     if not matched:
         return "Unknown reward", 400
-    _, title, cost = matched
+    _, title, cost, duration = matched
     if not deduct_points(username, cost):
         return "Not enough points", 400
-    log_redemption(username, 'default', reward_id, title, cost)
+    expires_at = None
+    if duration and duration > 0:
+        expires_at = (datetime.datetime.now() + datetime.timedelta(minutes=duration)).isoformat()
+    log_redemption(username, 'default', reward_id, title, cost, expires_at)
     
     return redirect(url_for('redeem'))
 
@@ -964,22 +1232,22 @@ def redeem_custom(reward_id):
         return redirect(url_for('home'))
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost FROM custom_rewards WHERE id = ? AND username = ?", (reward_id, username))
+    c.execute("SELECT id, title, cost, duration_minutes FROM custom_rewards WHERE id = ? AND username = ?", (reward_id, username))
     r = c.fetchone()
     conn.close()
     if not r:
         return "Reward not found", 404
     title = r['title']
     cost = r['cost']
+    duration = r['duration_minutes'] if 'duration_minutes' in r.keys() else 0
     if not deduct_points(username, cost):
         return "Not enough points", 400
-    log_redemption(username, 'custom', reward_id, title, cost)
-    # Optionally delete the custom reward after redemption or keep it
-    # c.execute("DELETE FROM custom_rewards WHERE id = ?", (reward_id,))
-    # commit if you choose to delete
+    expires_at = None
+    if duration and duration > 0:
+        expires_at = (datetime.datetime.now() + datetime.timedelta(minutes=duration)).isoformat()
+    log_redemption(username, 'custom', reward_id, title, cost, expires_at)
     return redirect(url_for('redeem'))
 
-# Route: add a custom reward
 @app.route('/redeem/add_custom', methods=['POST'])
 def add_custom_reward():
     username = session.get('user')
@@ -987,20 +1255,111 @@ def add_custom_reward():
         return redirect(url_for('home'))
     title = request.form.get('title', '').strip()
     cost = request.form.get('cost', '').strip()
+    duration_raw = request.form.get('duration', '').strip() or '0'
     try:
         cost = int(cost)
+        duration = int(duration_raw)
     except:
         return "Invalid cost", 400
     if not title or cost <= 0:
         return "Invalid input", 400
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("INSERT INTO custom_rewards (username, title, cost) VALUES (?, ?, ?)", (username, title, cost))
+    c.execute("INSERT INTO custom_rewards (username, title, cost, duration_minutes) VALUES (?, ?, ?, ?)", (username, title, cost, duration))
     conn.commit()
     conn.close()
     return redirect(url_for('redeem'))
 
 
+@app.route('/parent_dashboard')
+def parent_dashboard():
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+
+    # ensure user is a parent
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (username,))
+    row = c.fetchone()
+    # sqlite3.Row does not implement .get(); use indexing by column name
+    if not row or row['role'] != 'parent':
+        conn.close()
+        return redirect(url_for('activities'))
+
+    # list children assigned to this parent
+    c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
+    children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+    conn.close()
+    return render_template('parent_dashboard.html', username=username, children=children)
+
+
+@app.route('/parent/add_child', methods=['POST'])
+def parent_add_child():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+
+    child_username = request.form.get('child_username', '').strip()
+    if not child_username:
+        return redirect(url_for('parent_dashboard'))
+
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id FROM users WHERE username = ?", (child_username,))
+    if not c.fetchone():
+        conn.close()
+        return "Child not found", 404
+
+    c.execute("UPDATE users SET parent_username = ? WHERE username = ?", (parent, child_username))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('parent_dashboard'))
+
+
+@app.route('/parent/add_custom_reward_child', methods=['POST'])
+def parent_add_custom_reward_child():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+
+    child_username = request.form.get('child_username', '').strip()
+    title = request.form.get('title', '').strip()
+    cost_raw = request.form.get('cost', '').strip()
+    try:
+        cost = int(cost_raw)
+    except Exception:
+        return "Invalid cost", 400
+
+    duration_raw = request.form.get('duration', '').strip() or '0'
+    try:
+        duration = int(duration_raw)
+    except Exception:
+        return "Invalid duration", 400
+
+    if not child_username or not title or cost <= 0:
+        return "Invalid input", 400
+
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT parent_username FROM users WHERE username = ?", (child_username,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return "Child not found", 404
+
+    # optionally verify parent owns this child (if assigned). We'll allow creation even if unassigned.
+    c.execute("INSERT INTO custom_rewards (username, title, cost, duration_minutes) VALUES (?, ?, ?, ?)", (child_username, title, cost, duration))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('parent_dashboard'))
+
+
 
 if __name__ == "__main__":
+    # start reminder scheduler thread in this process (avoids using Flask-specific hooks)
+    try:
+        start_reminder_scheduler()
+    except Exception as e:
+        print('Could not start reminder scheduler:', e)
     app.run(debug=True, port=5050)
