@@ -131,6 +131,9 @@
           <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
           <li><a class="active" href="{{ url_for('progress') }}">View Progress</a></li>
           <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if is_parent %}
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          {% endif %}
           <li><a href="{{ url_for('settings') }}">Settings</a></li>
         </ul>
 

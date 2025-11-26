@@ -655,7 +655,20 @@ def calendar():
             points = row['points']
         conn.close()
 
-    return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta)
+    # determine parent role so template can show parent-only links
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
 @app.route('/viewtasks')
@@ -674,7 +687,20 @@ def view_tasks():
             points = row['points']
         conn.close()
 
-    return render_template('viewtasks.html', tasks=tasks, username=username, points=points)
+    # compute is_parent for conditional tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('viewtasks.html', tasks=tasks, username=username, points=points, is_parent=is_parent)
 
 
 def clear_completed_tasks(username=None):
@@ -707,10 +733,23 @@ def progress():
     if username:
         streak = get_user_streak(username)
 
+    # show parent-only tabs when appropriate
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
     return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
         'completed': AttrDict(breakdown.get('completed', {})),
         'pending': AttrDict(breakdown.get('pending', {})),
     }), username=username, streak=streak)
+    
 
 
 @app.route("/clear_completed", methods=['POST'])
@@ -742,7 +781,19 @@ def settings():
                 reminder_frequency = row['reminder_frequency'] or 'weekly'
                 email_verified = row['email_verified'] or 0
         conn.close()
-    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified)
+    # pass parent flag to settings template so parent link can appear in tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified, is_parent=is_parent)
 
 
 @app.route('/settings/update', methods=['POST'])
@@ -1212,13 +1263,26 @@ def redeem():
     elif nearest_custom:
         nearest = ('custom', nearest_custom)
 
+    # detect parent role so UI can show parent-only tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
     return render_template('redeem.html',
                            username=username,
                            points=points,
                            default_rewards=default_rewards,
                            custom_rewards=custom_rewards,
                            redeemed_rewards=redeemed_rewards,
-                           nearest=nearest)
+                           nearest=nearest,
+                           is_parent=is_parent)
 
 
 @app.route('/redeem/default/<int:reward_id>', methods=['POST'])
