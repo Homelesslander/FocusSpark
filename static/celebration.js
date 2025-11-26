@@ -159,9 +159,9 @@ function showAchievementNotification(message, importance) {
 
   // Display durations per importance level (ms)
   const DISPLAY_DURATIONS = {
-    Major: 8000,
+    Major: 5000,
     Medium: 5000,
-    Minor: 3500
+    Minor: 5000
   };
   const fadeDuration = 700; // fade-out time
   const displayFor = DISPLAY_DURATIONS[importance] || 4000;

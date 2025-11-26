@@ -92,6 +92,15 @@ def login():
 
         if user and bcrypt.checkpw(password, user[2]):
             session['user'] = username
+            # store role in session (table columns: id, username, password, role, ...)
+            try:
+                role = user[3] if len(user) > 3 else 'child'
+            except Exception:
+                role = 'child'
+            session['role'] = role
+            # Redirect parents to parent dashboard
+            if role and str(role).lower() == 'parent':
+                return redirect(url_for('parent_dashboard'))
             return redirect(url_for('activities'))
         else:
             return "Invalid username or password!"
@@ -101,7 +110,7 @@ def login():
 @login_bp.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login_bp.login'))
+    return redirect(url_for('auth.login'))
 
 
 # Change password route
