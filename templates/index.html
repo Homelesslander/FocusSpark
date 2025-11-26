@@ -1,65 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-<title>ADHD Webpage</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<head>      </head>
-<body>  
-    <div class="main">
-<div class="navbar">
-    <div class="icon">
-        <h2 class="logo">ADHD WEBPAGE</h2>
-    </div>
-    <div class= "menu">
-        
-        <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('about') }}">About</a></li>
-            <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
-            <li><a href="{{ url_for('activities') }}">Activities</a></li>
-        </ul>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>StreakMate</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='aboutstyle.css') }}">
+    </head>
+    <body>
+        <div class="menu">
+            <span class="logo-left">StreakMate</span>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('about') }}">About</a></li>
+                <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+                <li><a href="{{ url_for('activities') }}">Activities</a></li>
+            </ul>
+        </div>
 
-    </div>
-</div>
-<div class="front">
-        <h1>Welcome to the<br><span> ADHD Webpage</span></h1>
-        <p class="description">This platform is built to support individuals with ADHD by making task management simple, motivating, and fun.
-            <br> Through a gamified system, tasks become challenges that earn you points, streaks, and progress milestones. 
-        <br> For more information please check the About section and read the following details. </p>
+        <main class="hero">
+            <h1 id="heroTitle" class="hero-title">Welcome to<br><span>StreakMate</span></h1>
+            <div id="definitionBox" class="definition-box">
+                <p>This platform is built to support individuals by making task management simple, motivating, and fun. Through a gamified system, tasks become challenges that earn you points, streaks, and progress milestones.</p>
+            </div>
+        </main>
 
-    </div>
-    <div class="auth-container">
-    <!-- Login Form -->
-    <div class="login-box">
-        <h2>Login</h2>
-        <form action="{{ url_for('auth.login') }}" method="POST">
-            <label>Username:</label>
-            <input type="text" name="username" required>
-            <br><label>Password:</label>
-            <input type="password" name="password" required><br>
-            <button type="submit">Login</button>
-        </form>
-    </div>
+        <div class="auth-wrapper">
+            <div class="auth-container">
+                <!-- Register on the left, Login on the right -->
+                <div id="registerBox" class="register-box fade-in">
+                    <h2>Register</h2>
+                    <form action="{{ url_for('auth.register') }}" method="POST">
+                        <label>Username:</label>
+                        <input type="text" name="username" required>
+                        <label>Password:</label>
+                        <input type="password" name="password" required>
+                        <label>Role:</label>
+                        <select name="role">
+                            <option value="child" selected>Child</option>
+                            <option value="parent">Parent / Guardian</option>
+                        </select>
+                        <button type="submit">Register</button>
+                    </form>
+                </div>
 
-    <!-- Register Form -->
-    <div class="register-box">
-        <h2>Register</h2>
-        <form action="{{ url_for('auth.register') }}" method="POST">
-            <label>Username:</label>
-            <input type="text" name="username" required>
-            <br> <label>Password:</label>
-            <input type="password" name="password" required> <br>
-            <label>Role:</label>
-            <select name="role">
-                <option value="child" selected>Child</option>
-                <option value="parent">Parent / Guardian</option>
-            </select>
-            <br>
-            <button type="submit">Register</button>
-        </form>
-    </div>
-</div>
-</body>
+                <div id="loginBox" class="login-box fade-in">
+                    <h2>Login</h2>
+                    <form action="{{ url_for('auth.login') }}" method="POST">
+                        <label>Username:</label>
+                        <input type="text" name="username" required>
+                        <label>Password:</label>
+                        <input type="password" name="password" required>
+                        <button type="submit">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
+        <script>
+            // Show hero title immediately, then reveal definition+auth after ~3s
+            document.addEventListener('DOMContentLoaded', function(){
+                const hero = document.getElementById('heroTitle');
+                const def = document.getElementById('definitionBox');
+                const reg = document.getElementById('registerBox');
+                const login = document.getElementById('loginBox');
+
+                // Pop hero in with a short delay (gives a popping feeling on navigation)
+                setTimeout(()=> hero && hero.classList.add('visible'), 80);
+
+                // After 3 seconds reveal definition and auth boxes together
+                setTimeout(()=>{
+                    if(def) def.classList.add('visible');
+                    if(reg) reg.classList.add('visible');
+                    if(login) login.classList.add('visible');
+                }, 3000);
+            });
+        </script>
+    </body>
 </html>
 

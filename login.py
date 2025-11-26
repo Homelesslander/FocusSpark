@@ -69,7 +69,10 @@ def register():
         try:
             c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed_pw, role))
             conn.commit()
-            return redirect(url_for('auth.login'))
+            # Auto-login the user after successful registration
+            session['user'] = username
+            session['role'] = role
+            return redirect(url_for('activities'))
         except sqlite3.IntegrityError:
             return "Username already exists!"
         finally:
