@@ -4,9 +4,10 @@
   <meta charset="utf-8" />
   <title>Redeem Rewards</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
   <style>
     body {
-      padding-top: 72px;
       margin: 0;
     }
 
@@ -39,7 +40,7 @@
       color: #34495e;
       font-size: 20px;
       margin: 20px 0 15px 0;
-      border-bottom: 3px solid #3498db;
+      border-bottom: 3px solid #fb8500;
       padding-bottom: 10px;
     }
     
@@ -67,7 +68,7 @@
       min-width: 150px;
       padding: 12px;
       background: #f8f9fa;
-      border-left: 4px solid #3498db;
+      border-left: 4px solid #fb8500;
       border-radius: 4px;
       color: #333;
       font-size: 14px;
@@ -122,8 +123,8 @@
     .redeem-main input[type="text"]:focus,
     .redeem-main input[type="number"]:focus {
       outline: none;
-      border-color: #3498db;
-      box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+      border-color: #fb8500;
+      box-shadow: 0 0 5px rgba(251, 133, 0, 0.3);
     }
     
     .redeem-sidebar {
@@ -190,6 +191,13 @@
       padding: 20px;
       font-style: italic;
     }
+    /* Nearest custom reward box (centered below the nearest paragraph) */
+    .nearest-custom-box { display:flex; justify-content:center; margin-top:10px; }
+    .nearest-custom-card { max-width:580px; width:100%; background:white; border-left:4px solid #fb8500; padding:12px 16px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+    .nearest-custom-card strong { display:block; margin-bottom:6px; color:#2c3e50; }
+    /* Move Add Custom heading slightly down and align left like other sections */
+    .add-custom-section { margin-top:18px; }
+    .add-custom-section h2 { text-align:left; }
   </style>
 </head>
 <body>
@@ -199,14 +207,36 @@
       <li><a href="{{ url_for('about') }}">About</a></li>
       <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
       <li><a href="{{ url_for('activities') }}">Activities</a></li>
-      <li><a href="{{ url_for('redeem') }}">Redeem</a></li>
     </ul>
+  </div>
+
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1 class="page-title">Redeem Rewards</h1>
+        <p class="description">Redeem your earned rewards.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a class="active" href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting">Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+        <div id="points">Your Points: {{ points }}</div>
+      </div>
+    </div>
   </div>
 
   <div class="redeem-wrapper">
     <div class="redeem-container">
       <div class="redeem-main">
-        <h1>Redeem Rewards</h1>
 
         <section>
           <h2>Current Points</h2>
@@ -240,34 +270,27 @@
 
         <section>
           <h2>Custom Rewards</h2>
-          <ul>
-            {% if custom_rewards %}
-              {% for r in custom_rewards %}
-                <li>
-                  <span>
-                    <strong>{{ r.title }}</strong> — {{ r.cost }} points
-                  </span>
-                  {% if r.claimable %}
-                    <form style="display:inline" method="post" action="{{ url_for('redeem_custom', reward_id=r.id) }}">
-                      <button type="submit">Claim</button>
-                    </form>
-                  {% else %}
-                    <span style="color: #e74c3c; font-size: 13px;">Not enough points</span>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            {% else %}
-              <li>No custom rewards yet.</li>
-            {% endif %}
-          </ul>
 
           {% if nearest and nearest[0] == 'custom' %}
             {% set nc = nearest[1] %}
             <p><em>Nearest custom reward:</em> <strong>{{ nc.reward.title }}</strong> — you need <strong>{{ nc.points_needed }}</strong> more points. You are almost there!</p>
+            <div class="nearest-custom-box">
+              <div class="nearest-custom-card">
+                <strong>{{ nc.reward.title }}</strong>
+                <div style="margin-bottom:8px; color:#666">Cost: {{ nc.reward.cost }} points</div>
+                {% if nc.reward.claimable %}
+                  <form style="display:inline" method="post" action="{{ url_for('redeem_custom', reward_id=nc.reward.id) }}">
+                    <button type="submit">Claim</button>
+                  </form>
+                {% else %}
+                  <span style="color:#e74c3c; font-size:13px;">Not enough points</span>
+                {% endif %}
+              </div>
+            </div>
           {% endif %}
         </section>
 
-        <section>
+        <section class="add-custom-section">
           <h2>Add a Custom Reward</h2>
           <form method="post" action="{{ url_for('add_custom_reward') }}">
             <label>Reward name:</label>
