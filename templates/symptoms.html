@@ -6,43 +6,91 @@
 <title>Symptoms of ADHD</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='symptomsstyle.css') }}">
 </head>
-<body>
+<body class="symptoms-page">
 
-<div class= "menu">
-
-        <ul style="list-style-type: none;">
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('about') }}">About</a></li>
-            <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
-            <li><a href="{{ url_for('activities') }}">Activities</a></li>
-        </ul>
-
-    </div>
-<div class="content">
-	<h1>Symptoms of ADHD</h1>
-	<p>Symptoms of ADHD usually start before the age of 12. They involve a person’s ability to pay attention to things (being inattentive), having high energy levels (being hyperactive) and their ability to control their impulses (being impulsive).</p>
-	<p>A child or young person may show signs of being inattentive, such as:</p>
-	<ul style="list-style-type:disc;">
-		<li>being easily distracted</li>
-				<li>finding it hard to listen to what people are saying or to follow instructions
-					</li>
-						<li>forgetting everyday tasks, like brushing their teeth or putting on socks</li> 
-				</li>
-			</ul>
-		</li>
-	</ul>
-	<p>They may show signs of being hyperactive and impulsive, including:</p>
+<div class="menu">
 	<ul>
-        <li>being very restless and having a lot of energy</li>
-				<li>fidgeting or tapping their hands and feet</li>
-				<li>talking noisily</li>
-				<li>feeling restless, or getting up and moving around when they’re supposed to sit still</li>
-				<li>finding it hard to wait their turn, or interrupting conversations</li>
-			</ul>
-		</li>
+		<li><a href="{{ url_for('home') }}">Home</a></li>
+		<li><a href="{{ url_for('about') }}">About</a></li>
+		<li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+		<li><a href="{{ url_for('activities') }}">Activities</a></li>
 	</ul>
-	<p>Most children and young people with ADHD have symptoms of both the inattentive and hyperactive-impulsive type. Some only show signs of one type.</p>
 </div>
+
+<div class="content">
+	<h1 class="symptoms-title">Symptoms of ADHD</h1>
+
+	<div class="symptoms-container">
+		<section class="symptom-card">
+			<h2>Overview</h2>
+			<p>Symptoms of ADHD usually start before the age of 12. They involve a person’s ability to pay attention to things (being inattentive), having high energy levels (being hyperactive) and their ability to control their impulses (being impulsive).</p>
+		</section>
+
+		<section class="symptom-card reveal left">
+			<h2>Inattentive</h2>
+			<p>A child or young person may show signs of being inattentive, such as:</p>
+			<ul>
+				<li class="symptom-item">being easily distracted</li>
+				<li class="symptom-item">finding it hard to listen to what people are saying or to follow instructions</li>
+				<li class="symptom-item">forgetting everyday tasks, like brushing their teeth or putting on socks</li>
+			</ul>
+		</section>
+
+		<section class="symptom-card reveal left">
+			<h2>Hyperactive &amp; Impulsive</h2>
+			<p>They may show signs of being hyperactive and impulsive, including:</p>
+			<ul>
+				<li class="symptom-item">being very restless and having a lot of energy</li>
+				<li class="symptom-item">fidgeting or tapping their hands and feet</li>
+				<li class="symptom-item">talking noisily</li>
+				<li class="symptom-item">feeling restless, or getting up and moving around when they’re supposed to sit still</li>
+				<li class="symptom-item">finding it hard to wait their turn, or interrupting conversations</li>
+			</ul>
+		</section>
+
+		<section class="symptom-card reveal left">
+			<h2>Combined</h2>
+			<p>Most children and young people with ADHD have symptoms of both the inattentive and hyperactive-impulsive type. Some only show signs of one type.</p>
+		</section>
+	</div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+	const reveals = document.querySelectorAll('.symptom-card.reveal');
+	const options = { threshold: 0.2 };
+		const observer = new IntersectionObserver((entries) => {
+			entries.forEach(entry => {
+				const card = entry.target;
+				const items = Array.from(card.querySelectorAll('.symptom-item'));
+
+				if (entry.isIntersecting) {
+					// add class to card so card animation triggers
+					card.classList.add('in-view');
+
+					// stagger each bubble - add 'visible' with a timeout per item
+					items.forEach((it, idx) => {
+						// clear any previous timer
+						if (it._flipTimer) clearTimeout(it._flipTimer);
+						it._flipTimer = setTimeout(() => {
+							it.classList.add('visible');
+						}, idx * 90);
+					});
+				} else {
+					// remove the class and hide each bubble and cancel timers
+					card.classList.remove('in-view');
+					items.forEach((it) => {
+						if (it._flipTimer) { clearTimeout(it._flipTimer); it._flipTimer = null; }
+						it.classList.remove('visible');
+					});
+				}
+			});
+		}, options);
+
+		reveals.forEach(el => observer.observe(el));
+});
+</script>
 
 </body>
 </html>
