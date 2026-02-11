@@ -5,8 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <style>
+    .settings-box {
+      background: white;
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      border-left: 6px solid #fb8500;
+      margin-bottom: 18px;
+    }
+    .settings-box h3 { margin-top: 0; color: #2c3e50; }
+    .settings-box p { color: #444; }
+    .settings-box button { background: #fb8500; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    .settings-box button:hover { background: #ff8c42; }
+    /* Background image for settings page with blur */
+    .settings-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
+      background-size: cover;
+      background-position: center center;
+      filter: blur(6px) saturate(1.05);
+      opacity: 0.85;
+      z-index: -1;
+      pointer-events: none;
+    }
+    /* Ensure page content sits above background */
+    .settings-page-content { position: relative; z-index: 1; }
+  </style>
 </head>
 <body>
+  <div class="settings-bg" aria-hidden="true"></div>
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -16,11 +47,38 @@
     </ul>
   </div>
 
-  <div style="max-width:700px;margin:24px auto;">
-    <h1>Settings</h1>
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1 class="page-title">Settings</h1>
+        <p class="description">Adjust your account and app preferences.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if is_parent %}
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          <li><a href="{{ url_for('parent_attitude') }}">Attitude</a></li>
+          {% endif %}
+          <li><a class="active" href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting">Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+        <div id="points">Your Points: {{ points }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-page-content" style="max-width:700px;margin:24px auto;">
     <p>Signed in as: <strong>{{ username if username else 'Not signed in' }}</strong></p>
 
-    <section>
+    <section class="settings-box">
       <h3>Points</h3>
       {% if username %}
       <p>Reset your points to zero.</p>
@@ -36,7 +94,7 @@
       {% endif %}
     </section>
 
-    <section style="margin-top: 24px;">
+    <section class="settings-box">
       <h3>Clear Task History</h3>
       {% if username %}
       <p>Permanently delete all your completed tasks. This cannot be undone.</p>
@@ -52,12 +110,16 @@
       {% endif %}
     </section>
 
-    <section style="margin-top:24px;">
+    <section class="settings-box">
       <h3>Active Rewards</h3>
       {% if username %}
       <p>Remove all your currently active rewards (this will clear any timed rewards you have running).</p>
       <form method="post" action="{{ url_for('reset_rewards') }}">
         <button type="submit">Reset my active rewards</button>
+      </form>
+      <p style="margin-top:12px;">Remove your custom rewards (this will delete rewards you've added).</p>
+      <form method="post" action="{{ url_for('reset_custom_rewards') }}">
+        <button type="submit">Reset my custom rewards</button>
       </form>
       {% else %}
       <p>Not signed in. To clear all users' active rewards, use the button below.</p>
@@ -65,10 +127,15 @@
         <input type="hidden" name="all" value="1" />
         <button type="submit">Reset all users' active rewards</button>
       </form>
+      <p style="margin-top:12px;">To remove all custom rewards for all users, use the button below.</p>
+      <form method="post" action="{{ url_for('reset_custom_rewards') }}">
+        <input type="hidden" name="all" value="1" />
+        <button type="submit">Reset all users' custom rewards</button>
+      </form>
       {% endif %}
     </section>
 
-    <section style="margin-top:24px;">
+    <section class="settings-box">
       <h3>Email Reminders</h3>
       {% if username %}
       <p>Enter your email and choose how often you'd like to receive reminders about upcoming tasks.</p>
@@ -89,7 +156,6 @@
         </div>
         <button type="submit">Save email settings</button>
       </form>
-      <p style="font-size:0.9rem;color:#666;margin-top:8px;">Note: Configure SMTP using environment variables: <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, and optional <code>FROM_EMAIL</code>.</p>
 
       <div style="margin-top:10px;">
         <strong>Email verification:</strong>
@@ -111,7 +177,7 @@
       {% endif %}
     </section>
 
-    <section style="margin-top:24px;">
+    <section class="settings-box">
       <h3>Account</h3>
       {% if username %}
       <p>Change your password.</p>

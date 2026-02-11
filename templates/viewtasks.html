@@ -5,8 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>View Tasks - ADHD Task Manager</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+  </style>
 </head>
 <body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -17,17 +26,36 @@
   </div>
 
   <div class="front">
-    <h1>View Tasks</h1>
-    <p class="description">Here are the tasks you still need to do. Complete tasks to earn points.</p>
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1 class="page-title">View Tasks</h1>
+        <p class="description">Here are the tasks you still need to do. Complete tasks to earn points.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a class="active" href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if is_parent %}
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          <li><a href="{{ url_for('parent_attitude') }}">Attitude</a></li>
+          {% endif %}
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting"> Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+        <div id="points">Your Points: {{ points }}</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Place the user info inside a centered container matching Settings layout -->
-  <div style="max-width:700px; margin:24px auto;">
-    <h2 id="greeting"> Hello, {{ username }}!</h2>
-    <h3 id="points">Your Points: {{ points }}</h3>
-  </div>
-
-  <div class="task-sections">
+  <div class="activities-container">
+    <div class="activities-main">
+      <div class="task-sections">
 
     <div class="task-section">
       <h2>Major Tasks</h2>
@@ -86,7 +114,10 @@
       </ul>
     </div>
 
+      </div>
+    </div> <!-- End activities-main -->
+  </div> <!-- End activities-container -->
   </div>
-
+</div>
 </body>
 </html>

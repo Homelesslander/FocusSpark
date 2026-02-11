@@ -18,6 +18,13 @@
 </head>
 <body>
 
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+  </style>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -40,6 +47,7 @@
           <li><a href="{{ url_for('progress') }}">View Progress</a></li>
           <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
           <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          <li><a href="{{ url_for('parent_attitude') }}">Attitude</a></li>
           <li><a href="{{ url_for('settings') }}">Settings</a></li>
         </ul>
       </div>
@@ -94,6 +102,9 @@
       </div>
     </section>
   </div>
+</body>
+</html>
 
+  </div>
 </body>
 </html>

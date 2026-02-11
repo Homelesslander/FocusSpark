@@ -574,6 +574,29 @@ ensure_custom_rewards_table()
 ensure_subtasks_table()
 ensure_redemptions_table()
 ensure_streaks_table()
+ensure_attitude_table_called = False
+
+
+def ensure_attitude_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS attitude_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_username TEXT NOT NULL,
+            child_username TEXT NOT NULL,
+            rating TEXT NOT NULL,
+            points_awarded INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+# ensure attitude table exists
+ensure_attitude_table()
+
 
 
 
@@ -655,7 +678,20 @@ def calendar():
             points = row['points']
         conn.close()
 
-    return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta)
+    # determine parent role so template can show parent-only links
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
 @app.route('/viewtasks')
@@ -674,7 +710,20 @@ def view_tasks():
             points = row['points']
         conn.close()
 
-    return render_template('viewtasks.html', tasks=tasks, username=username, points=points)
+    # compute is_parent for conditional tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('viewtasks.html', tasks=tasks, username=username, points=points, is_parent=is_parent)
 
 
 def clear_completed_tasks(username=None):
@@ -707,10 +756,23 @@ def progress():
     if username:
         streak = get_user_streak(username)
 
+    # show parent-only tabs when appropriate
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
     return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
         'completed': AttrDict(breakdown.get('completed', {})),
         'pending': AttrDict(breakdown.get('pending', {})),
     }), username=username, streak=streak)
+    
 
 
 @app.route("/clear_completed", methods=['POST'])
@@ -742,7 +804,19 @@ def settings():
                 reminder_frequency = row['reminder_frequency'] or 'weekly'
                 email_verified = row['email_verified'] or 0
         conn.close()
-    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified)
+    # pass parent flag to settings template so parent link can appear in tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified, is_parent=is_parent)
 
 
 @app.route('/settings/update', methods=['POST'])
@@ -914,6 +988,22 @@ def reset_rewards():
     else:
         if request.form.get('all') == '1':
             c.execute("DELETE FROM redemptions")
+    conn.commit()
+    conn.close()
+    return redirect(url_for('settings'))
+
+
+@app.route('/reset_custom_rewards', methods=['POST'])
+def reset_custom_rewards():
+    """Delete custom rewards added by the current user (or all users if `all=1`)."""
+    username = session.get('user') if session else None
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("DELETE FROM custom_rewards WHERE username = ?", (username,))
+    else:
+        if request.form.get('all') == '1':
+            c.execute("DELETE FROM custom_rewards")
     conn.commit()
     conn.close()
     return redirect(url_for('settings'))
@@ -1196,13 +1286,26 @@ def redeem():
     elif nearest_custom:
         nearest = ('custom', nearest_custom)
 
+    # detect parent role so UI can show parent-only tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
     return render_template('redeem.html',
                            username=username,
                            points=points,
                            default_rewards=default_rewards,
                            custom_rewards=custom_rewards,
                            redeemed_rewards=redeemed_rewards,
-                           nearest=nearest)
+                           nearest=nearest,
+                           is_parent=is_parent)
 
 
 @app.route('/redeem/default/<int:reward_id>', methods=['POST'])
@@ -1315,6 +1418,67 @@ def parent_add_child():
     conn.commit()
     conn.close()
     return redirect(url_for('parent_dashboard'))
+
+
+@app.route('/parent/attitude', methods=['GET', 'POST'])
+def parent_attitude():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+
+    # verify parent role
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (parent,))
+    row = c.fetchone()
+    if not row or row['role'] != 'parent':
+        conn.close()
+        return redirect(url_for('activities'))
+
+    # list children assigned to this parent
+    c.execute("SELECT username, points FROM users WHERE parent_username = ?", (parent,))
+    children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+
+    if request.method == 'POST':
+        child_username = request.form.get('child_username', '').strip()
+        rating = request.form.get('rating')
+        mapping = {
+            'struggled': 5,
+            'mixed': 10,
+            'good': 15,
+            'excellent': 20
+        }
+        points = mapping.get(rating, 0)
+
+        if not child_username or rating not in mapping:
+            conn.close()
+            return redirect(url_for('parent_attitude'))
+
+        # prevent more than once per day for the same parent-child pair
+        today = datetime.datetime.now().date().isoformat()
+        c.execute("SELECT created_at FROM attitude_logs WHERE parent_username = ? AND child_username = ? ORDER BY created_at DESC LIMIT 1", (parent, child_username))
+        last = c.fetchone()
+        if last:
+            try:
+                last_date = datetime.datetime.fromisoformat(last['created_at']).date().isoformat()
+            except Exception:
+                last_date = None
+            if last_date == today:
+                conn.close()
+                return redirect(url_for('parent_attitude'))
+
+        created_at = datetime.datetime.now().isoformat()
+        c.execute("INSERT INTO attitude_logs (parent_username, child_username, rating, points_awarded, created_at) VALUES (?, ?, ?, ?, ?)", (parent, child_username, rating, points, created_at))
+        # award points to child
+        c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (points, child_username))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('parent_attitude'))
+
+    # GET request: show page
+    conn.close()
+    # determine if any children already logged today for display (optional)
+    return render_template('attitude.html', username=parent, children=children)
 
 
 @app.route('/parent/add_custom_reward_child', methods=['POST'])
