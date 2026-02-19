@@ -6,11 +6,27 @@
   <title>Progress</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='plant.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
   <style>
     
-    .progress-container { width: 90%; max-width: 600px; margin: 24px auto; }
-    .bar { width: 100%; background: #e6e6e6; border-radius: 8px; overflow: hidden; }
-    .bar-inner { height: 28px; background: #4caf50; width: 0%; color: white; text-align: center; line-height: 28px; }
+    .progress-container { width: 90%; max-width: 900px; margin: 24px auto; }
+    /* Blurred background for activity pages */
+    .page-bg {
+      position: fixed;
+      inset: 0 0 0 0;
+      background-image: url("{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}");
+      background-size: cover;
+      background-position: center;
+      filter: blur(6px) saturate(110%);
+      opacity: 0.62;
+      z-index: -1;
+    }
+    .page-content { position: relative; z-index: 1; }
+
+    /* Tabs styling is provided by global CSS `activitiesstyle.css` */
+    .bar { width: 100%; background: linear-gradient(90deg, #fff7e6 0%, #fff 100%); border-radius: 12px; overflow: hidden; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid rgba(251,133,0,0.12); margin-bottom: 20px; }
+    .bar-inner { height: 36px; background: linear-gradient(90deg, #fb8500 0%, #f39c12 100%); width: 0%; color: #000; text-align: center; line-height: 36px; border-radius: 8px; transition: width 0.6s ease; font-weight: 700; }
     .breakdown { margin-top: 12px; }
     .breakdown ul { list-style: none; padding-left: 0; }
     
@@ -92,6 +108,8 @@
   </style>
 </head>
 <body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
   <div class="menu">
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -101,9 +119,39 @@
     </ul>
   </div>
 
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1 class="page-title">Progress</h1>
+        <p class="description">Progress for: <strong>{{ username if username else 'All users' }}</strong></p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a class="active" href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if is_parent %}
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          {% endif %}
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting">Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+        <div id="points">Your Points: {{ points }}</div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
   <div class="progress-container">
-    <h1>Progress</h1>
-    <p>Progress for: <strong>{{ username if username else 'All users' }}</strong></p>
+    <div class="bar" aria-hidden="true">
+      <div id="barInner" class="bar-inner" style="width: {{ percent }}%">{{ percent }}%</div>
+    </div>
 
     <!-- Daily Streak Section -->
     <div class="streak-section">
@@ -225,30 +273,9 @@
       </p>
     </div>
 
-    <div class="bar" aria-hidden="true">
-      <div id="barInner" class="bar-inner" style="width: {{ percent }}%;">{{ percent }}%</div>
-    </div>
-
-    <div class="breakdown">
-      <h3>Breakdown</h3>
-      <div>
-        <strong>Completed</strong>
-        <ul>
-          <li>Major: {{ breakdown.completed.Major }}</li>
-          <li>Medium: {{ breakdown.completed.Medium }}</li>
-          <li>Minor: {{ breakdown.completed.Minor }}</li>
-        </ul>
-      </div>
-      <div>
-        <strong>Pending</strong>
-        <ul>
-          <li>Major: {{ breakdown.pending.Major }}</li>
-          <li>Medium: {{ breakdown.pending.Medium }}</li>
-          <li>Minor: {{ breakdown.pending.Minor }}</li>
-        </ul>
-      </div>
-    </div>
+    
   </div>
-
+</div>
+</div>
 </body>
 </html>

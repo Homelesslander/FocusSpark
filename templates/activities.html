@@ -69,9 +69,24 @@
         grid-template-columns: 1fr;
       }
     }
+    /* Shared blurred background for activities pages */
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
+      background-size: cover;
+      background-position: center center;
+      filter: blur(6px) saturate(1.05);
+      opacity: 0.85;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .page-content { position: relative; z-index: 1; }
   </style>
 
 <body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
 
   <div class="front">
     <div class="front-header">
@@ -83,7 +98,7 @@
         </p>
 
         <ul class="Tabs">
-          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a class="active" href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
           <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
           <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
           <li><a href="{{ url_for('progress') }}">View Progress</a></li>
@@ -496,6 +511,7 @@
         card.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
+            </div>
               <strong>${s.name}</strong><div style="font-size:0.9rem;color:#666;">${s.importance} • Due: ${s.date || 'No date'}</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;min-width:120px;">
