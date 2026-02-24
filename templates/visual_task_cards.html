@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visual Task Cards</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <style>
+    .upload-section {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    
+    .upload-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      align-items: end;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .form-group label {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .form-group input, .form-group textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-wrapper input[type="file"] {
+      display: none;
+    }
+    
+    .file-input-label {
+      display: block;
+      padding: 10px;
+      background: #f0f0f0;
+      border: 2px dashed #999;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .file-input-label:hover {
+      background: #e8e8e8;
+      border-color: #666;
+    }
+    
+    .file-input-label.filled {
+      background: #e8f5e9;
+      border-color: #4caf50;
+      color: #2e7d32;
+    }
+    
+    .btn-upload {
+      background: #4caf50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+    
+    .btn-upload:hover {
+      background: #45a049;
+    }
+    
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .card-item {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .card-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .card-image {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      display: block;
+    }
+    
+    .card-content {
+      padding: 15px;
+    }
+    
+    .card-title {
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    
+    .card-points {
+      background: #fff3cd;
+      color: #856404;
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-delete {
+      background: #f44336;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+    
+    .btn-delete:hover {
+      background: #da190b;
+    }
+    
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #333;
+      margin: 30px 0 20px 0;
+      border-bottom: 2px solid #4caf50;
+      padding-bottom: 10px;
+    }
+    
+    .info-message {
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+  </style>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+
+    <div class="menu">
+      <ul>
+        <li><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="{{ url_for('about') }}">About</a></li>
+        <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+        <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      </ul>
+    </div>
+
+    <div class="front">
+      <div class="front-header">
+        <div class="front-header-left">
+          <h1>Visual Task Cards</h1>
+          <p class="description">Create visual task cards for your child with images and point rewards.</p>
+          
+          <ul class="Tabs">
+            <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+            <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+            <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+            <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+            <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
+            <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+            <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+            <li><a href="{{ url_for('parent_attitude') }}">Parent Attitude</a></li>
+            <li><a href="{{ url_for('settings') }}">Settings</a></li>
+          </ul>
+        </div>
+        <div class="front-header-right">
+          <h3 style="text-align:right;margin:0;padding-top:8px;">Upload Task Cards</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="parent-container" style="max-width:1000px;margin:30px auto;padding:20px;">
+      
+      <!-- Upload Section -->
+      <div class="upload-section">
+        <h2 style="margin-top:0;color:#333;">Create New Task Card</h2>
+        <div class="info-message">
+          📸 Upload an image for your task card. It will be displayed to your child with the point reward value.
+        </div>
+        
+        <form action="{{ url_for('upload_task_card') }}" method="post" enctype="multipart/form-data" class="upload-form">
+          <div class="form-group" style="grid-column:1;">
+            <label for="title">Task Title *</label>
+            <input type="text" id="title" name="title" placeholder="e.g., Clean Room, Do Homework" required>
+          </div>
+          
+          <div class="form-group" style="grid-column:2;">
+            <label for="points">Points Reward *</label>
+            <input type="number" id="points" name="points" min="1" placeholder="e.g., 10" required>
+          </div>
+          
+          <div class="form-group" style="grid-column:1/3;">
+            <label for="image">Upload Image *</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="image" name="image" accept="image/*" required onchange="updateFileName(this)">
+              <label for="image" class="file-input-label" id="fileLabel">
+                📁 Click or drag image (PNG, JPG, GIF)
+              </label>
+            </div>
+          </div>
+          
+          <button type="submit" class="btn-upload" style="grid-column:1/3;width:auto;justify-self:center;">Upload Task Card</button>
+        </form>
+      </div>
+
+      <!-- Custom Cards Section -->
+      {% if custom_cards %}
+        <h2 class="section-title">Your Task Cards</h2>
+        <div class="cards-grid">
+          {% for card in custom_cards %}
+            <div class="card-item">
+              <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image">
+              <div class="card-content">
+                <h3 class="card-title">{{ card.title }}</h3>
+                <div class="card-points">{{ card.points }} pts</div>
+                <small style="color:#999;">Created: {{ card.created_at[:10] }}</small>
+                <div class="card-actions" style="margin-top:10px;">
+                  <form action="{{ url_for('delete_task_card', card_id=card.id) }}" method="post" style="flex:1;">
+                    <button type="submit" class="btn-delete" onclick="return confirm('Delete this card?');">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align:center;padding:40px;color:#999;">
+          <p>No custom task cards yet. Create one above!</p>
+        </div>
+      {% endif %}
+
+      <!-- Recommended Cards Section -->
+      {% if recommended_cards %}
+        <h2 class="section-title">✨ Recommended Cards (System)</h2>
+        <div class="cards-grid">
+          {% for card in recommended_cards %}
+            <div class="card-item">
+              <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image">
+              <div class="card-content">
+                <h3 class="card-title">{{ card.title }}</h3>
+                <div class="card-points">{{ card.points }} pts</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+  <script>
+    // Drag and drop support
+    const fileInput = document.getElementById('image');
+    const fileLabel = document.getElementById('fileLabel');
+    
+    if (fileInput && fileLabel) {
+      fileLabel.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileLabel.style.background = '#e8f5e9';
+      });
+      
+      fileLabel.addEventListener('dragleave', () => {
+        fileLabel.style.background = '';
+      });
+      
+      fileLabel.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileInput.files = e.dataTransfer.files;
+        updateFileName(fileInput);
+      });
+    }
+    
+    function updateFileName(input) {
+      const label = document.getElementById('fileLabel');
+      if (input.files && input.files[0]) {
+        label.textContent = '✓ ' + input.files[0].name;
+        label.classList.add('filled');
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -45,7 +45,7 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: -2; /* behind page content */
-  background-image: url('/static/images/ADHD-Web-Graphic-5-26-21-3.jpg');
+  background-image: url('/static/images/10-reasons-to-embrace-neurodiversity.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parent - Attitude</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+    .attitude-form{max-width:700px;margin:24px auto;background:rgba(255,255,255,0.9);padding:18px;border-radius:10px}
+    .rating-row{display:flex;gap:12px;flex-wrap:wrap}
+    .rating-card{flex:1;min-width:140px;padding:12px;border-radius:8px;border:1px solid #e6e6e6;text-align:center;position:relative;cursor:pointer}
+    .rating-card input{position:absolute;left:-9999px;opacity:0}
+    .rating-card.selected{box-shadow:0 4px 14px rgba(0,0,0,0.12);transform:translateY(-4px);border-color:#f39c12}
+    .rating-card:hover{transform:translateY(-2px)}
+  </style>
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1 class="page-title">Attitude</h1>
+        <p class="description">Log a daily attitude rating for your child. One entry per child per day.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          <li><a class="active" href="{{ url_for('parent_attitude') }}">Parent Attitude</a></li>
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting"> Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+      </div>
+    </div>
+  </div>
+
+  {% if child_emotions %}
+  <div style="max-width:700px;margin:24px auto;">
+    <h2 style="color:#333;margin-top:0;margin-bottom:16px">Children's Emotions Today 👀</h2>
+    {% for child_username, emotion_data in child_emotions.items() %}
+      <div style="background:rgba(255,255,255,0.9);border-radius:10px;padding:16px;margin-bottom:12px;border-left:4px solid #f39c12;display:flex;align-items:center;gap:16px">
+        <div style="font-size:36px;line-height:1">
+          {% if emotion_data['emotion'] == 'furious' %}😡
+          {% elif emotion_data['emotion'] == 'mad' %}😠
+          {% elif emotion_data['emotion'] == 'worried' %}😰
+          {% elif emotion_data['emotion'] == 'happy' %}😊
+          {% elif emotion_data['emotion'] == 'sad' %}😢
+          {% endif %}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:600;color:#333;font-size:16px;text-transform:capitalize">{{ child_username }}: {{ emotion_data['emotion'] }}</div>
+          <div style="font-size:13px;color:#999;margin-top:4px">{{ emotion_data['created_at'] }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="attitude-form">
+    <form method="post" action="{{ url_for('parent_attitude') }}">
+      <label for="child_username">Rate Child's Attitude</label>
+      <select id="child_username" name="child_username" required style="width:100%;padding:8px;margin-bottom:12px;border-radius:6px;border:1px solid #ddd;">
+        {% for c in children %}
+        <option value="{{ c.username }}">{{ c.username }} — Points: {{ c.points }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="rating-row">
+        <label class="rating-card">😔<br>Struggled<br><input type="radio" name="rating" value="struggled" required></label>
+        <label class="rating-card">😐<br>Mixed<br><input type="radio" name="rating" value="mixed"></label>
+        <label class="rating-card">🙂<br>Good effort<br><input type="radio" name="rating" value="good"></label>
+        <label class="rating-card">🎉<br>Excellent<br><input type="radio" name="rating" value="excellent"></label>
+      </div>
+      <script>
+        // add a small UI helper so selecting a radio highlights the card
+        document.addEventListener('DOMContentLoaded', function(){
+          document.querySelectorAll('.rating-card input[type=radio]').forEach(function(r){
+            r.addEventListener('change', function(e){
+              document.querySelectorAll('.rating-card').forEach(function(c){ c.classList.remove('selected') })
+              if(r.checked) r.closest('.rating-card').classList.add('selected')
+            })
+          })
+        })
+      </script>
+
+      <div style="margin-top:14px;text-align:right">
+        <button type="submit" class="btn-add">Submit</button>
+      </div>
+    </form>
+  </div>
+  </div>
+</body>
+</html>

@@ -568,12 +568,99 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 app.register_blueprint(login_bp)
 
+# File upload configuration
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 ensure_users_table()
 ensure_tasks_table()
 ensure_custom_rewards_table()
 ensure_subtasks_table()
 ensure_redemptions_table()
 ensure_streaks_table()
+ensure_attitude_table_called = False
+
+
+def ensure_attitude_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS attitude_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_username TEXT NOT NULL,
+            child_username TEXT NOT NULL,
+            rating TEXT NOT NULL,
+            points_awarded INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def ensure_emotion_logs_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS emotion_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            child_username TEXT NOT NULL,
+            emotion TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def ensure_visual_task_cards_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS visual_task_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_username TEXT NOT NULL,
+            title TEXT NOT NULL,
+            image_path TEXT NOT NULL,
+            points INTEGER NOT NULL,
+            is_recommended INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def ensure_task_completions_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS task_completions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER NOT NULL,
+            child_username TEXT NOT NULL,
+            completed_at TEXT NOT NULL,
+            FOREIGN KEY (card_id) REFERENCES visual_task_cards(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+# ensure tables exist
+ensure_attitude_table()
+ensure_emotion_logs_table()
+ensure_visual_task_cards_table()
+ensure_task_completions_table()
+
 
 
 
@@ -1240,6 +1327,91 @@ def nearest_reward_info(rewards, username):
     }
 
 
+@app.route('/attitude', methods=['GET', 'POST'])
+def attitude():
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    
+    # Get user role to determine if parent or child
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (username,))
+    row = c.fetchone()
+    
+    if not row:
+        conn.close()
+        return redirect(url_for('home'))
+    
+    is_parent = row['role'] == 'parent'
+    
+    # Parent can't access this route, redirect to parent attitude
+    if is_parent:
+        conn.close()
+        return redirect(url_for('parent_attitude'))
+    
+    # Handle POST request: child submitting emotion
+    if request.method == 'POST':
+        emotion = request.form.get('emotion', '').strip()
+        valid_emotions = ['furious', 'mad', 'worried', 'happy', 'sad']
+        
+        if emotion not in valid_emotions:
+            conn.close()
+            return redirect(url_for('attitude'))
+        
+        # Check if child already logged emotion today
+        today = datetime.datetime.now().date().isoformat()
+        c.execute("""
+            SELECT created_at FROM emotion_logs 
+            WHERE child_username = ? AND DATE(created_at) = ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (username, today))
+        last_emotion = c.fetchone()
+        
+        if last_emotion:
+            # Already logged today, redirect (optional: could allow one update per day)
+            conn.close()
+            return redirect(url_for('attitude'))
+        
+        # Log the emotion
+        created_at = datetime.datetime.now().isoformat()
+        c.execute(
+            "INSERT INTO emotion_logs (child_username, emotion, created_at) VALUES (?, ?, ?)",
+            (username, emotion, created_at)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('attitude'))
+    
+    # GET request: show emotion picker
+    # Get today's emotion if any
+    today = datetime.datetime.now().date().isoformat()
+    c.execute("""
+        SELECT emotion, created_at FROM emotion_logs 
+        WHERE child_username = ? AND DATE(created_at) = ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (username, today))
+    today_emotion = c.fetchone()
+    
+    # Get recent emotions history
+    c.execute("""
+        SELECT emotion, created_at 
+        FROM emotion_logs 
+        WHERE child_username = ? 
+        ORDER BY created_at DESC 
+        LIMIT 30
+    """, (username,))
+    emotion_history = c.fetchall()
+    
+    conn.close()
+    
+    return render_template('child_attitude.html',
+                           username=username,
+                           today_emotion=today_emotion,
+                           emotion_history=emotion_history,
+                           is_parent=False)
+
+
 @app.route('/redeem', methods=['GET'])
 def redeem():
     username = session.get('user')
@@ -1397,6 +1569,83 @@ def parent_add_child():
     return redirect(url_for('parent_dashboard'))
 
 
+@app.route('/parent/attitude', methods=['GET', 'POST'])
+def parent_attitude():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+
+    # verify parent role
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (parent,))
+    row = c.fetchone()
+    if not row or row['role'] != 'parent':
+        conn.close()
+        return redirect(url_for('activities'))
+
+    # list children assigned to this parent
+    c.execute("SELECT username, points FROM users WHERE parent_username = ?", (parent,))
+    children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+
+    if request.method == 'POST':
+        child_username = request.form.get('child_username', '').strip()
+        rating = request.form.get('rating')
+        mapping = {
+            'struggled': 5,
+            'mixed': 10,
+            'good': 15,
+            'excellent': 20
+        }
+        points = mapping.get(rating, 0)
+
+        if not child_username or rating not in mapping:
+            conn.close()
+            return redirect(url_for('parent_attitude'))
+
+        # prevent more than once per day for the same parent-child pair
+        today = datetime.datetime.now().date().isoformat()
+        c.execute("SELECT created_at FROM attitude_logs WHERE parent_username = ? AND child_username = ? ORDER BY created_at DESC LIMIT 1", (parent, child_username))
+        last = c.fetchone()
+        if last:
+            try:
+                last_date = datetime.datetime.fromisoformat(last['created_at']).date().isoformat()
+            except Exception:
+                last_date = None
+            if last_date == today:
+                conn.close()
+                return redirect(url_for('parent_attitude'))
+
+        created_at = datetime.datetime.now().isoformat()
+        c.execute("INSERT INTO attitude_logs (parent_username, child_username, rating, points_awarded, created_at) VALUES (?, ?, ?, ?, ?)", (parent, child_username, rating, points, created_at))
+        # award points to child
+        c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (points, child_username))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('parent_attitude'))
+
+    # GET request: show page
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get child emotions for today
+    today = datetime.datetime.now().date().isoformat()
+    child_emotions = {}
+    for child in children:
+        c.execute("""
+            SELECT emotion, created_at FROM emotion_logs 
+            WHERE child_username = ? AND DATE(created_at) = ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (child['username'], today))
+        emotion_row = c.fetchone()
+        if emotion_row:
+            child_emotions[child['username']] = emotion_row
+    
+    conn.close()
+    # determine if any children already logged today for display (optional)
+    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions)
+
+
 @app.route('/parent/add_custom_reward_child', methods=['POST'])
 def parent_add_custom_reward_child():
     parent = session.get('user') if session else None
@@ -1434,6 +1683,190 @@ def parent_add_custom_reward_child():
     conn.close()
     return redirect(url_for('parent_dashboard'))
 
+
+@app.route('/upload-task-card', methods=['POST'])
+def upload_task_card():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    # Check if file and other fields are present
+    if 'image' not in request.files:
+        return "No image file provided", 400
+    
+    file = request.files['image']
+    title = request.form.get('title', '').strip()
+    points_str = request.form.get('points', '').strip()
+    
+    if not file or file.filename == '':
+        return "No file selected", 400
+    
+    if not title:
+        return "Title is required", 400
+    
+    try:
+        points = int(points_str)
+    except ValueError:
+        return "Points must be a number", 400
+    
+    if file and allowed_file(file.filename):
+        # Generate unique filename
+        import uuid
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Store in database
+        conn = get_db_conn()
+        c = conn.cursor()
+        created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        c.execute(
+            "INSERT INTO visual_task_cards (parent_username, title, image_path, points, created_at) VALUES (?, ?, ?, ?, ?)",
+            (parent, title, f"/static/uploads/{filename}", points, created_at)
+        )
+        conn.commit()
+        conn.close()
+        
+        return redirect(url_for('visual_task_cards'))
+    else:
+        return "File type not allowed. Use PNG, JPG, JPEG, or GIF", 400
+
+
+@app.route('/visual-task-cards', methods=['GET'])
+def visual_task_cards():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get parent's custom cards
+    c.execute(
+        "SELECT id, title, image_path, points, created_at FROM visual_task_cards WHERE parent_username = ? AND is_recommended = 0 ORDER BY created_at DESC",
+        (parent,)
+    )
+    custom_cards = [dict(row) for row in c.fetchall()]
+    
+    # Get recommended cards
+    c.execute(
+        "SELECT id, title, image_path, points FROM visual_task_cards WHERE is_recommended = 1 ORDER BY title"
+    )
+    recommended_cards = [dict(row) for row in c.fetchall()]
+    
+    conn.close()
+    
+    return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards)
+
+
+@app.route('/delete-task-card/<int:card_id>', methods=['POST'])
+def delete_task_card(card_id):
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Verify ownership
+    c.execute("SELECT image_path FROM visual_task_cards WHERE id = ? AND parent_username = ?", (card_id, parent))
+    row = c.fetchone()
+    
+    if not row:
+        conn.close()
+        return "Card not found or not owned by you", 403
+    
+    # Delete image file
+    image_path = row['image_path']
+    if image_path.startswith('/'):
+        filepath = '.' + image_path
+    else:
+        filepath = os.path.join('static', image_path)
+    
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    
+    # Delete from database
+    c.execute("DELETE FROM visual_task_cards WHERE id = ?", (card_id,))
+    c.execute("DELETE FROM task_completions WHERE card_id = ?", (card_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('visual_task_cards'))
+
+
+@app.route('/child-task-cards', methods=['GET'])
+def child_task_cards():
+    child = session.get('user') if session else None
+    if not child:
+        return redirect(url_for('home'))
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get all available cards (from parent and recommended)
+    c.execute("SELECT id, title, image_path, points FROM visual_task_cards ORDER BY created_at DESC")
+    cards = [dict(row) for row in c.fetchall()]
+    
+    # Get completed cards for this child
+    c.execute("SELECT card_id FROM task_completions WHERE child_username = ?", (child,))
+    completed_ids = set(row['card_id'] for row in c.fetchall())
+    
+    conn.close()
+    
+    # Mark completed cards
+    for card in cards:
+        card['completed'] = card['id'] in completed_ids
+    
+    return render_template('child_task_cards.html', cards=cards)
+
+
+@app.route('/complete-task-card', methods=['POST'])
+def complete_task_card():
+    child = session.get('user') if session else None
+    if not child:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    data = request.get_json() if request.is_json else {}
+    card_id = data.get('card_id')
+    
+    if not card_id:
+        return jsonify({'success': False, 'error': 'Card ID required'}), 400
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get card details
+    c.execute("SELECT id, points FROM visual_task_cards WHERE id = ?", (card_id,))
+    card = c.fetchone()
+    
+    if not card:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Card not found'}), 404
+    
+    # Check if already completed
+    c.execute("SELECT id FROM task_completions WHERE card_id = ? AND child_username = ?", (card_id, child))
+    if c.fetchone():
+        conn.close()
+        return jsonify({'success': False, 'error': 'Already completed'}), 400
+    
+    # Record completion
+    completed_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    c.execute(
+        "INSERT INTO task_completions (card_id, child_username, completed_at) VALUES (?, ?, ?)",
+        (card_id, child, completed_at)
+    )
+    
+    # Award points
+    points = card['points']
+    c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, child))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'points_awarded': points})
 
 
 if __name__ == "__main__":
