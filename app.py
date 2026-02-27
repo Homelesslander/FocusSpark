@@ -1,14 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from login import login_bp
-import sqlite3
+from db_config import get_db_conn_wrapped
 import datetime
 import os
 import smtplib
 import ssl
 import threading
 import time
-
-DB_PATH = 'database.db'
 
 TASK_BREAKDOWN_PATTERNS = {
     "write": [
@@ -98,9 +96,7 @@ def auto_breakdown_task(task_name):
 
 
 def get_db_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_db_conn_wrapped()
 
 
 def ensure_users_table():
@@ -110,23 +106,34 @@ def ensure_users_table():
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
             password TEXT NOT NULL
         )
     ''')
-
-    c.execute("PRAGMA table_info(users)")
-    columns = [row[1] for row in c.fetchall()]
-    if "points" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
-    # Add optional email and reminder preferences columns if missing
-    if "email" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
-    if "reminders_enabled" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
-    if "reminder_frequency" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'weekly'")
+    
+    # Add optional columns if missing
+    # columns may already exist; ignore duplicate-column error
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN points INT DEFAULT 0")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INT DEFAULT 0")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency VARCHAR(50) DEFAULT 'weekly'")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
 
     conn.commit()
     conn.close()
@@ -138,23 +145,33 @@ def ensure_tasks_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
             name TEXT NOT NULL,
-            date TEXT,
-            time TEXT,
-            importance TEXT NOT NULL,
-            user TEXT
+            date VARCHAR(50),
+            time VARCHAR(50),
+            importance VARCHAR(50) NOT NULL,
+            user VARCHAR(255),
+            completed INT DEFAULT 0,
+            completed_at VARCHAR(255)
         )
     ''')
    
-    c.execute("PRAGMA table_info(tasks)")
-    existing_cols = [row[1] for row in c.fetchall()]
-    if "completed" not in existing_cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN completed INTEGER DEFAULT 0")
-    if "completed_at" not in existing_cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN completed_at TEXT")
-    if "time" not in existing_cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN time TEXT")
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN completed INT DEFAULT 0")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN completed_at VARCHAR(255)")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN time VARCHAR(50)")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    
     conn.commit()
     conn.close()
 
@@ -164,23 +181,18 @@ def ensure_custom_rewards_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS custom_rewards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            title TEXT NOT NULL,
-            cost INTEGER NOT NULL,
-            duration_minutes INTEGER DEFAULT 0
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            cost INT NOT NULL,
+            duration_minutes INT DEFAULT 0
         )
     ''')
-    conn.commit()
-    conn.close()
-
-    # ensure duration column exists for older DBs
-    conn = get_db_conn()
-    c = conn.cursor()
-    c.execute("PRAGMA table_info(custom_rewards)")
-    cols = [r[1] for r in c.fetchall()]
-    if 'duration_minutes' not in cols:
-        c.execute("ALTER TABLE custom_rewards ADD COLUMN duration_minutes INTEGER DEFAULT 0")
+    try:
+        c.execute("ALTER TABLE custom_rewards ADD COLUMN duration_minutes INT DEFAULT 0")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
     conn.commit()
     conn.close()
 
@@ -191,11 +203,11 @@ def ensure_subtasks_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS subtasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parent_task_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            completed INTEGER DEFAULT 0,
-            completed_at TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            parent_task_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            completed INT DEFAULT 0,
+            completed_at VARCHAR(255),
             FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
         )
     ''')
@@ -209,26 +221,22 @@ def ensure_redemptions_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS redemptions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            reward_type TEXT NOT NULL,
-            reward_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            cost INTEGER NOT NULL,
-            redeemed_at TEXT NOT NULL,
-            expires_at TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL,
+            reward_type VARCHAR(50) NOT NULL,
+            reward_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            cost INT NOT NULL,
+            redeemed_at VARCHAR(255) NOT NULL,
+            expires_at VARCHAR(255),
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
-    conn.commit()
-    conn.close()
-    # ensure expires_at column exists for older DBs
-    conn = get_db_conn()
-    c = conn.cursor()
-    c.execute("PRAGMA table_info(redemptions)")
-    cols = [r[1] for r in c.fetchall()]
-    if 'expires_at' not in cols:
-        c.execute("ALTER TABLE redemptions ADD COLUMN expires_at TEXT")
+    try:
+        c.execute("ALTER TABLE redemptions ADD COLUMN expires_at VARCHAR(255)")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
     conn.commit()
     conn.close()
 
@@ -244,11 +252,11 @@ def ensure_streaks_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS streaks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            current_streak INTEGER DEFAULT 0,
-            last_completion_date TEXT,
-            longest_streak INTEGER DEFAULT 0,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            current_streak INT DEFAULT 0,
+            last_completion_date VARCHAR(255),
+            longest_streak INT DEFAULT 0,
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
@@ -348,8 +356,8 @@ def compute_progress(username=None):
     }
 
     for r in rows:
-        imp = r[0]
-        completed = r[1]
+        imp = r['importance']
+        completed = r['completed']
         weight = WEIGHTS.get(imp, 1.0)
         if completed:
             completed_weight += weight
@@ -544,13 +552,6 @@ def complete_task_and_award(task_id, username):
         importance = row['importance']
         points = POINTS.get(importance, 0)
 
-        
-        c.execute("PRAGMA table_info(users)")
-        cols = [r[1] for r in c.fetchall()]
-        if "points" not in cols:
-            c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
-
-       
         c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, username))
 
         completed_at = datetime.datetime.now().isoformat()
@@ -594,12 +595,12 @@ def ensure_attitude_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS attitude_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parent_username TEXT NOT NULL,
-            child_username TEXT NOT NULL,
-            rating TEXT NOT NULL,
-            points_awarded INTEGER NOT NULL,
-            created_at TEXT NOT NULL
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            parent_username VARCHAR(255) NOT NULL,
+            child_username VARCHAR(255) NOT NULL,
+            rating VARCHAR(50) NOT NULL,
+            points_awarded INT NOT NULL,
+            created_at VARCHAR(255) NOT NULL
         )
     ''')
     conn.commit()
@@ -611,10 +612,10 @@ def ensure_emotion_logs_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS emotion_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            child_username TEXT NOT NULL,
-            emotion TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            child_username VARCHAR(255) NOT NULL,
+            emotion VARCHAR(100) NOT NULL,
+            created_at VARCHAR(255) NOT NULL
         )
     ''')
     conn.commit()
@@ -626,13 +627,13 @@ def ensure_visual_task_cards_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS visual_task_cards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parent_username TEXT NOT NULL,
-            title TEXT NOT NULL,
-            image_path TEXT NOT NULL,
-            points INTEGER NOT NULL,
-            is_recommended INTEGER DEFAULT 0,
-            created_at TEXT NOT NULL
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            parent_username VARCHAR(255) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            image_path VARCHAR(255) NOT NULL,
+            points INT NOT NULL,
+            is_recommended INT DEFAULT 0,
+            created_at VARCHAR(255) NOT NULL
         )
     ''')
     conn.commit()
@@ -644,10 +645,10 @@ def ensure_task_completions_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS task_completions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            card_id INTEGER NOT NULL,
-            child_username TEXT NOT NULL,
-            completed_at TEXT NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            card_id INT NOT NULL,
+            child_username VARCHAR(255) NOT NULL,
+            completed_at VARCHAR(255) NOT NULL,
             FOREIGN KEY (card_id) REFERENCES visual_task_cards(id)
         )
     ''')
@@ -857,16 +858,13 @@ def settings():
     if username:
         conn = get_db_conn()
         c = conn.cursor()
-        c.execute("PRAGMA table_info(users)")
-        cols = [r[1] for r in c.fetchall()]
-        if 'email' in cols:
-            c.execute("SELECT email, reminders_enabled, reminder_frequency, email_verified FROM users WHERE username = ?", (username,))
-            row = c.fetchone()
-            if row:
-                email = row['email']
-                reminders_enabled = row['reminders_enabled'] or 0
-                reminder_frequency = row['reminder_frequency'] or 'weekly'
-                email_verified = row['email_verified'] or 0
+        c.execute("SELECT email, reminders_enabled, reminder_frequency, email_verified FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row:
+            email = row['email']
+            reminders_enabled = row['reminders_enabled'] or 0
+            reminder_frequency = row['reminder_frequency'] or 'weekly'
+            email_verified = row['email_verified'] or 0
         conn.close()
     # pass parent flag to settings template so parent link can appear in tabs
     is_parent = False
@@ -895,15 +893,21 @@ def update_settings():
 
     conn = get_db_conn()
     c = conn.cursor()
-    # ensure columns exist (in case DB predates migration)
-    c.execute("PRAGMA table_info(users)")
-    cols = [r[1] for r in c.fetchall()]
-    if 'email' not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
-    if 'reminders_enabled' not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
-    if 'reminder_frequency' not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'weekly'")
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INT DEFAULT 0")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency VARCHAR(50) DEFAULT 'weekly'")
+    except Exception as e:
+        if not (hasattr(e, 'errno') and e.errno == 1060):
+            raise
 
     c.execute("UPDATE users SET email = ?, reminders_enabled = ?, reminder_frequency = ? WHERE username = ?",
               (email, reminders_enabled, reminder_frequency, username))
