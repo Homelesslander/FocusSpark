@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How Are You Feeling? - StreakMate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+    
+    .emotion-container{max-width:550px;margin:24px auto;padding:0 16px}
+    
+    .emotion-picker{background:rgba(255,255,255,0.95);border-radius:16px;padding:40px 24px;box-shadow:0 8px 24px rgba(0,0,0,0.12);margin-bottom:24px}
+    
+    .picker-title{text-align:center;color:#333;font-size:24px;margin:0 0 32px 0;font-weight:700}
+    
+    .thermometer-container{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:16px;
+    }
+    
+    .thermometer-tube{
+      width:160px;
+      height:500px;
+      border:6px solid #333;
+      border-radius:30px 30px 50px 50px;
+      background:linear-gradient(180deg, #FF3333 0%, #FF6B6B 20%, #FFD700 45%, #66BB6A 50%, #87CEEB 75%, #4A90E2 100%);
+      position:relative;
+      box-shadow:0 8px 24px rgba(0,0,0,0.25);
+      padding:12px;
+      display:flex;
+      flex-direction:column-reverse;
+      gap:0;
+      overflow:hidden;
+    }
+    
+    .emotion-slot{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:all 0.3s ease;
+      position:relative;
+      border-radius:12px;
+    }
+    
+    .emotion-slot input[type="radio"]{position:absolute;left:-9999px;opacity:0}
+    
+    .emotion-slot:hover{background:rgba(255,255,255,0.2);transform:scale(1.08)}
+    
+    .emotion-slot input:checked ~ .emotion-content{
+      transform:scale(1.2);
+      filter:drop-shadow(0 0 16px rgba(0,0,0,0.5));
+      z-index:10;
+    }
+    
+    .emotion-content{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      text-align:center;
+      transition:transform 0.3s ease;
+      z-index:1;
+    }
+    
+    .emotion-emoji{
+      font-size:42px;
+      line-height:1;
+      text-shadow:0 2px 6px rgba(0,0,0,0.3);
+      filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    
+    .emotion-name{
+      font-weight:700;
+      font-size:13px;
+      color:white;
+      text-shadow:0 2px 4px rgba(0,0,0,0.4);
+      line-height:1.2;
+    }
+    
+    .emotion-note{
+      font-size:10px;
+      color:rgba(255,255,255,0.95);
+      text-shadow:0 1px 3px rgba(0,0,0,0.4);
+      line-height:1.15;
+      max-width:100px;
+    }
+    
+    /* FURIOUS - Top, Red */
+    .emotion-slot.slot-furious{}.emotion-slot.slot-furious input:checked ~ .emotion-content{color:#fff}
+    
+    /* MAD - Orange */
+    .emotion-slot.slot-mad{}
+    
+    /* HAPPY - Green */
+    .emotion-slot.slot-happy{}
+    
+    /* WORRIED - Light Blue */
+    .emotion-slot.slot-worried{}
+    
+    /* SAD - Bottom, Dark Blue */
+    .emotion-slot.slot-sad{}
+    
+    .thermometer-bulb{
+      width:160px;
+      height:100px;
+      border-radius:50%;
+      background:linear-gradient(135deg, #FFB74D 0%, #FFA726 50%, #FF9800 100%);
+      border:6px solid #333;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:52px;
+      box-shadow:0 8px 24px rgba(255,152,0,0.35);
+      margin-top:-20px;
+    }
+    
+    .coping-tips{
+      background:rgba(243,156,18,0.08);
+      border:2px solid rgba(243,156,18,0.4);
+      border-radius:12px;
+      padding:16px;
+      margin-top:20px;
+      min-height:60px;
+      transition:all 0.3s ease;
+      text-align:center;
+    }
+    
+    .coping-tips h4{margin:0 0 8px 0;color:#f39c12;font-size:13px}
+    .coping-tips p{margin:0;color:#333;font-size:13px;line-height:1.5}
+    
+    .submit-btn{width:100%;max-width:300px;padding:14px;background:linear-gradient(135deg,#f39c12 0%,#e67e22 100%);border:none;border-radius:10px;color:white;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.3s ease;margin-top:20px}
+    
+    .submit-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(243,156,18,0.4)}
+    
+    .submit-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    
+    .today-status{background:rgba(76,175,80,0.15);border-left:4px solid #4CAF50;padding:12px 16px;border-radius:6px;margin-bottom:16px;color:#2e7d32;font-size:14px;font-weight:500}
+    
+    .emotion-history{margin-top:32px}
+    .emotion-history h3{color:#333;font-size:16px;margin-top:0}
+    
+    .history-item{background:rgba(255,255,255,0.9);border-left:4px solid #f39c12;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;gap:12px;font-size:14px}
+    
+    .history-emoji{font-size:24px}
+    .history-details{flex:1}
+    .history-emotion{font-weight:600;color:#333}
+    .history-date{font-size:12px;color:#999;margin-top:4px}
+  </style>
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1 class="page-title">How Are You Feeling?</h1>
+        <p class="description">Click an emotion in the thermometer to share how you're feeling today.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a class="active" href="{{ url_for('attitude') }}">Attitude</a></li>
+          <li><a href="{{ url_for('child_task_cards') }}">Task Cards</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting">Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+      </div>
+    </div>
+  </div>
+
+  <div class="emotion-container">
+    {% if today_emotion %}
+    <div class="today-status">
+      ✓ You already shared your emotion today! Come back tomorrow to share again.
+    </div>
+    {% endif %}
+    
+    <div class="emotion-picker">
+      <h2 class="picker-title">Feelings Thermometer</h2>
+      
+      <form method="post" action="{{ url_for('attitude') }}" id="emotionForm">
+        <div class="thermometer-container">
+          <div class="thermometer-tube">
+            
+            <!-- SAD - BOTTOM (Dark Blue, Coolest) -->
+            <label class="emotion-slot slot-sad">
+              <input type="radio" name="emotion" value="sad" {% if today_emotion %}disabled{% endif %}>
+              <div class="emotion-content">
+                <div class="emotion-emoji">😢</div>
+                <div class="emotion-name">SAD</div>
+                <div class="emotion-note">Talk to someone you know and trust</div>
+              </div>
+            </label>
+            
+            <!-- WORRIED (Light Blue, Cool) -->
+            <label class="emotion-slot slot-worried">
+              <input type="radio" name="emotion" value="worried" {% if today_emotion %}disabled{% endif %}>
+              <div class="emotion-content">
+                <div class="emotion-emoji">😰</div>
+                <div class="emotion-name">WORRIED</div>
+                <div class="emotion-note">Relax, You can do this!</div>
+              </div>
+            </label>
+            
+            <!-- HAPPY (Green/Yellow, Middle) -->
+            <label class="emotion-slot slot-happy">
+              <input type="radio" name="emotion" value="happy" {% if today_emotion %}disabled{% endif %}>
+              <div class="emotion-content">
+                <div class="emotion-emoji">😊</div>
+                <div class="emotion-name">HAPPY</div>
+                <div class="emotion-note">Feeling great!</div>
+              </div>
+            </label>
+            
+            <!-- FRUSTRATED (Orange-Red, Hot) -->
+            <label class="emotion-slot slot-mad">
+              <input type="radio" name="emotion" value="mad" {% if today_emotion %}disabled{% endif %}>
+              <div class="emotion-content">
+                <div class="emotion-emoji">😠</div>
+                <div class="emotion-name">Angry</div>
+                <div class="emotion-note">Take a break and come back</div>
+              </div>
+            </label>
+            
+            <!-- FURIOUS - TOP (Red, Hottest) -->
+            <label class="emotion-slot slot-furious">
+              <input type="radio" name="emotion" value="furious" required {% if today_emotion %}disabled{% endif %}>
+              <div class="emotion-content">
+                <div class="emotion-emoji">😡</div>
+                <div class="emotion-name">FURIOUS</div>
+                <div class="emotion-note">Remain Calm and Breathe</div>
+              </div>
+            </label>
+            
+          </div>
+          
+          <div class="thermometer-bulb">🌡️</div>
+        </div>
+        
+        <!-- Coping Tips Box -->
+        <div class="coping-tips" id="copingTips">
+          <h4>💡 Select an emotion to see helpful tips</h4>
+          <p id="copingText">Click any emotion in the thermometer</p>
+        </div>
+        
+        <div style="display:flex;justify-content:center">
+          <button type="submit" class="submit-btn" {% if today_emotion %}disabled{% endif %}>
+            {% if today_emotion %}Already Shared Today{% else %}Share My Feeling{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    {% if emotion_history and emotion_history|length > 0 %}
+    <div class="emotion-history">
+      <h3>📊 Your Recent Emotions</h3>
+      {% for entry in emotion_history %}
+        <div class="history-item">
+          <div class="history-emoji">
+            {% if entry['emotion'] == 'furious' %}😡
+            {% elif entry['emotion'] == 'mad' %}😠
+            {% elif entry['emotion'] == 'worried' %}😰
+            {% elif entry['emotion'] == 'happy' %}😊
+            {% elif entry['emotion'] == 'sad' %}😢
+            {% endif %}
+          </div>
+          <div class="history-details">
+            <div class="history-emotion">
+              {% if entry['emotion'] == 'furious' %}Furious
+              {% elif entry['emotion'] == 'mad' %}Frustrated
+              {% elif entry['emotion'] == 'worried' %}Worried
+              {% elif entry['emotion'] == 'happy' %}Happy
+              {% elif entry['emotion'] == 'sad' %}Sad
+              {% endif %}
+            </div>
+            <div class="history-date">{{ entry['created_at'] }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  </div>
+  
+  <script>
+    const copingStrategies = {
+      furious: {
+        title: '😡 FURIOUS - Count Out Loud & Ask for Help',
+        tips: '• Count out loud to 10\n• Step away from the situation\n• Ask an adult for help\n• Take deep breaths'
+      },
+      mad: {
+        title: '😠 FRUSTRATED - Take a Break & Release',
+        tips: '• Take a break from what you\'re doing\n• Squeeze your fists & release\n• Go for a walk\n• Listen to music'
+      },
+      happy: {
+        title: '😊 HAPPY - Enjoy the Good Feeling!',
+        tips: '• Smile and laugh!\n• Hang out with friends\n• Celebrate your win\n• Share your happiness'
+      },
+      worried: {
+        title: '😰 WORRIED - Stop & Breathe',
+        tips: '• Take 5 slow, deep breaths\n• Hug someone or a stuffed animal\n• Do something you enjoy\n• Talk to someone you trust'
+      },
+      sad: {
+        title: '😢 SAD - Get Support & Comfort',
+        tips: '• Talk to family or friends\n• Hug someone you trust\n• Cuddle a stuffed animal\n• Ask for a break'
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const emotionRadios = document.querySelectorAll('input[name="emotion"]');
+      const copingTips = document.getElementById('copingTips');
+      const copingText = document.getElementById('copingText');
+
+      emotionRadios.forEach(radio => {
+        radio.addEventListener('change', function(e) {
+          const emotion = this.value;
+          const tips = copingStrategies[emotion];
+          
+          copingTips.innerHTML = `
+            <h4>${tips.title}</h4>
+            <p style="white-space: pre-line; text-align: left;">${tips.tips}</p>
+          `;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
