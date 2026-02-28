@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='box.css') }}">
   <style>
     .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
     .page-content{position:relative;z-index:1}
@@ -69,6 +70,9 @@
           <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post" style="display:inline;">
             <button type="submit">Delete</button>
           </form>
+          <form action="{{ url_for('box_add', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit" class="box-btn">📦 Put in Box</button>
+          </form>
         </li>
         {% else %}
         <li class="empty">No major tasks yet.</li>
@@ -87,6 +91,9 @@
           </form>
           <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post" style="display:inline;">
             <button type="submit">Delete</button>
+          </form>
+          <form action="{{ url_for('box_add', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit" class="box-btn">📦 Put in Box</button>
           </form>
         </li>
         {% else %}
@@ -107,6 +114,9 @@
           <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post" style="display:inline;">
             <button type="submit">Delete</button>
           </form>
+          <form action="{{ url_for('box_add', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit" class="box-btn">📦 Put in Box</button>
+          </form>
         </li>
         {% else %}
         <li class="empty">No minor tasks yet.</li>
@@ -117,7 +127,28 @@
       </div>
     </div> <!-- End activities-main -->
   </div> <!-- End activities-container -->
+  <!-- Task Box Widget -->
+  <div id="task-box" class="task-box" aria-hidden="false">
+    <button id="box-toggle" class="box-toggle" aria-expanded="false" title="Open Storebox">
+      <!-- inline SVG box so lid can animate precisely -->
+      <svg class="box-svg" width="96" height="72" viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" fill-rule="evenodd">
+          <path class="box-body-shape" d="M4 14h56v28H4z" stroke-opacity="0.08"/>
+          <rect class="box-body-color" x="6" y="16" width="52" height="24" rx="6" opacity="0.12"/>
+          <g class="box-lid-group" transform="translate(0,0)">
+            <path class="box-lid" d="M2 14h60l-8-8H10z"/>
+          </g>
+        </g>
+      </svg>
+      <div class="box-label">storebox</div>
+      <span id="box-count" class="box-count">0</span>
+    </button>
+    <div id="box-contents" class="box-contents" hidden>
+      <div id="box-items" class="box-items">Loading...</div>
+    </div>
   </div>
+
+  <script src="{{ url_for('static', filename='box.js') }}"></script>
 </div>
 </body>
 </html>
