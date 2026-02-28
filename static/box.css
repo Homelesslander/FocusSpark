@@ -1,0 +1,46 @@
+/* Bright, playful styles for the Task Box widget */
+:root{
+  --box-accent:#ff6b6b;
+  --box-accent-2:#ffd166;
+  --box-body:#4cc9f0;
+  --box-bg:#ffffff;
+  --box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+
+/* position the widget */
+#task-box{position:fixed;right:18px;bottom:18px;z-index:9999;font-family:inherit}
+
+/* make the whole toggle a prominent rounded orange square */
+.box-toggle{background:linear-gradient(180deg,#ff9f1c,#ff7b00);border:none;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#111;border-radius:22px;width:140px;height:140px;box-shadow:0 12px 36px rgba(255,140,38,0.18)}
+.box-svg{display:block;width:86px;height:auto}
+.box-label{font-weight:800;color:#fff;text-transform:lowercase;letter-spacing:0.6px;font-size:15px}
+
+/* the count becomes a small rounded square to match the user's request */
+.box-count{background:#ff6b00;color:#fff;border-radius:8px;padding:6px 10px;font-weight:800;margin-top:4px;font-size:14px;box-shadow:0 6px 14px rgba(0,0,0,0.12)}
+
+.box-contents{position:fixed;right:18px;bottom:110px;width:340px;max-height:460px;background:linear-gradient(180deg,#ffffff, #fff7f0);border-radius:14px;box-shadow:var(--box-shadow);overflow:auto;padding:12px}
+.box-items{display:flex;flex-direction:column;gap:10px}
+.box-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:linear-gradient(90deg,rgba(76,201,240,0.12),rgba(255,214,165,0.08));border:1px solid rgba(0,0,0,0.04)}
+.box-item .meta{display:flex;flex-direction:column}
+.box-item .meta .title{font-weight:800;color:#143642}
+.box-item .meta .sub{font-size:12px;color:#566573}
+.box-item .actions{display:flex;gap:8px}
+.box-item button{background:var(--box-accent);color:#fff;border:none;padding:8px 10px;border-radius:10px;cursor:pointer}
+.box-item button.restore{background:#4cc9f0}
+
+/* lid animation - target the .box-lid path inside SVG via transform */
+.box-svg .box-lid{transform-origin:32px 12px;transition:transform .32s cubic-bezier(.2,.9,.2,1);fill:#6a4cff}
+.box-svg .box-body-color{fill:#2ec4b6;opacity:0.16}
+.box-svg .box-body-shape{stroke:#000;stroke-opacity:0.08;fill:transparent}
+.box-svg.lid-open .box-lid{transform:rotate(-40deg) translateY(-6px) translateX(-2px)}
+
+/* celebration pulse on add */
+.box-toggle.pulse{animation:pulse 480ms ease-out}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+/* small responsive tweak */
+@media(max-width:600px){
+  .box-contents{right:10px;left:10px;width:auto}
+  .box-svg{width:52px;height:auto}
+}
