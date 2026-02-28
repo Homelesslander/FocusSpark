@@ -156,22 +156,42 @@ def ensure_tasks_table():
         )
     ''')
    
+    # ensure all necessary columns exist (handles migrations for SQLite/MySQL)
     try:
-        c.execute("ALTER TABLE tasks ADD COLUMN completed INT DEFAULT 0")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-    try:
-        c.execute("ALTER TABLE tasks ADD COLUMN completed_at VARCHAR(255)")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-    try:
-        c.execute("ALTER TABLE tasks ADD COLUMN time VARCHAR(50)")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-    
+        c.execute("PRAGMA table_info(tasks)")
+        existing_cols = [row[1] for row in c.fetchall()]
+    except Exception:
+        # fallback for MySQL without PRAGMA
+        existing_cols = []
+    if "completed" not in existing_cols:
+        try:
+            c.execute("ALTER TABLE tasks ADD COLUMN completed INT DEFAULT 0")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
+    if "completed_at" not in existing_cols:
+        try:
+            c.execute("ALTER TABLE tasks ADD COLUMN completed_at VARCHAR(255)")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
+    if "time" not in existing_cols:
+        try:
+            c.execute("ALTER TABLE tasks ADD COLUMN time VARCHAR(50)")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
+    # Add box-related columns for Option B
+    if "in_box" not in existing_cols:
+        try:
+            c.execute("ALTER TABLE tasks ADD COLUMN in_box INTEGER DEFAULT 0")
+        except Exception:
+            pass
+    if "box_count" not in existing_cols:
+        try:
+            c.execute("ALTER TABLE tasks ADD COLUMN box_count INTEGER DEFAULT 0")
+        except Exception:
+            pass
     conn.commit()
     conn.close()
 
@@ -264,12 +284,113 @@ def ensure_streaks_table():
     conn.close()
 
 
+def ensure_box_moves_table():
+    """Create the `box_moves` table to store move history for analytics.
+
+    The SQL is written differently depending on whether we're using MySQL
+    or SQLite. MySQL requires `AUTO_INCREMENT` while SQLite uses
+    `AUTOINCREMENT` (or simply `INTEGER PRIMARY KEY`). We try the MySQL
+    form first and fall back to the SQLite form if it fails.
+    """
+    conn = get_db_conn()
+    c = conn.cursor()
+    try:
+        # attempt MySQL‑style creation
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS box_moves (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                task_id INT NOT NULL,
+                username VARCHAR(255),
+                moved_at VARCHAR(255) NOT NULL,
+                FOREIGN KEY (task_id) REFERENCES tasks(id)
+            )
+        ''')
+    except Exception:
+        # fallback for SQLite or other DBs
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS box_moves (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                username TEXT,
+                moved_at TEXT NOT NULL,
+                FOREIGN KEY (task_id) REFERENCES tasks(id)
+            )
+        ''')
+    conn.commit()
+    conn.close()
+
+
+def move_task_to_box(task_id, username):
+    """Mark a task as moved to the box and record the move for analytics."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    # verify task exists and not completed
+    c.execute("SELECT id, completed, user FROM tasks WHERE id = ?", (task_id,))
+    r = c.fetchone()
+    if not r:
+        conn.close()
+        return False
+    if r['completed']:
+        conn.close()
+        return False
+
+    # update task to be in the box and increment counter
+    c.execute("UPDATE tasks SET in_box = 1, box_count = COALESCE(box_count,0) + 1 WHERE id = ?", (task_id,))
+    moved_at = datetime.datetime.now().isoformat()
+    c.execute("INSERT INTO box_moves (task_id, username, moved_at) VALUES (?, ?, ?)", (task_id, username, moved_at))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def restore_task_from_box(task_id, username):
+    """Restore a task from the box back to active tasks."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id, completed FROM tasks WHERE id = ?", (task_id,))
+    r = c.fetchone()
+    if not r:
+        conn.close()
+        return False
+    if r['completed']:
+        conn.close()
+        return False
+    c.execute("UPDATE tasks SET in_box = 0 WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_box_items(username):
+    """Return tasks currently in the box for the given username."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id, name, date, time, importance, box_count, user FROM tasks WHERE in_box = 1 AND user = ? ORDER BY id DESC", (username,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_box_stats(username=None, limit=10):
+    """Return aggregated box move counts for tasks (most-boxed). If username provided, filter to that user's tasks."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("SELECT bm.task_id, t.name, COUNT(*) as moves FROM box_moves bm JOIN tasks t ON t.id = bm.task_id WHERE t.user = ? GROUP BY bm.task_id ORDER BY moves DESC LIMIT ?", (username, limit))
+    else:
+        c.execute("SELECT bm.task_id, t.name, COUNT(*) as moves FROM box_moves bm JOIN tasks t ON t.id = bm.task_id GROUP BY bm.task_id ORDER BY moves DESC LIMIT ?", (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_tasks_grouped():
     
     conn = get_db_conn()
     c = conn.cursor()
     
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY id")
+    # Exclude tasks currently placed in the box
+    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY id")
     rows = c.fetchall()
     conn.close()
 
@@ -304,7 +425,8 @@ def get_calendar_tasks():
     """Get tasks organized by date for calendar view"""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY date")
+    # Exclude boxed tasks from calendar view
+    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY date")
     rows = c.fetchall()
     conn.close()
     
@@ -344,6 +466,11 @@ def compute_progress(username=None):
         where = "WHERE user = ?"
         params = [username]
 
+    # ignore tasks that are in the box when computing progress
+    if where:
+        where = where + " AND (in_box = 0 OR in_box IS NULL)"
+    else:
+        where = "WHERE (in_box = 0 OR in_box IS NULL)"
     c.execute(f"SELECT importance, completed FROM tasks {where}", params)
     rows = c.fetchall()
     conn.close()
@@ -586,6 +713,7 @@ ensure_tasks_table()
 ensure_custom_rewards_table()
 ensure_subtasks_table()
 ensure_redemptions_table()
+ensure_box_moves_table()
 ensure_streaks_table()
 ensure_attitude_table_called = False
 
@@ -1187,6 +1315,40 @@ def delete_subtask(subtask_id):
     return redirect(url_for("activities"))
 
 
+@app.route('/box/add/<int:task_id>', methods=['POST'])
+def box_add(task_id):
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+    move_task_to_box(task_id, username)
+    return redirect(url_for('view_tasks'))
+
+
+@app.route('/box/remove/<int:task_id>', methods=['POST'])
+def box_remove(task_id):
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+    restore_task_from_box(task_id, username)
+    return redirect(url_for('view_tasks'))
+
+
+@app.route('/box/items')
+def box_items():
+    username = session.get('user') if session else None
+    if not username:
+        return jsonify([])
+    items = get_box_items(username)
+    return jsonify(items)
+
+
+@app.route('/box/stats')
+def box_stats():
+    username = session.get('user') if session else None
+    stats = get_box_stats(username)
+    return jsonify(stats)
+
+
 DEFAULT_REWARDS = [
     (1, "5 minute phone break", 20, 5),
     (2, "30 minute TV", 60, 30),
@@ -1221,6 +1383,7 @@ def get_upcoming_tasks(username=None, days=7):
             FROM tasks 
             WHERE user = ? 
             AND (completed = 0 OR completed IS NULL)
+            AND (in_box = 0 OR in_box IS NULL)
             AND date BETWEEN ? AND ?
             ORDER BY date ASC
         """, (username, today.isoformat(), future_date.isoformat()))
@@ -1229,6 +1392,7 @@ def get_upcoming_tasks(username=None, days=7):
             SELECT id, name, date, time, importance, user 
             FROM tasks 
             WHERE (completed = 0 OR completed IS NULL)
+            AND (in_box = 0 OR in_box IS NULL)
             AND date BETWEEN ? AND ?
             ORDER BY date ASC
         """, (today.isoformat(), future_date.isoformat()))
