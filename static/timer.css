@@ -1,0 +1,8 @@
+/* ADHD-Friendly Task Timer Styles */
+.timer-svg {
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+#timerWedge {
+  transition: d 1s ease; /* Smooth wedge shrinking */
+}
