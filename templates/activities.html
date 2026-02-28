@@ -179,7 +179,29 @@
               <input id="focusCustomInput" type="number" min="1" placeholder="mins" style="width:72px;display:none;padding:6px;border-radius:6px;border:1px solid #ddd" />
             </div>
             <div class="timer-display">
-              <div id="timerLabel">25:00</div>
+              <svg id="timerCircle" width="160" height="160" viewBox="0 0 160 160" class="timer-svg">
+                <defs>
+                  <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.12"/></filter>
+                </defs>
+                <!-- Background track -->
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#eee" stroke-width="10" />
+                <!-- subtle drop shadow around outer edge -->
+                <circle cx="80" cy="80" r="72" fill="transparent" filter="url(#ds)" />
+                <!-- Rainbow slices (seven layered pie slices) -->
+                <g id="timerSlices">
+                  <path id="timerSlice0" fill="#F44336"></path>
+                  <path id="timerSlice1" fill="#FF9800"></path>
+                  <path id="timerSlice2" fill="#FFC107"></path>
+                  <path id="timerSlice3" fill="#4CAF50"></path>
+                  <path id="timerSlice4" fill="#2196F3"></path>
+                  <path id="timerSlice5" fill="#3F51B5"></path>
+                  <path id="timerSlice6" fill="#9C27B0"></path>
+                </g>
+                <!-- Center hole (white) - slightly larger for breathing room -->
+                <circle id="timerCenterHole" cx="80" cy="80" r="18" fill="#ffffff" />
+                <!-- Center text (black fill with white outline for readability) -->
+                <text id="timerText" x="80" y="88" text-anchor="middle" font-size="22" font-weight="700" fill="#000000" stroke="#ffffff" stroke-width="0.9" paint-order="stroke" >25:00</text>
+              </svg>
               <div class="timer-controls">
                 <button id="startPauseBtn" class="timer-btn">Start</button>
                 <button id="resetBtn" class="timer-btn">Reset</button>
@@ -397,6 +419,7 @@
     const storedDuration = localStorage.getItem('focusDuration');
     const defaultMinutes = storedDuration ? parseInt(storedDuration, 10) : 25;
     let timerSeconds = defaultMinutes * 60;
+    let totalSeconds = timerSeconds;
     let timerInterval = null;
     const timerLabel = document.getElementById('timerLabel');
     const startPauseBtn = document.getElementById('startPauseBtn');
@@ -427,6 +450,7 @@
         mins = parseInt(v,10) || 25;
       }
       timerSeconds = mins * 60;
+      totalSeconds = timerSeconds;
       localStorage.setItem('focusDuration', String(mins));
       updateTimer();
     }
@@ -453,8 +477,76 @@
       return `${m}:${sec}`;
     }
 
+    // (Clock face removed) simplified Time-Timer style rainbow wedge
+
+    function makeDonutSlicePath(cx, cy, rOuter, rInner, startDeg, endDeg) {
+      // Creates an SVG path for a donut slice from startDeg to endDeg (degrees), clockwise
+      // startDeg/endDeg are in degrees, 0 = to the right; we will use -90 offset when calling
+      const startRad = (startDeg * Math.PI) / 180;
+      const endRad = (endDeg * Math.PI) / 180;
+
+      // Outer arc points
+      const x1 = cx + rOuter * Math.cos(startRad);
+      const y1 = cy + rOuter * Math.sin(startRad);
+      const x2 = cx + rOuter * Math.cos(endRad);
+      const y2 = cy + rOuter * Math.sin(endRad);
+
+      // Inner arc points (reverse direction)
+      const x3 = cx + rInner * Math.cos(endRad);
+      const y3 = cy + rInner * Math.sin(endRad);
+      const x4 = cx + rInner * Math.cos(startRad);
+      const y4 = cy + rInner * Math.sin(startRad);
+
+      let angle = endDeg - startDeg;
+      if (angle < 0) angle += 360;
+      if (angle === 0) return '';
+      // Avoid full-circle exactness causing path issues
+      if (angle >= 360) angle = 359.999;
+      const largeArc = angle > 180 ? 1 : 0;
+
+      return `M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${rInner} ${rInner} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+    }
+
     function updateTimer() {
-      timerLabel.textContent = formatTime(timerSeconds);
+      const textEl = document.getElementById('timerText');
+      const slicesGroup = document.getElementById('timerSlices');
+      const centerHole = document.getElementById('timerCenterHole');
+      if (!textEl || !slicesGroup || !centerHole) return;
+
+      // Update center text
+      textEl.textContent = formatTime(timerSeconds);
+
+      // Fraction of time remaining (0..1)
+      const fraction = totalSeconds > 0 ? Math.max(0, Math.min(1, timerSeconds / totalSeconds)) : 0;
+
+      // Angle to show (clockwise from top). We use -90 start so 0deg at top.
+      const angle = fraction * 360;
+      const startDeg = -90;
+      const endDeg = startDeg + angle;
+
+      // Radii for 7 slices (outer to inner). Each band 8px thick, with small gap between bands
+      const outerR = 70;
+      const band = 8; // thickness of each color band
+      const gap = 2;  // white gap between bands
+      const colors = ['#F44336','#FF9800','#FFC107','#4CAF50','#2196F3','#3F51B5','#9C27B0'];
+
+      for (let i = 0; i < 7; i++) {
+        const slice = document.getElementById('timerSlice' + i);
+        if (!slice) continue;
+        const rOuter = outerR - i * (band + gap);
+        const rInner = Math.max(0, rOuter - band);
+        // When fraction is 0, hide slice
+        if (fraction <= 0) {
+          slice.setAttribute('d', '');
+        } else {
+          const d = makeDonutSlicePath(80, 80, rOuter, rInner, startDeg, endDeg);
+          slice.setAttribute('d', d);
+        }
+        slice.setAttribute('fill', colors[i]);
+      }
+
+      // Keep center hole on top
+      centerHole.setAttribute('r', String(Math.max(10, 14)));
     }
 
     function startTimer() {
@@ -493,6 +585,8 @@
       updateTimer();
     });
 
+    // Initialize from select/custom input and render timer
+    updateDurationFromUI();
     updateTimer();
 
     // Suggestions UI
@@ -691,38 +785,32 @@
         btn.setAttribute('aria-expanded','true');
       }
 
-      function toggleCorner(){
-        const collapsed = content.classList.toggle('collapsed');
-        panel.classList.toggle('collapsed', collapsed);
-        if(collapsed){
-          btn.textContent = 'Show';
-          btn.setAttribute('aria-expanded','false');
-          localStorage.setItem(key,'1');
-        } else {
-          btn.textContent = 'Hide';
-          btn.setAttribute('aria-expanded','true');
-          localStorage.removeItem(key);
-        }
-      }
+      function updateTimer() {
+        const textEl = document.getElementById('timerText');
+        const arcEl = document.getElementById('timerArc');
+        if (!textEl || !arcEl) return;
 
-      btn.addEventListener('click', toggleCorner);
-      if(handle){
-        handle.addEventListener('click', toggleCorner);
-      }
-    })();
-  </script>
+        // Update center text
+        textEl.textContent = formatTime(timerSeconds);
 
-  <!-- Edit Task Modal -->
-  <div id="editModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Edit Task</h2>
-        <button type="button" class="close-modal" onclick="closeEditModal()">✕</button>
-      </div>
-      <form id="editForm" action="" method="POST" class="edit-form">
-        <div>
-          <label for="editTaskName">Task Name:</label>
-          <input type="text" id="editTaskName" name="task_name" required />
+        // Fraction of time remaining
+        const fraction = totalSeconds > 0 ? (timerSeconds / totalSeconds) : 0;
+
+        // Stroke dash calculations
+        const r = parseFloat(arcEl.getAttribute('r')) || 70;
+        const circumference = 2 * Math.PI * r;
+        arcEl.setAttribute('stroke-dasharray', String(circumference));
+        const offset = circumference * (1 - fraction);
+        arcEl.setAttribute('stroke-dashoffset', String(offset));
+
+        // Color transitions
+        let color = '#4CAF50';
+        if (fraction > 0.5) color = '#4CAF50';
+        else if (fraction > 0.25) color = '#FFC107';
+        else if (fraction > 0.1) color = '#FF9800';
+        else color = '#F44336';
+        arcEl.setAttribute('stroke', color);
+      }
         </div>
         <div>
           <label for="editTaskDate">Due Date:</label>
