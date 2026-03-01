@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Timer - ADHD Task Manager</title>
+  
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Neurodevelompental Profiles</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .focus-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .focus-header {
+      text-align: center;
+      margin-bottom: 40px;
+      color: white;
+    }
+
+    .focus-header h1 {
+      font-size: 2.5em;
+      margin: 20px 0;
+      color: white;
+    }
+
+    .focus-header .description {
+      font-size: 1.1em;
+      color: rgba(255,255,255,0.9);
+      margin-top: 10px;
+    }
+
+    /* Tab navigation */
+    .timer-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .timer-tabs button {
+      padding: 12px 24px;
+      font-size: 1em;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .timer-tabs button:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.6);
+      transform: scale(1.05);
+    }
+
+    .timer-tabs button.active {
+      background: white;
+      color: #667eea;
+      border-color: white;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* Main timer section */
+    .timer-section {
+      background: white;
+      border-radius: 30px;
+      padding: 50px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      text-align: center;
+      margin-bottom: 40px;
+      min-width: 400px;
+      max-width: 600px;
+    }
+
+    .timer-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    /* Large SVG timer - 300px */
+    .timer-svg {
+      width: 300px;
+      height: 300px;
+      filter: drop-shadow(0 4px 15px rgba(102, 126, 234, 0.3));
+    }
+
+    .timer-text {
+      font-size: 1.2em;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    .timer-buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .timer-btn {
+      padding: 15px 40px;
+      font-size: 1.1em;
+      font-weight: 600;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .timer-btn-start {
+      background: linear-gradient(90deg, #00a8ff, #00e5ff);
+      color: white;
+    }
+
+    .timer-btn-start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 168, 255, 0.4);
+    }
+
+    .timer-btn-reset {
+      background: linear-gradient(90deg, #ff5252, #ff8a80);
+      color: white;
+    }
+
+    .timer-btn-reset:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 82, 82, 0.4);
+    }
+
+    /* Task section */
+    .task-section-focus {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      max-width: 600px;
+      width: 100%;
+      margin-bottom: 30px;
+    }
+
+    .current-task {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .current-task-label {
+      font-size: 0.9em;
+      opacity: 0.9;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .current-task-name {
+      font-size: 1.5em;
+      font-weight: 700;
+      word-wrap: break-word;
+    }
+
+    .current-task-importance {
+      font-size: 0.85em;
+      opacity: 0.8;
+      margin-top: 8px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      background: rgba(255,255,255,0.2);
+      display: inline-block;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .no-task {
+      text-align: center;
+      padding: 20px;
+      background: #f0f0f0;
+      border-radius: 15px;
+      color: #666;
+      font-style: italic;
+    }
+
+    /* Today's tasks list */
+    .todays-tasks {
+      margin-top: 20px;
+    }
+
+    .todays-tasks h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 1.1em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .task-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .task-list::-webkit-scrollbar-track {
+      background: #f0f0f0;
+      border-radius: 3px;
+    }
+
+    .task-list::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    .task-list::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+      transition: all 0.3s ease;
+    }
+
+    .task-item:hover {
+      background: #f0f0f0;
+      transform: translateX(4px);
+    }
+
+    .task-item.completed {
+      opacity: 0.5;
+      border-left-color: #4CAF50;
+    }
+
+    .task-item.completed .task-name {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .task-item.completed::after {
+      content: ' ✅';
+      margin-left: auto;
+    }
+
+    .task-checkbox {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .task-name {
+      flex: 1;
+      text-align: left;
+      font-size: 0.95em;
+      color: #333;
+      word-wrap: break-word;
+    }
+
+    .task-date {
+      font-size: 0.85em;
+      color: #999;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .task-importance {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.8em;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .task-importance.major {
+      background: rgba(244, 67, 54, 0.2);
+      color: #C62828;
+    }
+
+    .task-importance.medium {
+      background: rgba(255, 152, 0, 0.2);
+      color: #E65100;
+    }
+
+    .task-importance.minor {
+      background: rgba(33, 150, 243, 0.2);
+      color: #1565C0;
+    }
+
+    .add-task-input-section {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .new-task-input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95em;
+      font-family: Arial, sans-serif;
+    }
+
+    .new-task-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .new-task-importance {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95em;
+      background: white;
+      cursor: pointer;
+    }
+
+    .new-task-importance:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .add-task-btn {
+      padding: 12px 24px;
+      background: linear-gradient(90deg, #4CAF50, #45a049);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .add-task-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    .add-task-btn:active {
+      transform: translateY(0);
+    }
+
+    .no-tasks {
+      text-align: center;
+      padding: 30px 20px;
+      color: #999;
+      font-size: 0.95em;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+      border-radius: 15px;
+    }
+
+    .empty-state-icon {
+      font-size: 3em;
+      margin-bottom: 15px;
+    }
+
+    .empty-state-text {
+      color: #667eea;
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .focus-container {
+        padding: 20px 10px;
+      }
+
+      .focus-header h1 {
+        font-size: 2em;
+      }
+
+      .timer-section {
+        padding: 30px;
+        min-width: auto;
+        max-width: 100%;
+      }
+
+      .timer-svg {
+        width: 250px;
+        height: 250px;
+      }
+
+      .timer-tabs {
+        gap: 10px;
+      }
+
+      .timer-tabs button {
+        padding: 10px 18px;
+        font-size: 0.9em;
+      }
+
+      .task-section-focus {
+        max-width: 100%;
+      }
+
+      .timer-buttons {
+        gap: 10px;
+      }
+
+      .timer-btn {
+        padding: 12px 30px;
+        font-size: 1em;
+      }
+
+      .task-item {
+        flex-wrap: wrap;
+      }
+
+      .task-date {
+        order: 3;
+        width: 100%;
+        margin-left: 40px;
+        font-size: 0.8em;
+      }
+
+      .add-task-input-section {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .new-task-input,
+      .new-task-importance,
+      .add-task-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="focus-container">
+    <div class="focus-header">
+      <h1>Focus Timer</h1>
+      <p class="description">Stay focused with Pomodoro-style timing</p>
+    </div>
+
+    <!-- Timer Mode Tabs -->
+    <div class="timer-tabs">
+      <button class="timer-mode-btn active" data-mode="focus" data-duration="25">Focus (25 min)</button>
+      <button class="timer-mode-btn" data-mode="short-break" data-duration="5">Short Break (5 min)</button>
+      <button class="timer-mode-btn" data-mode="long-break" data-duration="15">Long Break (15 min)</button>
+    </div>
+
+    <!-- Main Timer Section -->
+    <div class="timer-section">
+      <div class="timer-display">
+        <svg id="timerCircle" width="300" height="300" viewBox="0 0 160 160" class="timer-svg">
+          <defs>
+            <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.12"/></filter>
+          </defs>
+          <!-- Background track -->
+          <circle cx="80" cy="80" r="70" fill="none" stroke="#eee" stroke-width="10" />
+          <!-- Rainbow slices (seven layered pie slices) -->
+          <g id="timerSlices">
+            <path id="timerSlice0" fill="#F44336"></path>
+            <path id="timerSlice1" fill="#FF9800"></path>
+            <path id="timerSlice2" fill="#FFC107"></path>
+            <path id="timerSlice3" fill="#4CAF50"></path>
+            <path id="timerSlice4" fill="#2196F3"></path>
+            <path id="timerSlice5" fill="#3F51B5"></path>
+            <path id="timerSlice6" fill="#9C27B0"></path>
+          </g>
+          <!-- Center hole -->
+          <circle cx="80" cy="80" r="18" fill="#ffffff" />
+          <!-- Center text -->
+          <text id="timerText" x="80" y="88" text-anchor="middle" font-size="22" font-weight="700" fill="#000000" stroke="#ffffff" stroke-width="0.9" paint-order="stroke">25:00</text>
+        </svg>
+      </div>
+
+      <div class="timer-buttons">
+        <button id="startPauseBtn" class="timer-btn timer-btn-start">Start</button>
+        <button id="resetBtn" class="timer-btn timer-btn-reset">Reset</button>
+      </div>
+    </div>
+
+    <!-- Task Section -->
+    <div class="task-section-focus">
+      <!-- Current Task -->
+      <div id="currentTaskContainer">
+        {% if current_task %}
+        <div class="current-task">
+          <div class="current-task-label">Now Working On 🎯</div>
+          <div class="current-task-name">{{ current_task.name }}</div>
+          <div class="current-task-importance">{{ current_task.importance }} Priority</div>
+        </div>
+        {% else %}
+        <div class="no-task">
+          ✨ No tasks yet! Add some tasks to get started.
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Task List -->
+      {% if all_tasks %}
+      <div class="todays-tasks">
+        <h3>📋 Your Tasks ({{ all_tasks|length }})</h3>
+        <div class="task-list" id="taskList">
+          {% for task in all_tasks %}
+          <div class="task-item" data-task-id="{{ task.id }}" data-task-index="0">
+            <input type="checkbox" class="task-checkbox" onchange="completeTask({{ task.id }}, this)">
+            <span class="task-name">{{ task.name }}</span>
+            {% if task.date %}
+            <span class="task-date">{{ task.date }}</span>
+            {% endif %}
+            <span class="task-importance {% if task.importance == 'Major' %}major{% elif task.importance == 'Medium' %}medium{% else %}minor{% endif %}">
+              {{ task.importance }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Add Task Input -->
+      <div class="add-task-input-section">
+        <input type="text" id="newTaskInput" class="new-task-input" placeholder="Add a new task..." />
+        <select id="newTaskImportance" class="new-task-importance">
+          <option value="Major">Major</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Minor">Minor</option>
+        </select>
+        <button id="addTaskBtn" class="add-task-btn" onclick="addNewTask()">Add</button>
+      </div>
+      {% else %}
+      <div class="no-tasks">
+        <div class="empty-state-icon">🎉</div>
+        <div class="empty-state-text">No tasks yet! Add some tasks to get started.</div>
+      </div>
+
+      <!-- Add Task Input (shown even with no tasks) -->
+      <div class="add-task-input-section">
+        <input type="text" id="newTaskInput" class="new-task-input" placeholder="Add a new task..." />
+        <select id="newTaskImportance" class="new-task-importance">
+          <option value="Major">Major</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Minor">Minor</option>
+        </select>
+        <button id="addTaskBtn" class="add-task-btn" onclick="addNewTask()">Add</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    // All tasks data
+    let allTasks = {{ all_tasks|tojson }};
+    let currentTaskId = {{ current_task.id if current_task else 'null' }};
+
+    // Timer functionality
+    let timerSeconds = 25 * 60;
+    let totalSeconds = 25 * 60;
+    let timerInterval = null;
+    const startPauseBtn = document.getElementById('startPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const timerModeButtons = document.querySelectorAll('.timer-mode-btn');
+
+    // Format time as MM:SS
+    function formatTime(s) {
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const sec = (s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    // Create donut slice path for SVG
+    function makeDonutSlicePath(cx, cy, rOuter, rInner, startDeg, endDeg) {
+      const startRad = (startDeg * Math.PI) / 180;
+      const endRad = (endDeg * Math.PI) / 180;
+
+      const x1 = cx + rOuter * Math.cos(startRad);
+      const y1 = cy + rOuter * Math.sin(startRad);
+      const x2 = cx + rOuter * Math.cos(endRad);
+      const y2 = cy + rOuter * Math.sin(endRad);
+
+      const x3 = cx + rInner * Math.cos(endRad);
+      const y3 = cy + rInner * Math.sin(endRad);
+      const x4 = cx + rInner * Math.cos(startRad);
+      const y4 = cy + rInner * Math.sin(startRad);
+
+      let angle = endDeg - startDeg;
+      if (angle < 0) angle += 360;
+      if (angle === 0) return '';
+      if (angle >= 360) angle = 359.999;
+      const largeArc = angle > 180 ? 1 : 0;
+
+      return `M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${rInner} ${rInner} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+    }
+
+    // Update timer display
+    function updateTimer() {
+      const textEl = document.getElementById('timerText');
+      const slicesGroup = document.getElementById('timerSlices');
+      if (!textEl || !slicesGroup) return;
+
+      textEl.textContent = formatTime(timerSeconds);
+
+      const fraction = totalSeconds > 0 ? Math.max(0, Math.min(1, timerSeconds / totalSeconds)) : 0;
+      const angle = fraction * 360;
+      const startDeg = -90;
+      const endDeg = startDeg + angle;
+
+      const outerR = 70;
+      const band = 8;
+      const gap = 2;
+      const colors = ['#F44336', '#FF9800', '#FFC107', '#4CAF50', '#2196F3', '#3F51B5', '#9C27B0'];
+
+      for (let i = 0; i < 7; i++) {
+        const slice = document.getElementById('timerSlice' + i);
+        if (!slice) continue;
+        const rOuter = outerR - i * (band + gap);
+        const rInner = Math.max(0, rOuter - band);
+        if (fraction <= 0) {
+          slice.setAttribute('d', '');
+        } else {
+          const d = makeDonutSlicePath(80, 80, rOuter, rInner, startDeg, endDeg);
+          slice.setAttribute('d', d);
+        }
+        slice.setAttribute('fill', colors[i]);
+      }
+    }
+
+    // Start timer
+    function startTimer() {
+      if (timerInterval) return;
+      startPauseBtn.textContent = 'Pause';
+      timerInterval = setInterval(() => {
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          startPauseBtn.textContent = 'Start';
+          celebrateTaskCompletion('');
+          return;
+        }
+        timerSeconds -= 1;
+        updateTimer();
+      }, 1000);
+    }
+
+    // Pause timer
+    function pauseTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        startPauseBtn.textContent = 'Start';
+      }
+    }
+
+    // Reset timer
+    function resetTimer() {
+      pauseTimer();
+      timerSeconds = totalSeconds;
+      updateTimer();
+    }
+
+    // Switch timer mode (Focus/Break)
+    timerModeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        timerModeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        pauseTimer();
+        totalSeconds = parseInt(btn.getAttribute('data-duration')) * 60;
+        timerSeconds = totalSeconds;
+        updateTimer();
+      });
+    });
+
+    // Button event listeners
+    startPauseBtn.addEventListener('click', () => {
+      if (timerInterval) pauseTimer();
+      else startTimer();
+    });
+
+    resetBtn.addEventListener('click', resetTimer);
+
+    // TASK MANAGEMENT FUNCTIONS
+
+    // Update current task display
+    function updateCurrentTask() {
+      const incompleteTasks = allTasks.filter(t => !t.completed);
+      const container = document.getElementById('currentTaskContainer');
+      
+      if (incompleteTasks.length === 0) {
+        container.innerHTML = `
+          <div class="no-task">
+            ✨ No tasks yet! Add some tasks to get started.
+          </div>
+        `;
+        return;
+      }
+
+      const nextTask = incompleteTasks[0];
+      container.innerHTML = `
+        <div class="current-task">
+          <div class="current-task-label">Now Working On 🎯</div>
+          <div class="current-task-name">${nextTask.name}</div>
+          <div class="current-task-importance">${nextTask.importance} Priority</div>
+        </div>
+      `;
+      currentTaskId = nextTask.id;
+    }
+
+    // Complete task via fetch
+    async function completeTask(taskId, checkbox) {
+      checkbox.disabled = true;
+      const taskItem = document.querySelector(`[data-task-id="${taskId}"]`);
+      
+      try {
+        const response = await fetch(`/complete_task_by_id/${taskId}`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update task in allTasks
+          const task = allTasks.find(t => t.id === taskId);
+          if (task) {
+            task.completed = true;
+          }
+          
+          // Visual feedback
+          taskItem.classList.add('completed');
+          
+          // Move to bottom after short delay
+          setTimeout(() => {
+            const taskList = document.getElementById('taskList');
+            taskList.appendChild(taskItem);
+          }, 500);
+          
+          // Update current task
+          setTimeout(updateCurrentTask, 300);
+          
+          // Trigger celebration
+          celebrateTaskCompletion('');
+        } else {
+          alert('Error completing task: ' + (data.error || 'Unknown error'));
+          checkbox.checked = false;
+        }
+      } catch (error) {
+        console.error('Error completing task:', error);
+        alert('Network error: Could not complete task');
+        checkbox.checked = false;
+      }
+      
+      checkbox.disabled = false;
+    }
+
+    // Add new task
+    async function addNewTask() {
+      const input = document.getElementById('newTaskInput');
+      const importance = document.getElementById('newTaskImportance').value;
+      const taskName = input.value.trim();
+      
+      if (!taskName) {
+        alert('Please enter a task name');
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      
+      try {
+        const formData = new FormData();
+        formData.append('task_name', taskName);
+        formData.append('task_date', today);
+        formData.append('importance', importance);
+        
+        const response = await fetch('/add_task', {
+          method: 'POST',
+          body: formData
+        });
+        
+        // Clear input regardless of success
+        input.value = '';
+        document.getElementById('newTaskImportance').value = 'Medium';
+        
+        // Refresh tasks after a short delay to ensure DB is updated
+        await new Promise(r => setTimeout(r, 300));
+        await refreshTasks();
+        
+        // Show brief success feedback
+        const btn = document.getElementById('addTaskBtn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Added! ✓';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 1500);
+      } catch (error) {
+        console.error('Error adding task:', error);
+        alert('Network error: Could not add task');
+      }
+    }
+
+    // Refresh tasks from server
+    async function refreshTasks() {
+      try {
+        const response = await fetch('/get_all_tasks');
+        const data = await response.json();
+        
+        if (data.success) {
+          allTasks = data.tasks;
+          updateCurrentTask();
+          renderTaskList();
+        } else {
+          console.error('Error fetching tasks:', data.error);
+        }
+      } catch (error) {
+        console.error('Error refreshing tasks:', error);
+      }
+    }
+
+    // Render task list
+    function renderTaskList() {
+      const taskList = document.getElementById('taskList');
+      if (!taskList) return;
+
+      const incompleteTasks = allTasks.filter(t => !t.completed);
+      const completedTasks = allTasks.filter(t => t.completed);
+      const sortedTasks = [...incompleteTasks, ...completedTasks];
+
+      taskList.innerHTML = sortedTasks.map(task => {
+        const importanceClass = task.importance.toLowerCase();
+        const dateStr = task.date ? `<span class="task-date">${task.date}</span>` : '';
+        const completedClass = task.completed ? 'completed' : '';
+        
+        return `
+          <div class="task-item ${completedClass}" data-task-id="${task.id}">
+            <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="completeTask(${task.id}, this)">
+            <span class="task-name">${task.name}</span>
+            ${dateStr}
+            <span class="task-importance ${importanceClass}">${task.importance}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Handle Enter key in input
+    document.getElementById('newTaskInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addNewTask();
+      }
+    });
+
+    // Initialize
+    updateTimer();
+    updateCurrentTask();
+    renderTaskList();
+  </script>
+</body>
+</html>

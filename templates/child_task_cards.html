@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Cards</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    .cards-container {
+      max-width: 1200px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+    
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 25px;
+      margin-top: 20px;
+    }
+    
+    .task-card {
+      background: white;
+      border: 3px solid #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .task-card:hover:not(.completed) {
+      transform: translateY(-8px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      border-color: #4caf50;
+    }
+    
+    .task-card.completed {
+      background: #f1f8f4;
+      border-color: #4caf50;
+      opacity: 0.8;
+    }
+    
+    .card-image-wrapper {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+    
+    .card-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    
+    .card-image.completed-fade {
+      opacity: 0.5;
+      filter: grayscale(50%);
+    }
+    
+    .completion-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(76, 175, 80, 0.95);
+      color: white;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 10;
+    }
+    
+    .task-card.completed .completion-badge {
+      opacity: 1;
+    }
+    
+    .card-content {
+      padding: 15px;
+    }
+    
+    .card-title {
+      font-weight: 700;
+      font-size: 18px;
+      color: #333;
+      margin: 0 0 10px 0;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .card-points-display {
+      background: linear-gradient(135deg, #ffd700, #ffed4e);
+      color: #333;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      display: inline-block;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(255, 215, 0, 0.3);
+    }
+    
+    .complete-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #4caf50, #45a049);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 8px;
+    }
+    
+    .complete-btn:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    }
+    
+    .complete-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    
+    .completed-text {
+      color: #4caf50;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px;
+    }
+    
+    .no-cards-message {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      font-size: 18px;
+    }
+    
+    .particle {
+      position: fixed;
+      pointer-events: none;
+      font-size: 24px;
+      z-index: 1000;
+      animation: float-up 2s ease-out forwards;
+    }
+    
+    @keyframes float-up {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-150px) scale(0.5) rotate(180deg);
+      }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .completing {
+      animation: pulse 0.3s ease-in-out;
+    }
+    
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .complete-btn.loading .loading-spinner {
+      display: block;
+    }
+    
+    .complete-btn.loading {
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .info-section {
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      text-align: center;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+  </style>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+
+    <div class="menu">
+      <ul>
+        <li><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="{{ url_for('about') }}">About</a></li>
+        <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+        <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      </ul>
+    </div>
+
+    <div class="front">
+      <div class="front-header">
+        <div class="front-header-left">
+          <h1>Task Cards</h1>
+          <p class="description">Complete visual task cards to earn points!</p>
+          
+          <ul class="Tabs">
+            <li><a href="{{ url_for('activities') }}">Activities</a></li>
+            <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+            <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+            <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+            <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
+            <li><a href="{{ url_for('child_task_cards') }}">Task Cards</a></li>
+            <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+            <li><a href="{{ url_for('settings') }}">Settings</a></li>
+          </ul>
+        </div>
+        <div class="front-header-right">
+          <h3 style="text-align:right;margin:0;padding-top:8px;">Complete Tasks!</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-container">
+      {% if cards %}
+        <div class="info-section">
+          ✨ Click "Mark Complete" to finish a task and earn points! Each card can only be completed once.
+        </div>
+        
+        <div class="cards-grid">
+          {% for card in cards %}
+            <div class="task-card {% if card.completed %}completed{% endif %}" id="card-{{ card.id }}">
+              <div class="card-image-wrapper">
+                <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image {% if card.completed %}completed-fade{% endif %}">
+                <div class="completion-badge">✓</div>
+              </div>
+              
+              <div class="card-content">
+                <h3 class="card-title">{{ card.title }}</h3>
+                <div class="card-points-display">{{ card.points }} points</div>
+                
+                {% if card.completed %}
+                  <div class="completed-text">✓ Completed!</div>
+                {% else %}
+                  <button class="complete-btn" onclick="completeCard({{ card.id }}, event)">
+                    Mark Complete
+                    <div class="loading-spinner"></div>
+                  </button>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="no-cards-message">
+          <p>🎯 No task cards available yet.</p>
+          <p>Check back later for new challenges!</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <script>
+    async function completeCard(cardId, event) {
+      event.preventDefault();
+      const button = event.target.closest('.complete-btn');
+      const card = document.getElementById(`card-${cardId}`);
+      
+      if (button.disabled) return;
+      
+      button.disabled = true;
+      button.classList.add('loading');
+      button.innerHTML = '<div class="loading-spinner"></div>';
+      
+      try {
+        const response = await fetch('{{ url_for("complete_task_card") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ card_id: cardId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Animate card completion
+          card.classList.add('completing');
+          
+          setTimeout(() => {
+            card.classList.add('completed');
+            card.classList.remove('completing');
+            
+            // Hide button and show completed message
+            button.replaceWith(document.createElement('div')).outerHTML = 
+              '<div class="completed-text">✓ Completed!</div>';
+            
+            // Fade image
+            card.querySelector('.card-image').classList.add('completed-fade');
+            
+            // Fire particles
+            fireParticles(card, data.points_awarded);
+            
+            // Trigger celebration
+            if (window.triggerCelebration) {
+              triggerCelebration();
+            }
+          }, 300);
+        } else {
+          alert('Error: ' + (data.error || 'Could not complete card'));
+          button.disabled = false;
+          button.classList.remove('loading');
+          button.textContent = 'Mark Complete';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to complete card');
+        button.disabled = false;
+        button.classList.remove('loading');
+        button.textContent = 'Mark Complete';
+      }
+    }
+    
+    function fireParticles(element, points) {
+      const rect = element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const particles = ['⭐', '✨', '🎉', '🌟', '💫', '👏'];
+      
+      for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.textContent = particles[Math.floor(Math.random() * particles.length)];
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+        particle.style.transform = `translate(${(Math.random() - 0.5) * 200}px, ${(Math.random() - 0.5) * 200}px)`;
+        document.body.appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 2000);
+      }
+      
+      // Show points popup
+      const pointsPopup = document.createElement('div');
+      pointsPopup.textContent = `+${points} points!`;
+      pointsPopup.style.position = 'fixed';
+      pointsPopup.style.left = centerX + 'px';
+      pointsPopup.style.top = centerY + 'px';
+      pointsPopup.style.color = '#4caf50';
+      pointsPopup.style.fontSize = '24px';
+      pointsPopup.style.fontWeight = 'bold';
+      pointsPopup.style.zIndex = '1000';
+      pointsPopup.style.pointerEvents = 'none';
+      pointsPopup.style.animation = 'float-up 2s ease-out forwards';
+      document.body.appendChild(pointsPopup);
+      
+      setTimeout(() => pointsPopup.remove(), 2000);
+    }
+  </script>
+
+</body>
+</html>
