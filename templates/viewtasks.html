@@ -37,6 +37,9 @@
           <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
           <li><a href="{{ url_for('progress') }}">View Progress</a></li>
           <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if not is_parent %}
+          <li><a href="{{ url_for('rewards') }}">Badges</a></li>
+          {% endif %}
           {% if is_parent %}
           <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
           <li><a href="{{ url_for('parent_attitude') }}">Attitude</a></li>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badges</title>
+
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    /* Use same blurred background as Add/Delete Tasks */
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
+      background-size: cover;
+      background-position: center center;
+      filter: blur(6px) saturate(1.05);
+      opacity: 0.85;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .page-content { position: relative; z-index: 1; }
+    /* Nudge the main header up slightly on the Badges page */
+    .front-header-left h1 { top: 6px; }
+    .badges-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:16px; margin-top:16px; }
+    .badge-card { background:linear-gradient(180deg,#fff,#f7fbff); border-radius:12px; padding:12px; box-shadow:0 2px 6px rgba(0,0,0,0.06); text-align:center; }
+    .badge-icon { font-size:38px; margin-bottom:8px; }
+    .badge-title { font-weight:600; margin-bottom:6px; }
+    .badge-cost { color:#666; margin-bottom:8px; }
+    .btn-redeem { background:#2d9cdb;color:#fff;border:none;padding:8px 12px;border-radius:8px; cursor:pointer; }
+    .btn-redeem[disabled] { opacity:0.5; cursor:not-allowed; }
+    .points-display { font-size:1.1rem; font-weight:700; }
+    .redeemed-list { margin-top:16px; display:flex; gap:8px; flex-wrap:wrap; }
+    .redeemed-item { background:#fff;border-radius:8px;padding:8px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.06); display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1>Badges</h1>
+        <p class="description">View and claim badges based on total points you have earned from completing tasks.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          {% if not is_parent %}
+          <li><a class="active" href="{{ url_for('rewards') }}">Badges</a></li>
+          {% endif %}
+          {% if is_parent %}
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          <li><a href="{{ url_for('parent_attitude') }}">Attitude</a></li>
+          {% endif %}
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+
+        <h2 id="greeting">Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1000px;margin:6px auto 40px;padding:16px;">
+    <h2 style="margin-top:6px">Badges</h2>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:12px;">
+      <div></div>
+      <div class="points-display">Points: <span id="pointsCount">{{ points }}</span> &nbsp;(<small>Total earned: {{ total_earned }}</small>)</div>
+    </div>
+
+    <div class="badges-grid">
+      {% for badge in badges %}
+      <div class="badge-card">
+        <div class="badge-icon">{{ badge.icon }}</div>
+        <div class="badge-title">{{ badge.title }}</div>
+        <div class="badge-cost">Required: {{ badge.cost }} pts</div>
+        <form action="{{ url_for('redeem_badge', badge_id=badge.id) }}" method="post">
+          {% if badge.claimed %}
+            <button type="button" class="btn-redeem" disabled>Claimed</button>
+          {% else %}
+            <button type="submit" class="btn-redeem" {% if not badge.claimable %}disabled{% endif %}>Claim</button>
+          {% endif %}
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h3 style="margin-top:20px">Your Badges</h3>
+    <div class="redeemed-list">
+      {% set badge_list = redeemed_rewards | selectattr('reward_type', 'equalto', 'badge') | list %}
+      {% if badge_list %}
+        {% for r in badge_list %}
+          <div class="redeemed-item">
+            <div style="font-size:20px;">{{ r.icon or '🏅' }}</div>
+            <div style="display:flex;flex-direction:column;">
+              <div style="font-weight:600">{{ r.title }}</div>
+              <div style="font-size:0.85rem;color:#666">Redeemed: {{ r.redeemed_at }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="redeemed-item">No badges earned yet.</div>
+      {% endif %}
+    </div>
+
+  </div>
+  </div>
+</body>
+</html>

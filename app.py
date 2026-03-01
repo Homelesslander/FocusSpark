@@ -120,6 +120,8 @@ def ensure_users_table():
     columns = [row[1] for row in c.fetchall()]
     if "points" not in columns:
         c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
+    if "total_earned" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN total_earned INTEGER DEFAULT 0")
     # Add optional email and reminder preferences columns if missing
     if "email" not in columns:
         c.execute("ALTER TABLE users ADD COLUMN email TEXT")
@@ -552,6 +554,8 @@ def complete_task_and_award(task_id, username):
 
        
         c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, username))
+        # also increment historical total earned for badges tracking
+        c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, username))
 
         completed_at = datetime.datetime.now().isoformat()
         c.execute("UPDATE tasks SET completed = 1, completed_at = ? WHERE id = ?", (completed_at, task_id))
@@ -1174,9 +1178,30 @@ def get_upcoming_tasks(username=None, days=7):
 def add_points(username, amount):
     conn = get_db_conn()
     c = conn.cursor()
+    # increase current available points
     c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (amount, username))
+    # also track historical total earned (not reduced when spending)
+    c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (amount, username))
     conn.commit()
     conn.close()
+
+
+def get_user_total_earned(username):
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT total_earned FROM users WHERE username = ?", (username,))
+    row = c.fetchone()
+    conn.close()
+    return row['total_earned'] if row and row['total_earned'] is not None else 0
+
+
+def has_claimed_badge(username, badge_id):
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM redemptions WHERE username = ? AND reward_type = 'badge' AND reward_id = ? LIMIT 1", (username, badge_id))
+    r = c.fetchone()
+    conn.close()
+    return bool(r)
 
 def deduct_points(username, amount):
     conn = get_db_conn()
@@ -1225,7 +1250,7 @@ def get_redeemed_rewards(username):
     """Get all redeemed rewards for a user, ordered by most recent first."""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost, redeemed_at, expires_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 50", (username,))
+    c.execute("SELECT id, reward_type, reward_id, title, cost, redeemed_at, expires_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 50", (username,))
     rows = c.fetchall()
     conn.close()
 
@@ -1235,7 +1260,13 @@ def get_redeemed_rewards(username):
         expires = r['expires_at'] if 'expires_at' in r.keys() else None
         # keep reward if no expires_at (permanent) or expires in the future
         if not expires:
-            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': None})
+            rec = {'id': r['id'], 'reward_type': r['reward_type'] if 'reward_type' in r.keys() else None, 'reward_id': r['reward_id'] if 'reward_id' in r.keys() else None, 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': None}
+            # attach badge icon when applicable
+            if rec.get('reward_type') == 'badge':
+                bid = rec.get('reward_id')
+                icon = next((b[3] for b in BADGES if b[0] == bid), None)
+                rec['icon'] = icon
+            active.append(rec)
             continue
         try:
             exp_dt = datetime.datetime.fromisoformat(expires)
@@ -1246,7 +1277,12 @@ def get_redeemed_rewards(username):
             except Exception:
                 continue
         if exp_dt > now:
-            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': exp_dt.isoformat()})
+            rec = {'id': r['id'], 'reward_type': r['reward_type'] if 'reward_type' in r.keys() else None, 'reward_id': r['reward_id'] if 'reward_id' in r.keys() else None, 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': exp_dt.isoformat()}
+            if rec.get('reward_type') == 'badge':
+                bid = rec.get('reward_id')
+                icon = next((b[3] for b in BADGES if b[0] == bid), None)
+                rec['icon'] = icon
+            active.append(rec)
 
     return active
 
@@ -1261,6 +1297,71 @@ def nearest_reward_info(rewards, username):
         'reward': nearest,
         'points_needed': max(0, nearest['cost'] - points)
     }
+
+
+@app.route('/rewards')
+def rewards():
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    points = get_user_points(username)
+    total_earned = get_user_total_earned(username)
+    badges = get_badges_for_display(username)
+    redeemed_rewards = get_redeemed_rewards(username)
+
+    # determine parent role so template can show/hide tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('rewards.html', username=username, points=points, total_earned=total_earned, badges=badges, redeemed_rewards=redeemed_rewards, is_parent=is_parent)
+
+
+@app.route('/rewards/redeem/<int:badge_id>', methods=['POST'])
+def redeem_badge(badge_id):
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    matched = next((b for b in BADGES if b[0] == badge_id), None)
+    if not matched:
+        return "Unknown badge", 400
+    _, title, cost, icon = matched
+    # Check historical total earned points (not current balance)
+    total_earned = get_user_total_earned(username)
+    if total_earned < cost:
+        return "Not enough total points earned to claim this badge", 400
+    # Ensure badge not already claimed
+    if has_claimed_badge(username, badge_id):
+        return "Badge already claimed", 400
+    # Claim the badge (no point deduction) and log redemption for record
+    log_redemption(username, 'badge', badge_id, title, cost)
+    return redirect(url_for('rewards'))
+
+
+# Simple badges available for children on the Rewards tab
+BADGES = [
+    (1, "Star", 1000, "⭐"),
+    (2, "Shield", 2000, "🛡️"),
+    (3, "Gold Trophy", 3000, "🏆"),
+    (4, "Platinum Crown", 5000, "👑"),
+]
+
+def get_badges_for_display(username):
+    total_earned = get_user_total_earned(username)
+    badges = []
+    for bid, title, cost, icon in BADGES:
+        already = has_claimed_badge(username, bid)
+        badges.append({'id': bid, 'title': title, 'cost': cost, 'icon': icon, 'claimable': (not already) and (total_earned >= cost), 'claimed': already})
+    return badges
+
+
 
 
 @app.route('/redeem', methods=['GET'])
@@ -1469,8 +1570,9 @@ def parent_attitude():
 
         created_at = datetime.datetime.now().isoformat()
         c.execute("INSERT INTO attitude_logs (parent_username, child_username, rating, points_awarded, created_at) VALUES (?, ?, ?, ?, ?)", (parent, child_username, rating, points, created_at))
-        # award points to child
+        # award points to child and increment their historical total earned
         c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (points, child_username))
+        c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, child_username))
         conn.commit()
         conn.close()
         return redirect(url_for('parent_attitude'))
