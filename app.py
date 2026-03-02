@@ -157,6 +157,11 @@ def ensure_tasks_table():
         c.execute("ALTER TABLE tasks ADD COLUMN completed_at TEXT")
     if "time" not in existing_cols:
         c.execute("ALTER TABLE tasks ADD COLUMN time TEXT")
+    # Add box-related columns for Option B
+    if "in_box" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN in_box INTEGER DEFAULT 0")
+    if "box_count" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN box_count INTEGER DEFAULT 0")
     conn.commit()
     conn.close()
 
@@ -258,12 +263,94 @@ def ensure_streaks_table():
     conn.close()
 
 
+def ensure_box_moves_table():
+    """Create the `box_moves` table to store move history for analytics."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS box_moves (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            username TEXT,
+            moved_at TEXT NOT NULL,
+            FOREIGN KEY (task_id) REFERENCES tasks(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def move_task_to_box(task_id, username):
+    """Mark a task as moved to the box and record the move for analytics."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    # verify task exists and not completed
+    c.execute("SELECT id, completed, user FROM tasks WHERE id = ?", (task_id,))
+    r = c.fetchone()
+    if not r:
+        conn.close()
+        return False
+    if r['completed']:
+        conn.close()
+        return False
+
+    # update task to be in the box and increment counter
+    c.execute("UPDATE tasks SET in_box = 1, box_count = COALESCE(box_count,0) + 1 WHERE id = ?", (task_id,))
+    moved_at = datetime.datetime.now().isoformat()
+    c.execute("INSERT INTO box_moves (task_id, username, moved_at) VALUES (?, ?, ?)", (task_id, username, moved_at))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def restore_task_from_box(task_id, username):
+    """Restore a task from the box back to active tasks."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id, completed FROM tasks WHERE id = ?", (task_id,))
+    r = c.fetchone()
+    if not r:
+        conn.close()
+        return False
+    if r['completed']:
+        conn.close()
+        return False
+    c.execute("UPDATE tasks SET in_box = 0 WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_box_items(username):
+    """Return tasks currently in the box for the given username."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id, name, date, time, importance, box_count, user FROM tasks WHERE in_box = 1 AND user = ? ORDER BY id DESC", (username,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_box_stats(username=None, limit=10):
+    """Return aggregated box move counts for tasks (most-boxed). If username provided, filter to that user's tasks."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    if username:
+        c.execute("SELECT bm.task_id, t.name, COUNT(*) as moves FROM box_moves bm JOIN tasks t ON t.id = bm.task_id WHERE t.user = ? GROUP BY bm.task_id ORDER BY moves DESC LIMIT ?", (username, limit))
+    else:
+        c.execute("SELECT bm.task_id, t.name, COUNT(*) as moves FROM box_moves bm JOIN tasks t ON t.id = bm.task_id GROUP BY bm.task_id ORDER BY moves DESC LIMIT ?", (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_tasks_grouped():
     
     conn = get_db_conn()
     c = conn.cursor()
     
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY id")
+    # Exclude tasks currently placed in the box
+    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY id")
     rows = c.fetchall()
     conn.close()
 
@@ -298,7 +385,8 @@ def get_calendar_tasks():
     """Get tasks organized by date for calendar view"""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE completed = 0 OR completed IS NULL ORDER BY date")
+    # Exclude boxed tasks from calendar view
+    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY date")
     rows = c.fetchall()
     conn.close()
     
@@ -338,6 +426,11 @@ def compute_progress(username=None):
         where = "WHERE user = ?"
         params = [username]
 
+    # ignore tasks that are in the box when computing progress
+    if where:
+        where = where + " AND (in_box = 0 OR in_box IS NULL)"
+    else:
+        where = "WHERE (in_box = 0 OR in_box IS NULL)"
     c.execute(f"SELECT importance, completed FROM tasks {where}", params)
     rows = c.fetchall()
     conn.close()
@@ -572,11 +665,24 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 app.register_blueprint(login_bp)
 
+# File upload configuration
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 ensure_users_table()
 ensure_tasks_table()
 ensure_custom_rewards_table()
 ensure_subtasks_table()
 ensure_redemptions_table()
+ensure_box_moves_table()
 ensure_streaks_table()
 ensure_attitude_table_called = False
 
@@ -598,8 +704,60 @@ def ensure_attitude_table():
     conn.close()
 
 
-# ensure attitude table exists
+def ensure_emotion_logs_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS emotion_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            child_username TEXT NOT NULL,
+            emotion TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def ensure_visual_task_cards_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS visual_task_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_username TEXT NOT NULL,
+            title TEXT NOT NULL,
+            image_path TEXT NOT NULL,
+            points INTEGER NOT NULL,
+            is_recommended INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def ensure_task_completions_table():
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS task_completions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER NOT NULL,
+            child_username TEXT NOT NULL,
+            completed_at TEXT NOT NULL,
+            FOREIGN KEY (card_id) REFERENCES visual_task_cards(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+# ensure tables exist
 ensure_attitude_table()
+ensure_emotion_logs_table()
+ensure_visual_task_cards_table()
+ensure_task_completions_table()
 
 
 
@@ -696,6 +854,105 @@ def calendar():
             conn.close()
 
     return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
+
+
+@app.route('/focus-timer')
+def focus_timer():
+    """Render the dedicated focus timer page (Pomodoro-style)."""
+    username = session.get('user') if session else None
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get ALL incomplete tasks (not just today's), ordered by importance
+    if username:
+        c.execute("""
+            SELECT id, name, date, time, importance, completed 
+            FROM tasks 
+            WHERE (completed = 0 OR completed IS NULL) 
+            AND (in_box = 0 OR in_box IS NULL)
+            AND user = ?
+            ORDER BY 
+              CASE importance 
+                WHEN 'Major' THEN 1 
+                WHEN 'Medium' THEN 2 
+                WHEN 'Minor' THEN 3 
+                ELSE 4 
+              END, 
+              date, 
+              time
+        """, (username,))
+    else:
+        c.execute("""
+            SELECT id, name, date, time, importance, completed 
+            FROM tasks 
+            WHERE (completed = 0 OR completed IS NULL) 
+            AND (in_box = 0 OR in_box IS NULL)
+            ORDER BY 
+              CASE importance 
+                WHEN 'Major' THEN 1 
+                WHEN 'Medium' THEN 2 
+                WHEN 'Minor' THEN 3 
+                ELSE 4 
+              END, 
+              date, 
+              time
+        """)
+    all_tasks_rows = c.fetchall()
+    conn.close()
+    
+    # Convert Row objects to dictionaries
+    all_tasks = [
+        {
+            'id': row['id'],
+            'name': row['name'],
+            'date': row['date'],
+            'time': row['time'] if 'time' in row.keys() else None,
+            'importance': row['importance'],
+            'completed': row['completed'] if 'completed' in row.keys() else 0
+        }
+        for row in all_tasks_rows
+    ]
+    
+    # Get the highest priority incomplete task (for "Now Working On")
+    current_task = None
+    incomplete_tasks = [t for t in all_tasks if not t['completed']]
+    if incomplete_tasks:
+        current_task = {
+            'id': incomplete_tasks[0]['id'],
+            'name': incomplete_tasks[0]['name'],
+            'importance': incomplete_tasks[0]['importance']
+        }
+    
+    points = 0
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT points FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row:
+            points = row['points']
+        conn.close()
+    
+    # Determine parent role
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    
+    return render_template('focus_timer.html', 
+                          username=username, 
+                          current_task=current_task,
+                          all_tasks=all_tasks,
+                          points=points, 
+                          is_parent=is_parent)
 
 
 @app.route('/viewtasks')
@@ -1062,6 +1319,83 @@ def complete_task(importance, task_index):
     return redirect(url_for("activities"))
 
 
+@app.route("/complete_task_by_id/<int:task_id>", methods=["POST"])
+def complete_task_by_id(task_id):
+    """Complete a task by ID and return JSON (for AJAX requests)."""
+    username = session.get('user')
+    
+    if not username:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        # Get task to verify it belongs to the user
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT user FROM tasks WHERE id = ?", (task_id,))
+        task_row = c.fetchone()
+        conn.close()
+        
+        if not task_row:
+            return jsonify({'success': False, 'error': 'Task not found'}), 404
+        
+        # Determine who to award points to
+        target_username = username
+        if task_row and 'user' in task_row.keys() and task_row['user']:
+            target_username = task_row['user']
+        
+        # Complete the task
+        complete_task_and_award(task_id, target_username)
+        
+        return jsonify({'success': True, 'message': 'Task completed'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/get_all_tasks', methods=["GET"])
+def get_all_tasks_json():
+    """Get all incomplete tasks for the current user as JSON."""
+    username = session.get('user')
+    
+    if not username:
+        return jsonify({'success': False, 'error': 'Not authenticated', 'tasks': []}), 401
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, date, time, importance, completed 
+        FROM tasks 
+        WHERE (completed = 0 OR completed IS NULL) 
+        AND (in_box = 0 OR in_box IS NULL)
+        AND user = ?
+        ORDER BY 
+          CASE importance 
+            WHEN 'Major' THEN 1 
+            WHEN 'Medium' THEN 2 
+            WHEN 'Minor' THEN 3 
+            ELSE 4 
+          END, 
+          date, 
+          time
+    """, (username,))
+    tasks_rows = c.fetchall()
+    conn.close()
+    
+    # Convert to dictionaries
+    tasks = [
+        {
+            'id': row['id'],
+            'name': row['name'],
+            'date': row['date'],
+            'time': row['time'] if 'time' in row.keys() else None,
+            'importance': row['importance'],
+            'completed': row['completed'] if 'completed' in row.keys() else 0
+        }
+        for row in tasks_rows
+    ]
+    
+    return jsonify({'success': True, 'tasks': tasks})
+
+
 @app.route("/add_subtask/<int:parent_task_id>", methods=["POST"])
 def add_subtask(parent_task_id):
     subtask_name = request.form.get("subtask_name")
@@ -1123,6 +1457,40 @@ def delete_subtask(subtask_id):
     return redirect(url_for("activities"))
 
 
+@app.route('/box/add/<int:task_id>', methods=['POST'])
+def box_add(task_id):
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+    move_task_to_box(task_id, username)
+    return redirect(url_for('view_tasks'))
+
+
+@app.route('/box/remove/<int:task_id>', methods=['POST'])
+def box_remove(task_id):
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+    restore_task_from_box(task_id, username)
+    return redirect(url_for('view_tasks'))
+
+
+@app.route('/box/items')
+def box_items():
+    username = session.get('user') if session else None
+    if not username:
+        return jsonify([])
+    items = get_box_items(username)
+    return jsonify(items)
+
+
+@app.route('/box/stats')
+def box_stats():
+    username = session.get('user') if session else None
+    stats = get_box_stats(username)
+    return jsonify(stats)
+
+
 DEFAULT_REWARDS = [
     (1, "5 minute phone break", 20, 5),
     (2, "30 minute TV", 60, 30),
@@ -1157,6 +1525,7 @@ def get_upcoming_tasks(username=None, days=7):
             FROM tasks 
             WHERE user = ? 
             AND (completed = 0 OR completed IS NULL)
+            AND (in_box = 0 OR in_box IS NULL)
             AND date BETWEEN ? AND ?
             ORDER BY date ASC
         """, (username, today.isoformat(), future_date.isoformat()))
@@ -1165,6 +1534,7 @@ def get_upcoming_tasks(username=None, days=7):
             SELECT id, name, date, time, importance, user 
             FROM tasks 
             WHERE (completed = 0 OR completed IS NULL)
+            AND (in_box = 0 OR in_box IS NULL)
             AND date BETWEEN ? AND ?
             ORDER BY date ASC
         """, (today.isoformat(), future_date.isoformat()))
@@ -1362,6 +1732,89 @@ def get_badges_for_display(username):
     return badges
 
 
+@app.route('/attitude', methods=['GET', 'POST'])
+def attitude():
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    
+    # Get user role to determine if parent or child
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (username,))
+    row = c.fetchone()
+    
+    if not row:
+        conn.close()
+        return redirect(url_for('home'))
+    
+    is_parent = row['role'] == 'parent'
+    
+    # Parent can't access this route, redirect to parent attitude
+    if is_parent:
+        conn.close()
+        return redirect(url_for('parent_attitude'))
+    
+    # Handle POST request: child submitting emotion
+    if request.method == 'POST':
+        emotion = request.form.get('emotion', '').strip()
+        valid_emotions = ['furious', 'mad', 'worried', 'happy', 'sad']
+        
+        if emotion not in valid_emotions:
+            conn.close()
+            return redirect(url_for('attitude'))
+        
+        # Check if child already logged emotion today
+        today = datetime.datetime.now().date().isoformat()
+        c.execute("""
+            SELECT created_at FROM emotion_logs 
+            WHERE child_username = ? AND DATE(created_at) = ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (username, today))
+        last_emotion = c.fetchone()
+        
+        if last_emotion:
+            # Already logged today, redirect (optional: could allow one update per day)
+            conn.close()
+            return redirect(url_for('attitude'))
+        
+        # Log the emotion
+        created_at = datetime.datetime.now().isoformat()
+        c.execute(
+            "INSERT INTO emotion_logs (child_username, emotion, created_at) VALUES (?, ?, ?)",
+            (username, emotion, created_at)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('attitude'))
+    
+    # GET request: show emotion picker
+    # Get today's emotion if any
+    today = datetime.datetime.now().date().isoformat()
+    c.execute("""
+        SELECT emotion, created_at FROM emotion_logs 
+        WHERE child_username = ? AND DATE(created_at) = ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (username, today))
+    today_emotion = c.fetchone()
+    
+    # Get recent emotions history
+    c.execute("""
+        SELECT emotion, created_at 
+        FROM emotion_logs 
+        WHERE child_username = ? 
+        ORDER BY created_at DESC 
+        LIMIT 30
+    """, (username,))
+    emotion_history = c.fetchall()
+    
+    conn.close()
+    
+    return render_template('child_attitude.html',
+                           username=username,
+                           today_emotion=today_emotion,
+                           emotion_history=emotion_history,
+                           is_parent=False)
 
 
 @app.route('/redeem', methods=['GET'])
@@ -1578,9 +2031,25 @@ def parent_attitude():
         return redirect(url_for('parent_attitude'))
 
     # GET request: show page
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get child emotions for today
+    today = datetime.datetime.now().date().isoformat()
+    child_emotions = {}
+    for child in children:
+        c.execute("""
+            SELECT emotion, created_at FROM emotion_logs 
+            WHERE child_username = ? AND DATE(created_at) = ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (child['username'], today))
+        emotion_row = c.fetchone()
+        if emotion_row:
+            child_emotions[child['username']] = emotion_row
+    
     conn.close()
     # determine if any children already logged today for display (optional)
-    return render_template('attitude.html', username=parent, children=children)
+    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions)
 
 
 @app.route('/parent/add_custom_reward_child', methods=['POST'])
@@ -1621,6 +2090,190 @@ def parent_add_custom_reward_child():
     return redirect(url_for('parent_dashboard'))
 
 
+@app.route('/upload-task-card', methods=['POST'])
+def upload_task_card():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    # Check if file and other fields are present
+    if 'image' not in request.files:
+        return "No image file provided", 400
+    
+    file = request.files['image']
+    title = request.form.get('title', '').strip()
+    points_str = request.form.get('points', '').strip()
+    
+    if not file or file.filename == '':
+        return "No file selected", 400
+    
+    if not title:
+        return "Title is required", 400
+    
+    try:
+        points = int(points_str)
+    except ValueError:
+        return "Points must be a number", 400
+    
+    if file and allowed_file(file.filename):
+        # Generate unique filename
+        import uuid
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Store in database
+        conn = get_db_conn()
+        c = conn.cursor()
+        created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        c.execute(
+            "INSERT INTO visual_task_cards (parent_username, title, image_path, points, created_at) VALUES (?, ?, ?, ?, ?)",
+            (parent, title, f"/static/uploads/{filename}", points, created_at)
+        )
+        conn.commit()
+        conn.close()
+        
+        return redirect(url_for('visual_task_cards'))
+    else:
+        return "File type not allowed. Use PNG, JPG, JPEG, or GIF", 400
+
+
+@app.route('/visual-task-cards', methods=['GET'])
+def visual_task_cards():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get parent's custom cards
+    c.execute(
+        "SELECT id, title, image_path, points, created_at FROM visual_task_cards WHERE parent_username = ? AND is_recommended = 0 ORDER BY created_at DESC",
+        (parent,)
+    )
+    custom_cards = [dict(row) for row in c.fetchall()]
+    
+    # Get recommended cards
+    c.execute(
+        "SELECT id, title, image_path, points FROM visual_task_cards WHERE is_recommended = 1 ORDER BY title"
+    )
+    recommended_cards = [dict(row) for row in c.fetchall()]
+    
+    conn.close()
+    
+    return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards)
+
+
+@app.route('/delete-task-card/<int:card_id>', methods=['POST'])
+def delete_task_card(card_id):
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Verify ownership
+    c.execute("SELECT image_path FROM visual_task_cards WHERE id = ? AND parent_username = ?", (card_id, parent))
+    row = c.fetchone()
+    
+    if not row:
+        conn.close()
+        return "Card not found or not owned by you", 403
+    
+    # Delete image file
+    image_path = row['image_path']
+    if image_path.startswith('/'):
+        filepath = '.' + image_path
+    else:
+        filepath = os.path.join('static', image_path)
+    
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    
+    # Delete from database
+    c.execute("DELETE FROM visual_task_cards WHERE id = ?", (card_id,))
+    c.execute("DELETE FROM task_completions WHERE card_id = ?", (card_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('visual_task_cards'))
+
+
+@app.route('/child-task-cards', methods=['GET'])
+def child_task_cards():
+    child = session.get('user') if session else None
+    if not child:
+        return redirect(url_for('home'))
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get all available cards (from parent and recommended)
+    c.execute("SELECT id, title, image_path, points FROM visual_task_cards ORDER BY created_at DESC")
+    cards = [dict(row) for row in c.fetchall()]
+    
+    # Get completed cards for this child
+    c.execute("SELECT card_id FROM task_completions WHERE child_username = ?", (child,))
+    completed_ids = set(row['card_id'] for row in c.fetchall())
+    
+    conn.close()
+    
+    # Mark completed cards
+    for card in cards:
+        card['completed'] = card['id'] in completed_ids
+    
+    return render_template('child_task_cards.html', cards=cards)
+
+
+@app.route('/complete-task-card', methods=['POST'])
+def complete_task_card():
+    child = session.get('user') if session else None
+    if not child:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    data = request.get_json() if request.is_json else {}
+    card_id = data.get('card_id')
+    
+    if not card_id:
+        return jsonify({'success': False, 'error': 'Card ID required'}), 400
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get card details
+    c.execute("SELECT id, points FROM visual_task_cards WHERE id = ?", (card_id,))
+    card = c.fetchone()
+    
+    if not card:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Card not found'}), 404
+    
+    # Check if already completed
+    c.execute("SELECT id FROM task_completions WHERE card_id = ? AND child_username = ?", (card_id, child))
+    if c.fetchone():
+        conn.close()
+        return jsonify({'success': False, 'error': 'Already completed'}), 400
+    
+    # Record completion
+    completed_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    c.execute(
+        "INSERT INTO task_completions (card_id, child_username, completed_at) VALUES (?, ?, ?)",
+        (card_id, child, completed_at)
+    )
+    
+    # Award points
+    points = card['points']
+    c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, child))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'points_awarded': points})
+
 
 if __name__ == "__main__":
     # start reminder scheduler thread in this process (avoids using Flask-specific hooks)
@@ -1629,3 +2282,5 @@ if __name__ == "__main__":
     except Exception as e:
         print('Could not start reminder scheduler:', e)
     app.run(debug=True, port=5050)
+    
+    

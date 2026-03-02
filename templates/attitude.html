@@ -42,9 +42,10 @@
           <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
           <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
           <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
           <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
           <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-          <li><a class="active" href="{{ url_for('parent_attitude') }}">Attitude</a></li>
+          <li><a class="active" href="{{ url_for('parent_attitude') }}">Parent Attitude</a></li>
           <li><a href="{{ url_for('settings') }}">Settings</a></li>
         </ul>
 
@@ -56,9 +57,31 @@
     </div>
   </div>
 
+  {% if child_emotions %}
+  <div style="max-width:700px;margin:24px auto;">
+    <h2 style="color:#333;margin-top:0;margin-bottom:16px">Children's Emotions Today 👀</h2>
+    {% for child_username, emotion_data in child_emotions.items() %}
+      <div style="background:rgba(255,255,255,0.9);border-radius:10px;padding:16px;margin-bottom:12px;border-left:4px solid #f39c12;display:flex;align-items:center;gap:16px">
+        <div style="font-size:36px;line-height:1">
+          {% if emotion_data['emotion'] == 'furious' %}😡
+          {% elif emotion_data['emotion'] == 'mad' %}😠
+          {% elif emotion_data['emotion'] == 'worried' %}😰
+          {% elif emotion_data['emotion'] == 'happy' %}😊
+          {% elif emotion_data['emotion'] == 'sad' %}😢
+          {% endif %}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:600;color:#333;font-size:16px;text-transform:capitalize">{{ child_username }}: {{ emotion_data['emotion'] }}</div>
+          <div style="font-size:13px;color:#999;margin-top:4px">{{ emotion_data['created_at'] }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="attitude-form">
     <form method="post" action="{{ url_for('parent_attitude') }}">
-      <label for="child_username">Child</label>
+      <label for="child_username">Rate Child's Attitude</label>
       <select id="child_username" name="child_username" required style="width:100%;padding:8px;margin-bottom:12px;border-radius:6px;border:1px solid #ddd;">
         {% for c in children %}
         <option value="{{ c.username }}">{{ c.username }} — Points: {{ c.points }}</option>
