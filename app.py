@@ -852,6 +852,105 @@ def calendar():
     return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
+@app.route('/focus-timer')
+def focus_timer():
+    """Render the dedicated focus timer page (Pomodoro-style)."""
+    username = session.get('user') if session else None
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get ALL incomplete tasks (not just today's), ordered by importance
+    if username:
+        c.execute("""
+            SELECT id, name, date, time, importance, completed 
+            FROM tasks 
+            WHERE (completed = 0 OR completed IS NULL) 
+            AND (in_box = 0 OR in_box IS NULL)
+            AND user = ?
+            ORDER BY 
+              CASE importance 
+                WHEN 'Major' THEN 1 
+                WHEN 'Medium' THEN 2 
+                WHEN 'Minor' THEN 3 
+                ELSE 4 
+              END, 
+              date, 
+              time
+        """, (username,))
+    else:
+        c.execute("""
+            SELECT id, name, date, time, importance, completed 
+            FROM tasks 
+            WHERE (completed = 0 OR completed IS NULL) 
+            AND (in_box = 0 OR in_box IS NULL)
+            ORDER BY 
+              CASE importance 
+                WHEN 'Major' THEN 1 
+                WHEN 'Medium' THEN 2 
+                WHEN 'Minor' THEN 3 
+                ELSE 4 
+              END, 
+              date, 
+              time
+        """)
+    all_tasks_rows = c.fetchall()
+    conn.close()
+    
+    # Convert Row objects to dictionaries
+    all_tasks = [
+        {
+            'id': row['id'],
+            'name': row['name'],
+            'date': row['date'],
+            'time': row['time'] if 'time' in row.keys() else None,
+            'importance': row['importance'],
+            'completed': row['completed'] if 'completed' in row.keys() else 0
+        }
+        for row in all_tasks_rows
+    ]
+    
+    # Get the highest priority incomplete task (for "Now Working On")
+    current_task = None
+    incomplete_tasks = [t for t in all_tasks if not t['completed']]
+    if incomplete_tasks:
+        current_task = {
+            'id': incomplete_tasks[0]['id'],
+            'name': incomplete_tasks[0]['name'],
+            'importance': incomplete_tasks[0]['importance']
+        }
+    
+    points = 0
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT points FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row:
+            points = row['points']
+        conn.close()
+    
+    # Determine parent role
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    
+    return render_template('focus_timer.html', 
+                          username=username, 
+                          current_task=current_task,
+                          all_tasks=all_tasks,
+                          points=points, 
+                          is_parent=is_parent)
+
+
 @app.route('/viewtasks')
 def view_tasks():
     """Render a focused view of pending tasks grouped by importance."""
@@ -1214,6 +1313,83 @@ def complete_task(importance, task_index):
 
             complete_task_and_award(task_id, target_username)
     return redirect(url_for("activities"))
+
+
+@app.route("/complete_task_by_id/<int:task_id>", methods=["POST"])
+def complete_task_by_id(task_id):
+    """Complete a task by ID and return JSON (for AJAX requests)."""
+    username = session.get('user')
+    
+    if not username:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        # Get task to verify it belongs to the user
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT user FROM tasks WHERE id = ?", (task_id,))
+        task_row = c.fetchone()
+        conn.close()
+        
+        if not task_row:
+            return jsonify({'success': False, 'error': 'Task not found'}), 404
+        
+        # Determine who to award points to
+        target_username = username
+        if task_row and 'user' in task_row.keys() and task_row['user']:
+            target_username = task_row['user']
+        
+        # Complete the task
+        complete_task_and_award(task_id, target_username)
+        
+        return jsonify({'success': True, 'message': 'Task completed'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/get_all_tasks', methods=["GET"])
+def get_all_tasks_json():
+    """Get all incomplete tasks for the current user as JSON."""
+    username = session.get('user')
+    
+    if not username:
+        return jsonify({'success': False, 'error': 'Not authenticated', 'tasks': []}), 401
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, date, time, importance, completed 
+        FROM tasks 
+        WHERE (completed = 0 OR completed IS NULL) 
+        AND (in_box = 0 OR in_box IS NULL)
+        AND user = ?
+        ORDER BY 
+          CASE importance 
+            WHEN 'Major' THEN 1 
+            WHEN 'Medium' THEN 2 
+            WHEN 'Minor' THEN 3 
+            ELSE 4 
+          END, 
+          date, 
+          time
+    """, (username,))
+    tasks_rows = c.fetchall()
+    conn.close()
+    
+    # Convert to dictionaries
+    tasks = [
+        {
+            'id': row['id'],
+            'name': row['name'],
+            'date': row['date'],
+            'time': row['time'] if 'time' in row.keys() else None,
+            'importance': row['importance'],
+            'completed': row['completed'] if 'completed' in row.keys() else 0
+        }
+        for row in tasks_rows
+    ]
+    
+    return jsonify({'success': True, 'tasks': tasks})
 
 
 @app.route("/add_subtask/<int:parent_task_id>", methods=["POST"])
