@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Child's Attitude - Parent Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <script src="{{ url_for('static', filename='celebration.js') }}"></script>
+  <style>
+    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
+    .page-content{position:relative;z-index:1}
+    
+    .attitude-container{max-width:1200px;margin:24px auto;padding:0 16px}
+    
+    .attitude-header{background:linear-gradient(135deg, #fff3e0, #ffe0b2);border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;box-shadow:0 4px 16px rgba(255,152,0,0.15)}
+    
+    .attitude-header h1{color:#e65100;margin:0 0 16px 0;font-size:2rem}
+    
+    .attitude-header p{color:#ff6f00;margin:0;font-size:1.1rem;line-height:1.5}
+    
+    .attitude-content{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+    
+    .child-attitude-card{background:rgba(255,255,255,0.95);border-radius:16px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,0.12);border-left:6px solid #4a90e2}
+    
+    .child-attitude-card h3{color:#4a90e2;margin:0 0 16px 0;font-size:1.4rem}
+    
+    .attitude-display{background:linear-gradient(180deg, #FF3333 0%, #FF6B6B 20%, #FFD700 45%, #66BB6A 50%, #87CEEB 75%, #4A90E2 100%);border-radius:12px;padding:16px;margin:16px 0;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
+    
+    .attitude-value{font-size:2.5rem;font-weight:700;color:#333;text-shadow:0 2px 4px rgba(255,255,255,0.3)}
+    
+    .attitude-date{font-size:0.9rem;color:#666;margin-top:8px}
+    
+    .recommendations-card{background:linear-gradient(135deg, rgba(76,175,80,0.1), rgba(129,199,132,0.05));border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(76,175,80,0.15);border-left:6px solid #4caf50}
+    
+    .recommendations-card h3{color:#2e7d32;margin:0 0 16px 0;font-size:1.3rem}
+    
+    .recommendation-list{list-style:none;padding:0;margin:0}
+    
+    .recommendation-list li{background:rgba(255,255,255,0.8);margin:8px 0;padding:12px 16px;border-radius:8px;border-left:3px solid #4caf50;font-size:1rem;line-height:1.5}
+    
+    .recommendation-list li strong{color:#2e7d32}
+    
+    .no-data{text-align:center;padding:48px;color:#666;font-size:1.1rem;background:rgba(255,255,255,0.8);border-radius:12px;border:2px dashed #ddd}
+    
+    @media(max-width:768px){
+      .attitude-content{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Neurodevelompental Profiles</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+    </ul>
+  </div>
+
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1>Child's Attitude</h1>
+        <p class="description">Monitor your child's daily attitude and get personalized recommendations for support.</p>
+
+        <ul class="Tabs">
+          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
+          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
+          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
+          <li><a href="{{ url_for('visual_task_cards') }}">Task Cards</a></li>
+          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+          <li><a class="active" href="{{ url_for('parent_attitude') }}">Child's Attitude</a></li>
+          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+          <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+      </div>
+      <div class="front-header-right">
+        <h3 style="text-align:right;margin:0;padding-top:8px;">Hello, {{ username }}!</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="attitude-container">
+    <div class="attitude-header">
+      <h1>🌟 Child's Daily Attitude Tracker</h1>
+      <p>See how your child is feeling each day and get helpful recommendations for support</p>
+    </div>
+
+    {% if child_attitudes %}
+    <div class="attitude-content">
+      {% for attitude in child_attitudes %}
+      <div class="child-attitude-card">
+        <h3>{{ attitude.child_username }} - {{ attitude.date }}</h3>
+        <div class="attitude-display">
+          <div class="attitude-value">{{ attitude.emotion }}</div>
+        </div>
+        <div class="attitude-date">Recorded at {{ attitude.time }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="recommendations-card">
+      <h3>📋 Parent Recommendations</h3>
+      <ul class="recommendation-list">
+        <li><strong>For Positive Attitudes:</strong> Celebrate their achievements and maintain consistent routines. Consider offering extra privileges or praise.</li>
+        <li><strong>For Neutral/Okay Attitudes:</strong> Check in about their day and offer support. Sometimes a break or change of scenery can help improve mood.</li>
+        <li><strong>For Challenging Attitudes:</strong> Practice patience and understanding. Consider if they need more support with tasks, are feeling overwhelmed, or may need professional help.</li>
+        <li><strong>For Low Energy:</strong> Ensure they're getting enough sleep and nutrition. Break large tasks into smaller, manageable steps.</li>
+        <li><strong>General Tips:</strong> Maintain open communication, validate their feelings, and work together on solutions. Remember that attitude fluctuations are normal.</li>
+      </ul>
+    </div>
+    {% else %}
+    <div class="no-data">
+      <h3>📊 No Attitude Data Yet</h3>
+      <p>Your child hasn't recorded any attitude data yet. Encourage them to use the attitude tracker daily to help you better understand their emotional patterns.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</body>
+</html>

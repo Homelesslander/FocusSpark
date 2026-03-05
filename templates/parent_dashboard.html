@@ -45,11 +45,10 @@
           <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
           <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
           <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-          <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
           <li><a href="{{ url_for('visual_task_cards') }}">Task Cards</a></li>
           <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
           <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-          <li><a href="{{ url_for('parent_attitude') }}">Parent Attitude</a></li>
+          <li><a href="{{ url_for('attitude') }}">Child's Attitude</a></li>
           <li><a href="{{ url_for('settings') }}">Settings</a></li>
         </ul>
       </div>
@@ -101,6 +100,76 @@
           <input name="duration" type="number" min="0" placeholder="e.g. 5" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
           <button type="submit" class="btn-add">Create Reward</button>
         </form>
+      </div>
+    </section>
+
+    <!-- Task Cards Section -->
+    <section style="margin-top:30px;">
+      <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+          🎴 Task Cards Management
+        </h2>
+        <p style="color: #666; margin-bottom: 20px;">
+          Create and manage visual task cards for your children. These cards appear in their task interface with images and point rewards.
+        </p>
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <a href="{{ url_for('visual_task_cards') }}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+            📋 Create New Task Cards
+          </a>
+          <a href="{{ url_for('view_tasks') }}" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+            📋 View Existing Tasks
+          </a>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #4CAF50;">
+          <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Quick Stats</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+            <div style="text-align: center;">
+              <div style="font-size: 24px; margin-bottom: 5px;">🎴</div>
+              <div style="font-weight: 600; color: #2c3e50;">Task Cards</div>
+              <div style="color: #666;">{{ total_task_cards if total_task_cards else 0 }} created</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; margin-bottom: 5px;">👥</div>
+              <div style="font-weight: 600; color: #2c3e50;">Active Tasks</div>
+              <div style="color: #666;">{{ active_tasks_count if active_tasks_count else 0 }} pending</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Child's Attitude Section -->
+    <section style="margin-top:30px;">
+      <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+          💚 Child's Attitude Tracker
+        </h2>
+        <p style="color: #666; margin-bottom: 20px;">
+          Monitor your child's daily emotional well-being and get personalized recommendations based on their attitude patterns.
+        </p>
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <a href="{{ url_for('attitude') }}" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+            😊 View Child's Attitude
+          </a>
+          <a href="{{ url_for('parent_attitude') }}" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+            📊 Parent Attitude Reports
+          </a>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #ff6b6b;">
+          <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Today's Overview</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+            <div style="text-align: center;">
+              <div style="font-size: 24px; margin-bottom: 5px;">😊</div>
+              <div style="font-weight: 600; color: #2c3e50;">Today's Mood</div>
+              <div style="color: #666;">{{ today_child_attitude if today_child_attitude else 'Not logged yet' }}</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; margin-bottom: 5px;">📈</div>
+              <div style="font-weight: 600; color: #2c3e50;">Weekly Trend</div>
+              <div style="color: #666;">{{ weekly_attitude_trend if weekly_attitude_trend else 'No data yet' }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </div>

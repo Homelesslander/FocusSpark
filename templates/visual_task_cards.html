@@ -214,8 +214,13 @@
             <li><a href="{{ url_for('progress') }}">View Progress</a></li>
             <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
             <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
+            {% if not is_parent %}
+            <li><a href="{{ url_for('rewards') }}">Badges</a></li>
+            {% endif %}
+            {% if is_parent %}
             <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-            <li><a href="{{ url_for('parent_attitude') }}">Parent Attitude</a></li>
+            <li><a href="{{ url_for('attitude') }}">Child's Attitude</a></li>
+            {% endif %}
             <li><a href="{{ url_for('settings') }}">Settings</a></li>
           </ul>
         </div>
@@ -286,20 +291,208 @@
       {% endif %}
 
       <!-- Recommended Cards Section -->
-      {% if recommended_cards %}
-        <h2 class="section-title">✨ Recommended Cards (System)</h2>
-        <div class="cards-grid">
-          {% for card in recommended_cards %}
-            <div class="card-item">
-              <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image">
+      <h2 class="section-title">✨ Recommended Task Cards</h2>
+      <div class="info-message" style="margin-bottom:20px;">
+        🎯 Choose from these pre-designed task cards or create your own custom card below!
+      </div>
+      
+      <div style="text-align:center; margin-bottom:20px;">
+        <button onclick="toggleCustomForm()" class="btn-upload" style="margin:0 auto; background:linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);">
+          <span id="toggleButtonText">🎨 Create Custom Card Instead</span>
+        </button>
+      </div>
+      
+      <div id="recommendedCardsSection">
+        <!-- Morning Routine -->
+        <div class="category-section">
+          <h3 class="category-title">🌅 Morning Routine</h3>
+          <div class="cards-grid">
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Get Ready for School', 'Brush teeth, get dressed, pack bag', 15, 'morning-routine')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <span style="font-size:2rem;">🎒</span>
+              </div>
               <div class="card-content">
-                <h3 class="card-title">{{ card.title }}</h3>
-                <div class="card-points">{{ card.points }} pts</div>
+                <h3 class="card-title">Get Ready for School</h3>
+                <div class="card-description">Brush teeth, get dressed, pack bag</div>
+                <div class="card-points">15 pts</div>
               </div>
             </div>
-          {% endfor %}
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Make Your Bed', 'Straighten sheets and fluff pillows', 10, 'morning-routine')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <span style="font-size:2rem;">🛏</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Make Your Bed</h3>
+                <div class="card-description">Straighten sheets and fluff pillows</div>
+                <div class="card-points">10 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Healthy Breakfast', 'Eat nutritious breakfast and clean up', 12, 'morning-routine')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <span style="font-size:2rem;">🥣</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Healthy Breakfast</h3>
+                <div class="card-description">Eat nutritious breakfast and clean up</div>
+                <div class="card-points">12 pts</div>
+              </div>
+            </div>
+          </div>
         </div>
-      {% endif %}
+
+        <!-- School Work -->
+        <div class="category-section">
+          <h3 class="category-title">📚 School Work</h3>
+          <div class="cards-grid">
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Complete Homework', 'Finish all assignments for today', 20, 'school-work')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <span style="font-size:2rem;">📝</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Complete Homework</h3>
+                <div class="card-description">Finish all assignments for today</div>
+                <div class="card-points">20 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Read for 20 Minutes', 'Read any book or textbook', 15, 'school-work')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                <span style="font-size:2rem;">📖</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Read for 20 Minutes</h3>
+                <div class="card-description">Read any book or textbook</div>
+                <div class="card-points">15 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Study Session', 'Review notes and practice problems', 25, 'school-work')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                <span style="font-size:2rem;">🎓</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Study Session</h3>
+                <div class="card-description">Review notes and practice problems</div>
+                <div class="card-points">25 pts</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chores -->
+        <div class="category-section">
+          <h3 class="category-title">🏠 Chores</h3>
+          <div class="cards-grid">
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Clean Your Room', 'Tidy up, vacuum, organize desk', 18, 'chores')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                <span style="font-size:2rem;">🧹</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Clean Your Room</h3>
+                <div class="card-description">Tidy up, vacuum, organize desk</div>
+                <div class="card-points">18 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Take Out Trash', 'Gather trash from all rooms', 8, 'chores')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);">
+                <span style="font-size:2rem;">🗑️</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Take Out Trash</h3>
+                <div class="card-description">Gather trash from all rooms</div>
+                <div class="card-points">8 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Help with Dishes', 'Wash, dry, and put away dishes', 12, 'chores')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #d299c2 0%, #89f7fe 100%);">
+                <span style="font-size:2rem;">🍽</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Help with Dishes</h3>
+                <div class="card-description">Wash, dry, and put away dishes</div>
+                <div class="card-points">12 pts</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Self Care -->
+        <div class="category-section">
+          <h3 class="category-title">💚 Self Care</h3>
+          <div class="cards-grid">
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Exercise Time', '30 minutes of physical activity', 20, 'self-care')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #f857a6 0%, #ff5858 100%);">
+                <span style="font-size:2rem;">🏃</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Exercise Time</h3>
+                <div class="card-description">30 minutes of physical activity</div>
+                <div class="card-points">20 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Screen-Free Break', 'No screens for 1 hour, play outside', 15, 'self-care')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <span style="font-size:2rem;">🌳</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Screen-Free Break</h3>
+                <div class="card-description">No screens for 1 hour, play outside</div>
+                <div class="card-points">15 pts</div>
+              </div>
+            </div>
+            
+            <div class="card-item recommended-card" onclick="selectRecommendedCard('Practice Hobby', '30 minutes of favorite hobby', 12, 'self-care')">
+              <div class="card-image-placeholder" style="background:linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
+                <span style="font-size:2rem;">🎨</span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title">Practice Hobby</h3>
+                <div class="card-description">30 minutes of favorite hobby</div>
+                <div class="card-points">12 pts</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Creation Form (Hidden by default) -->
+      <div id="customCreationForm" style="display:none; margin-top:30px;">
+        <h2 class="section-title">✏️ Create Custom Card</h2>
+        <form action="{{ url_for('upload_task_card') }}" method="post" enctype="multipart/form-data" class="upload-form">
+          <div class="form-group" style="grid-column:1;">
+            <label for="customTitle">Task Title *</label>
+            <input type="text" id="customTitle" name="title" placeholder="e.g., Clean Room, Do Homework" required>
+          </div>
+          
+          <div class="form-group" style="grid-column:2;">
+            <label for="customDescription">Task Description</label>
+            <textarea id="customDescription" name="description" placeholder="e.g., Put away all clothes, organize desk, make bed" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+          </div>
+          
+          <div class="form-group" style="grid-column:1;">
+            <label for="customPoints">Points Reward *</label>
+            <input type="number" id="customPoints" name="points" min="1" placeholder="e.g., 10" required>
+          </div>
+          
+          <div class="form-group" style="grid-column:1/3;">
+            <label for="customImage">Upload Image *</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="customImage" name="image" accept="image/*" onchange="updateFileName(this)">
+              <label for="customImage" class="file-input-label" id="customFileLabel">
+                📁 Click or drag image (PNG, JPG, GIF)
+              </label>
+            </div>
+          </div>
+          
+          <button type="submit" class="btn-upload" style="grid-column:1/3;width:auto;justify-self:center;">Create Custom Card</button>
+        </form>
+      </div>
+    </div>
 
     </div>
 
@@ -309,6 +502,7 @@
     // Drag and drop support
     const fileInput = document.getElementById('image');
     const fileLabel = document.getElementById('fileLabel');
+    const customFileLabel = document.getElementById('customFileLabel');
     
     if (fileInput && fileLabel) {
       fileLabel.addEventListener('dragover', (e) => {
@@ -327,12 +521,102 @@
       });
     }
     
+    if (customFileLabel) {
+      customFileLabel.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        customFileLabel.style.background = '#e8f5e9';
+      });
+      
+      customFileLabel.addEventListener('dragleave', () => {
+        customFileLabel.style.background = '';
+      });
+      
+      customFileLabel.addEventListener('drop', (e) => {
+        e.preventDefault();
+        customFileInput.files = e.dataTransfer.files;
+        updateCustomFileName(customFileInput);
+      });
+    }
+    
     function updateFileName(input) {
       const label = document.getElementById('fileLabel');
       if (input.files && input.files[0]) {
         label.textContent = '✓ ' + input.files[0].name;
         label.classList.add('filled');
       }
+    }
+    
+    function updateCustomFileName(input) {
+      const label = document.getElementById('customFileLabel');
+      if (input.files && input.files[0]) {
+        label.textContent = '✓ ' + input.files[0].name;
+        label.classList.add('filled');
+      }
+    }
+    
+    // Function to select recommended card
+    function selectRecommendedCard(title, description, points, category) {
+      document.getElementById('customTitle').value = title;
+      document.getElementById('customDescription').value = description;
+      document.getElementById('customPoints').value = points;
+      
+      // Show custom creation form
+      document.getElementById('customCreationForm').style.display = 'block';
+      
+      // Scroll to form
+      document.getElementById('customCreationForm').scrollIntoView({ behavior: 'smooth' });
+      
+      // Add visual feedback
+      showSelectionFeedback(title, category);
+    }
+    
+    // Function to toggle between recommended and custom
+    function toggleCustomForm() {
+      const customForm = document.getElementById('customCreationForm');
+      const recommendedSection = document.getElementById('recommendedCardsSection');
+      const toggleButton = document.getElementById('toggleButtonText');
+      
+      if (customForm.style.display === 'none' || !customForm.style.display) {
+        // Show custom form, hide recommended
+        customForm.style.display = 'block';
+        recommendedSection.style.display = 'none';
+        toggleButton.textContent = '📋 Show Recommended Cards';
+        customForm.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        // Show recommended, hide custom form
+        customForm.style.display = 'none';
+        recommendedSection.style.display = 'block';
+        toggleButton.textContent = '🎨 Create Custom Card Instead';
+        recommendedSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    
+    // Function to show selection feedback
+    function showSelectionFeedback(title, category) {
+      // Remove existing feedback
+      const existingFeedback = document.querySelector('.selection-feedback');
+      if (existingFeedback) {
+        existingFeedback.remove();
+      }
+      
+      // Create feedback element
+      const feedback = document.createElement('div');
+      feedback.className = 'selection-feedback';
+      feedback.innerHTML = `
+        <div style="background:#4caf50;color:white;padding:12px 16px;border-radius:8px;margin:10px 0;box-shadow:0 4px 12px rgba(76,175,80,0.2);">
+          <strong>✅ Selected: ${title}</strong><br>
+          <small>Category: ${category}</small>
+        </div>
+      `;
+      
+      // Insert after recommended cards section
+      const recommendedSection = document.querySelector('.recommended-categories');
+      recommendedSection.parentNode.insertBefore(feedback, recommendedSection.nextSibling);
+      
+      // Remove after 3 seconds
+      setTimeout(() => {
+        feedback.remove();
+      }, 3000);
     }
   </script>
 
