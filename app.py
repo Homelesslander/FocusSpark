@@ -111,47 +111,46 @@ def ensure_users_table():
             password TEXT NOT NULL
         )
     ''')
-<<<<<<< HEAD
     
-    # Add optional columns if missing
-    # columns may already exist; ignore duplicate-column error
+    # Get existing columns using MySQL DESCRIBE command
     try:
-        c.execute("ALTER TABLE users ADD COLUMN points INT DEFAULT 0")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INT DEFAULT 0")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency VARCHAR(50) DEFAULT 'weekly'")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
-=======
-
-    c.execute("PRAGMA table_info(users)")
-    columns = [row[1] for row in c.fetchall()]
+        c.execute("DESCRIBE users")
+        columns = [row[0] for row in c.fetchall()]
+    except Exception:
+        columns = []
+    
     if "points" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
     if "total_earned" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN total_earned INTEGER DEFAULT 0")
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN total_earned INTEGER DEFAULT 0")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
     # Add optional email and reminder preferences columns if missing
     if "email" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
     if "reminders_enabled" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
     if "reminder_frequency" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'weekly'")
->>>>>>> main
-
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT")
+        except Exception as e:
+            if not (hasattr(e, 'errno') and e.errno == 1060):
+                raise
+    
     conn.commit()
     conn.close()
 
@@ -173,12 +172,11 @@ def ensure_tasks_table():
         )
     ''')
    
-    # ensure all necessary columns exist (handles migrations for SQLite/MySQL)
+    # ensure all necessary columns exist (handles migrations for MySQL)
     try:
-        c.execute("PRAGMA table_info(tasks)")
-        existing_cols = [row[1] for row in c.fetchall()]
+        c.execute("DESCRIBE tasks")
+        existing_cols = [row[0] for row in c.fetchall()]
     except Exception:
-        # fallback for MySQL without PRAGMA
         existing_cols = []
     if "completed" not in existing_cols:
         try:
