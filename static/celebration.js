@@ -157,13 +157,13 @@ function showAchievementNotification(message, importance) {
   notification.textContent = message;
   document.body.appendChild(notification);
 
-  // Display durations per importance level (ms)
+  // Display durations per importance level (ms) - extended for better visibility
   const DISPLAY_DURATIONS = {
-    Major: 5000,
-    Medium: 5000,
-    Minor: 5000
+    Major: 8000,    // Increased from 5000 to 8000ms (8 seconds)
+    Medium: 6000,   // Increased from 5000 to 6000ms (6 seconds)  
+    Minor: 4000    // Increased from 5000 to 4000ms (4 seconds)
   };
-  const fadeDuration = 700; // fade-out time
+  const fadeDuration = 1000; // Increased fade-out time from 700ms to 1000ms
   const displayFor = DISPLAY_DURATIONS[importance] || 4000;
 
   setTimeout(() => {

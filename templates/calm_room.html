@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calm Room - ADHD Task Manager</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  
+  <style>
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-size: cover;
+      background-position: center center;
+      filter: blur(0px) saturate(1.05);
+      opacity: 0.4; /* make gradient semi-transparent so slides show through */
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .page-content {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .calm-container {
+      text-align: center;
+      padding: 20px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .calm-title {
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .calm-subtitle {
+      color: rgba(255,255,255,0.8);
+      font-size: 1.1rem;
+      margin-bottom: 40px;
+      font-weight: 300;
+    }
+
+    .breathing-circle {
+      width: 400px;
+      height: 400px;
+      margin: 0 auto 40px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .breath-circle {
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 100%);
+      box-shadow: 0 0 50px rgba(255,255,255,0.5), inset 0 0 30px rgba(255,255,255,0.2);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.6);
+      transition: transform 4s ease-in-out;
+    }
+
+    .breath-circle::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.8);
+      transition: all 4s ease-in-out;
+    }
+
+    /* slideshow styles */
+    /* background slideshow layers */
+    .slide-bg {
+      position: fixed;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: opacity 1s ease-in-out;
+      opacity: 0;
+      z-index: -2;
+    }
+    .slide-bg.visible {
+      opacity: 1;
+    }
+
+    .breath-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #333;
+      font-size: 1.2rem;
+      font-weight: 600;
+      z-index: 10;
+      text-shadow: 0 1px 3px rgba(255,255,255,0.8);
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .btn-calm {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-calm:hover {
+      background: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .btn-calm.active {
+      background: rgba(255,255,255,0.4);
+      border-color: rgba(255,255,255,0.6);
+    }
+
+    .timer-display {
+      color: rgba(255,255,255,0.9);
+      font-size: 1.5rem;
+      font-weight: 300;
+      margin-bottom: 20px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .session-info {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 30px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .session-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .stat-item {
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 600;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-top: 5px;
+    }
+
+    .breathing-patterns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .pattern-btn {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .pattern-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    .pattern-btn.active {
+      background: rgba(255,255,255,0.3);
+      color: white;
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    @media (max-width: 768px) {
+      .calm-title {
+        font-size: 2rem;
+      }
+      
+      .breathing-circle {
+        width: 300px;
+        height: 300px;
+      }
+      
+      .breath-circle {
+        width: 200px;
+        height: 200px;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn-calm {
+        width: 200px;
+      }
+    }
+      .calm-title {
+        font-size: 2rem;
+      }
+      
+      .breathing-circle {
+        width: 250px;
+        height: 250px;
+      }
+      
+      .breath-circle {
+        width: 150px;
+        height: 150px;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn-calm {
+        width: 200px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- slideshow background layers -->
+  <div class="slide-bg" id="slide1" aria-hidden="true"></div>
+  <div class="slide-bg" id="slide2" aria-hidden="true"></div>
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+    <div class="menu">
+      <ul>
+        <li><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="{{ url_for('about') }}">About</a></li>
+        <li><a href="{{ url_for('symptoms') }}">Neurodevelompental Profiles</a></li>
+        <li><a href="{{ url_for('activities') }}">Activities</a></li>
+        <li><a href="{{ url_for('calm_room') }}" class="active">🧘 Calm Room</a></li>
+      </ul>
+    </div>
+
+    <div class="calm-container">
+      <h1 class="calm-title">Calm Room</h1>
+      <p class="calm-subtitle"></p>
+
+      <!-- background slideshow handled via page backdrop -->
+
+      <div class="breathing-patterns">
+        <button class="pattern-btn active" data-pattern="4-7-8">4-7-8 Relax</button>
+        <button class="pattern-btn" data-pattern="box">Box Breathing</button>
+        <button class="pattern-btn" data-pattern="4-4-4">4-4-4 Focus</button>
+        <button class="pattern-btn" data-pattern="7-11">7-11 Deep</button>
+      </div>
+
+      <div class="timer-display" id="sessionTimer">00:00</div>
+
+      <div class="breathing-circle" id="breathingCircle">
+        <div class="breath-circle" id="breathCircle">
+          <span class="breath-text" id="breathText">Click Start</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn-calm" id="startBtn">
+          🌸 Start Breathing
+        </button>
+        <button class="btn-calm" id="pauseBtn" style="display:none;">
+          ⏸️ Pause
+        </button>
+        <button class="btn-calm" id="resetBtn">
+          🔄 Reset
+        </button>
+      </div>
+
+      <div class="session-info">
+        <h3 style="color: white; margin-bottom: 15px;">Session Progress</h3>
+        <div class="session-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="breathCount">0</span>
+            <span class="stat-label">Breaths</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="sessionTime">0:00</span>
+            <span class="stat-label">Total Time</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="avgBreaths">0</span>
+            <span class="stat-label">Breaths/Min</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isBreathing = false;
+    let isPaused = false;
+    let breathCount = 0;
+    let sessionStartTime = null;
+    let totalPausedTime = 0;
+    let pauseStartTime = null;
+    let currentPattern = '4-7-8';
+    let breathingInterval = null;
+    let timerInterval = null;
+
+    const patterns = {
+      '4-7-8': { inhale: 4, hold: 7, exhale: 8, name: '4-7-8 Relax' },
+      'box': { inhale: 4, hold: 4, exhale: 4, hold2: 4, name: 'Box Breathing' },
+      '4-4-4': { inhale: 4, hold: 0, exhale: 4, name: '4-4-4 Focus' },
+      '7-11': { inhale: 7, hold: 0, exhale: 11, name: '7-11 Deep' }
+    };
+
+    function updateBreathText(text) {
+      document.getElementById('breathText').textContent = text;
+    }
+
+    function updateCircleScale(scale, duration) {
+      const circle = document.getElementById('breathCircle');
+      circle.style.transition = `transform ${duration}s ease-in-out`;
+      circle.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    /* slideshow logic for background fade */
+    const imageBase = "{{ url_for('static', filename='images/') }}";
+    const slideshowImages = [
+      '0d8e0215230f829053d078247b5d5bec.jpg',
+      '61FdkzF32OL._AC_UF894,1000_QL80_.jpg',
+      'about tab.jpg',
+      'closeup-dried-out-yosemite-waterfall-yosemite-national-park_181624-37045.avif',
+      'world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png',
+      'Teaching-Students-with-ADHD.jpeg'
+    ];
+    let slideshowIndex = 0;
+    let activeSlide = 1;
+
+    function advanceSlideshow() {
+      slideshowIndex = (slideshowIndex + 1) % slideshowImages.length;
+      const nextBg = `url(${imageBase}${slideshowImages[slideshowIndex]})`;
+      const current = activeSlide === 1 ? document.getElementById('slide1') : document.getElementById('slide2');
+      const next = activeSlide === 1 ? document.getElementById('slide2') : document.getElementById('slide1');
+      next.style.backgroundImage = nextBg;
+      next.classList.add('visible');
+      current.classList.remove('visible');
+      activeSlide = activeSlide === 1 ? 2 : 1;
+    }
+
+    // initialize first slide immediately (script is at bottom)
+    const s1 = document.getElementById('slide1');
+    s1.style.backgroundImage = `url(${imageBase}${slideshowImages[0]})`;
+    s1.classList.add('visible');
+    setInterval(advanceSlideshow, 15000);
+
+
+    function updateStats() {
+      document.getElementById('breathCount').textContent = breathCount;
+      
+      if (sessionStartTime) {
+        const now = Date.now();
+        const elapsedMs = now - sessionStartTime - totalPausedTime;
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        const minutes = Math.floor(elapsedSeconds / 60);
+        const seconds = elapsedSeconds % 60;
+        
+        document.getElementById('sessionTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        document.getElementById('sessionTimer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        const avgBreaths = elapsedSeconds > 0 ? Math.round((breathCount / elapsedSeconds) * 60) : 0;
+        document.getElementById('avgBreaths').textContent = avgBreaths;
+      }
+    }
+
+    function startBreathing() {
+      if (isBreathing && !isPaused) return;
+      
+      if (isPaused) {
+        // Resume from pause
+        isPaused = false;
+        totalPausedTime += Date.now() - pauseStartTime;
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('pauseBtn').style.display = 'inline-block';
+      } else {
+        // Start new session
+        isBreathing = true;
+        isPaused = false;
+        sessionStartTime = Date.now();
+        totalPausedTime = 0;
+        breathCount = 0;
+        
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('pauseBtn').style.display = 'inline-block';
+      }
+      
+      startBreathingCycle();
+      startTimer();
+    }
+
+    function pauseBreathing() {
+      if (!isBreathing || isPaused) return;
+      
+      isPaused = true;
+      pauseStartTime = Date.now();
+      
+      document.getElementById('startBtn').style.display = 'inline-block';
+      document.getElementById('pauseBtn').style.display = 'none';
+      document.getElementById('startBtn').textContent = '▶️ Resume';
+      
+      clearInterval(breathingInterval);
+      clearInterval(timerInterval);
+      
+      updateBreathText('Paused');
+    }
+
+    function resetBreathing() {
+      isBreathing = false;
+      isPaused = false;
+      breathCount = 0;
+      sessionStartTime = null;
+      totalPausedTime = 0;
+      pauseStartTime = null;
+      
+      document.getElementById('startBtn').style.display = 'inline-block';
+      document.getElementById('pauseBtn').style.display = 'none';
+      document.getElementById('startBtn').textContent = '🌸 Start Breathing';
+      
+      clearInterval(breathingInterval);
+      clearInterval(timerInterval);
+      
+      updateCircleScale(0.6, 1); // Reset to initial size
+      updateBreathText('Click Start');
+      updateStats();
+    }
+
+    function startBreathingCycle() {
+      const pattern = patterns[currentPattern];
+      let phase = 'inhale';
+      let phaseTime = 0;
+      
+      // Start with inhale
+      updateCircleScale(1.0, pattern.inhale);
+      updateBreathText('Breathe In');
+      
+      breathingInterval = setInterval(() => {
+        phaseTime++;
+        
+        if (phase === 'inhale') {
+          if (phaseTime >= pattern.inhale) {
+            phase = 'hold';
+            phaseTime = 0;
+            if (pattern.hold === 0) {
+              phase = 'exhale';
+              updateCircleScale(0.6, pattern.exhale);
+              updateBreathText('Breathe Out');
+            } else {
+              updateBreathText('Hold');
+            }
+          }
+        } else if (phase === 'hold') {
+          if (phaseTime >= pattern.hold) {
+            phase = 'exhale';
+            phaseTime = 0;
+            updateCircleScale(0.6, pattern.exhale);
+            updateBreathText('Breathe Out');
+          }
+        } else if (phase === 'exhale') {
+          if (phaseTime >= pattern.exhale) {
+            breathCount++;
+            updateStats();
+            if (pattern.hold2) {
+              phase = 'hold2';
+              phaseTime = 0;
+              updateBreathText('Hold');
+            } else {
+              phase = 'inhale';
+              phaseTime = 0;
+              updateCircleScale(1.0, pattern.inhale);
+              updateBreathText('Breathe In');
+            }
+          }
+        } else if (phase === 'hold2') {
+          if (phaseTime >= pattern.hold2) {
+            phase = 'inhale';
+            phaseTime = 0;
+            updateCircleScale(1.0, pattern.inhale);
+            updateBreathText('Breathe In');
+          }
+        }
+      }, 1000);
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(updateStats, 1000);
+    }
+
+    // Button event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('startBtn').addEventListener('click', function() {
+        startBreathing();
+      });
+      
+      document.getElementById('pauseBtn').addEventListener('click', function() {
+        pauseBreathing();
+      });
+      
+      document.getElementById('resetBtn').addEventListener('click', function() {
+        resetBreathing();
+      });
+
+      // Pattern selection
+      document.querySelectorAll('.pattern-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          if (isBreathing && !isPaused) return;
+          
+          document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          currentPattern = this.dataset.pattern;
+        });
+      });
+    });
+
+    // Initialize
+    updateStats();
+  </script>
+</body>
+</html>

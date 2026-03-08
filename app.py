@@ -111,6 +111,7 @@ def ensure_users_table():
             password TEXT NOT NULL
         )
     ''')
+<<<<<<< HEAD
     
     # Add optional columns if missing
     # columns may already exist; ignore duplicate-column error
@@ -134,6 +135,22 @@ def ensure_users_table():
     except Exception as e:
         if not (hasattr(e, 'errno') and e.errno == 1060):
             raise
+=======
+
+    c.execute("PRAGMA table_info(users)")
+    columns = [row[1] for row in c.fetchall()]
+    if "points" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
+    if "total_earned" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN total_earned INTEGER DEFAULT 0")
+    # Add optional email and reminder preferences columns if missing
+    if "email" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if "reminders_enabled" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
+    if "reminder_frequency" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'weekly'")
+>>>>>>> main
 
     conn.commit()
     conn.close()
@@ -680,6 +697,8 @@ def complete_task_and_award(task_id, username):
         points = POINTS.get(importance, 0)
 
         c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, username))
+        # also increment historical total earned for badges tracking
+        c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, username))
 
         completed_at = datetime.datetime.now().isoformat()
         c.execute("UPDATE tasks SET completed = 1, completed_at = ? WHERE id = ?", (completed_at, task_id))
@@ -854,6 +873,13 @@ def activities():
     return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
+@app.route('/calm_room')
+def calm_room():
+    """Render the calm room page with breathing exercises."""
+    username = session.get('user') if session else None
+    return render_template("calm_room.html", username=username)
+
+
 @app.route('/calendar')
 def calendar():
     """Render the standalone calendar page (14-day view)."""
@@ -885,6 +911,105 @@ def calendar():
             conn.close()
 
     return render_template('calendar.html', calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
+
+
+@app.route('/focus-timer')
+def focus_timer():
+    """Render the dedicated focus timer page (Pomodoro-style)."""
+    username = session.get('user') if session else None
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get ALL incomplete tasks (not just today's), ordered by importance
+    if username:
+        c.execute("""
+            SELECT id, name, date, time, importance, completed 
+            FROM tasks 
+            WHERE (completed = 0 OR completed IS NULL) 
+            AND (in_box = 0 OR in_box IS NULL)
+            AND user = ?
+            ORDER BY 
+              CASE importance 
+                WHEN 'Major' THEN 1 
+                WHEN 'Medium' THEN 2 
+                WHEN 'Minor' THEN 3 
+                ELSE 4 
+              END, 
+              date, 
+              time
+        """, (username,))
+    else:
+        c.execute("""
+            SELECT id, name, date, time, importance, completed 
+            FROM tasks 
+            WHERE (completed = 0 OR completed IS NULL) 
+            AND (in_box = 0 OR in_box IS NULL)
+            ORDER BY 
+              CASE importance 
+                WHEN 'Major' THEN 1 
+                WHEN 'Medium' THEN 2 
+                WHEN 'Minor' THEN 3 
+                ELSE 4 
+              END, 
+              date, 
+              time
+        """)
+    all_tasks_rows = c.fetchall()
+    conn.close()
+    
+    # Convert Row objects to dictionaries
+    all_tasks = [
+        {
+            'id': row['id'],
+            'name': row['name'],
+            'date': row['date'],
+            'time': row['time'] if 'time' in row.keys() else None,
+            'importance': row['importance'],
+            'completed': row['completed'] if 'completed' in row.keys() else 0
+        }
+        for row in all_tasks_rows
+    ]
+    
+    # Get the highest priority incomplete task (for "Now Working On")
+    current_task = None
+    incomplete_tasks = [t for t in all_tasks if not t['completed']]
+    if incomplete_tasks:
+        current_task = {
+            'id': incomplete_tasks[0]['id'],
+            'name': incomplete_tasks[0]['name'],
+            'importance': incomplete_tasks[0]['importance']
+        }
+    
+    points = 0
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT points FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row:
+            points = row['points']
+        conn.close()
+    
+    # Determine parent role
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    
+    return render_template('focus_timer.html', 
+                          username=username, 
+                          current_task=current_task,
+                          all_tasks=all_tasks,
+                          points=points, 
+                          is_parent=is_parent)
 
 
 @app.route('/viewtasks')
@@ -1254,6 +1379,83 @@ def complete_task(importance, task_index):
     return redirect(url_for("activities"))
 
 
+@app.route("/complete_task_by_id/<int:task_id>", methods=["POST"])
+def complete_task_by_id(task_id):
+    """Complete a task by ID and return JSON (for AJAX requests)."""
+    username = session.get('user')
+    
+    if not username:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        # Get task to verify it belongs to the user
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT user FROM tasks WHERE id = ?", (task_id,))
+        task_row = c.fetchone()
+        conn.close()
+        
+        if not task_row:
+            return jsonify({'success': False, 'error': 'Task not found'}), 404
+        
+        # Determine who to award points to
+        target_username = username
+        if task_row and 'user' in task_row.keys() and task_row['user']:
+            target_username = task_row['user']
+        
+        # Complete the task
+        complete_task_and_award(task_id, target_username)
+        
+        return jsonify({'success': True, 'message': 'Task completed'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/get_all_tasks', methods=["GET"])
+def get_all_tasks_json():
+    """Get all incomplete tasks for the current user as JSON."""
+    username = session.get('user')
+    
+    if not username:
+        return jsonify({'success': False, 'error': 'Not authenticated', 'tasks': []}), 401
+    
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, date, time, importance, completed 
+        FROM tasks 
+        WHERE (completed = 0 OR completed IS NULL) 
+        AND (in_box = 0 OR in_box IS NULL)
+        AND user = ?
+        ORDER BY 
+          CASE importance 
+            WHEN 'Major' THEN 1 
+            WHEN 'Medium' THEN 2 
+            WHEN 'Minor' THEN 3 
+            ELSE 4 
+          END, 
+          date, 
+          time
+    """, (username,))
+    tasks_rows = c.fetchall()
+    conn.close()
+    
+    # Convert to dictionaries
+    tasks = [
+        {
+            'id': row['id'],
+            'name': row['name'],
+            'date': row['date'],
+            'time': row['time'] if 'time' in row.keys() else None,
+            'importance': row['importance'],
+            'completed': row['completed'] if 'completed' in row.keys() else 0
+        }
+        for row in tasks_rows
+    ]
+    
+    return jsonify({'success': True, 'tasks': tasks})
+
+
 @app.route("/add_subtask/<int:parent_task_id>", methods=["POST"])
 def add_subtask(parent_task_id):
     subtask_name = request.form.get("subtask_name")
@@ -1406,9 +1608,30 @@ def get_upcoming_tasks(username=None, days=7):
 def add_points(username, amount):
     conn = get_db_conn()
     c = conn.cursor()
+    # increase current available points
     c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (amount, username))
+    # also track historical total earned (not reduced when spending)
+    c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (amount, username))
     conn.commit()
     conn.close()
+
+
+def get_user_total_earned(username):
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT total_earned FROM users WHERE username = ?", (username,))
+    row = c.fetchone()
+    conn.close()
+    return row['total_earned'] if row and row['total_earned'] is not None else 0
+
+
+def has_claimed_badge(username, badge_id):
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM redemptions WHERE username = ? AND reward_type = 'badge' AND reward_id = ? LIMIT 1", (username, badge_id))
+    r = c.fetchone()
+    conn.close()
+    return bool(r)
 
 def deduct_points(username, amount):
     conn = get_db_conn()
@@ -1457,7 +1680,7 @@ def get_redeemed_rewards(username):
     """Get all redeemed rewards for a user, ordered by most recent first."""
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("SELECT id, title, cost, redeemed_at, expires_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 50", (username,))
+    c.execute("SELECT id, reward_type, reward_id, title, cost, redeemed_at, expires_at FROM redemptions WHERE username = ? ORDER BY redeemed_at DESC LIMIT 50", (username,))
     rows = c.fetchall()
     conn.close()
 
@@ -1467,7 +1690,13 @@ def get_redeemed_rewards(username):
         expires = r['expires_at'] if 'expires_at' in r.keys() else None
         # keep reward if no expires_at (permanent) or expires in the future
         if not expires:
-            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': None})
+            rec = {'id': r['id'], 'reward_type': r['reward_type'] if 'reward_type' in r.keys() else None, 'reward_id': r['reward_id'] if 'reward_id' in r.keys() else None, 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': None}
+            # attach badge icon when applicable
+            if rec.get('reward_type') == 'badge':
+                bid = rec.get('reward_id')
+                icon = next((b[3] for b in BADGES if b[0] == bid), None)
+                rec['icon'] = icon
+            active.append(rec)
             continue
         try:
             exp_dt = datetime.datetime.fromisoformat(expires)
@@ -1478,7 +1707,12 @@ def get_redeemed_rewards(username):
             except Exception:
                 continue
         if exp_dt > now:
-            active.append({'id': r['id'], 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': exp_dt.isoformat()})
+            rec = {'id': r['id'], 'reward_type': r['reward_type'] if 'reward_type' in r.keys() else None, 'reward_id': r['reward_id'] if 'reward_id' in r.keys() else None, 'title': r['title'], 'cost': r['cost'], 'redeemed_at': r['redeemed_at'], 'expires_at': exp_dt.isoformat()}
+            if rec.get('reward_type') == 'badge':
+                bid = rec.get('reward_id')
+                icon = next((b[3] for b in BADGES if b[0] == bid), None)
+                rec['icon'] = icon
+            active.append(rec)
 
     return active
 
@@ -1493,6 +1727,69 @@ def nearest_reward_info(rewards, username):
         'reward': nearest,
         'points_needed': max(0, nearest['cost'] - points)
     }
+
+
+@app.route('/rewards')
+def rewards():
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    points = get_user_points(username)
+    total_earned = get_user_total_earned(username)
+    badges = get_badges_for_display(username)
+    redeemed_rewards = get_redeemed_rewards(username)
+
+    # determine parent role so template can show/hide tabs
+    is_parent = False
+    if username:
+        conn = get_db_conn(); c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+
+    return render_template('rewards.html', username=username, points=points, total_earned=total_earned, badges=badges, redeemed_rewards=redeemed_rewards, is_parent=is_parent)
+
+
+@app.route('/rewards/redeem/<int:badge_id>', methods=['POST'])
+def redeem_badge(badge_id):
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    matched = next((b for b in BADGES if b[0] == badge_id), None)
+    if not matched:
+        return "Unknown badge", 400
+    _, title, cost, icon = matched
+    # Check historical total earned points (not current balance)
+    total_earned = get_user_total_earned(username)
+    if total_earned < cost:
+        return "Not enough total points earned to claim this badge", 400
+    # Ensure badge not already claimed
+    if has_claimed_badge(username, badge_id):
+        return "Badge already claimed", 400
+    # Claim the badge (no point deduction) and log redemption for record
+    log_redemption(username, 'badge', badge_id, title, cost)
+    return redirect(url_for('rewards'))
+
+
+# Simple badges available for children on the Rewards tab
+BADGES = [
+    (1, "Star", 1000, "⭐"),
+    (2, "Shield", 2000, "🛡️"),
+    (3, "Gold Trophy", 3000, "🏆"),
+    (4, "Platinum Crown", 5000, "👑"),
+]
+
+def get_badges_for_display(username):
+    total_earned = get_user_total_earned(username)
+    badges = []
+    for bid, title, cost, icon in BADGES:
+        already = has_claimed_badge(username, bid)
+        badges.append({'id': bid, 'title': title, 'cost': cost, 'icon': icon, 'claimable': (not already) and (total_earned >= cost), 'claimed': already})
+    return badges
 
 
 @app.route('/attitude', methods=['GET', 'POST'])
@@ -1786,8 +2083,9 @@ def parent_attitude():
 
         created_at = datetime.datetime.now().isoformat()
         c.execute("INSERT INTO attitude_logs (parent_username, child_username, rating, points_awarded, created_at) VALUES (?, ?, ?, ?, ?)", (parent, child_username, rating, points, created_at))
-        # award points to child
+        # award points to child and increment their historical total earned
         c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (points, child_username))
+        c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, child_username))
         conn.commit()
         conn.close()
         return redirect(url_for('parent_attitude'))
@@ -2044,3 +2342,5 @@ if __name__ == "__main__":
     except Exception as e:
         print('Could not start reminder scheduler:', e)
     app.run(debug=True, port=5050)
+    
+    

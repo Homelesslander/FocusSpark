@@ -3,25 +3,29 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>StreakMate</title>
+        <title>FocusSpark</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='aboutstyle.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
     </head>
     <body class="home-page">
         <div class="menu">
-            <span class="logo-left">StreakMate</span>
             <ul>
                 <li><a href="{{ url_for('home') }}">Home</a></li>
                 <li><a href="{{ url_for('about') }}">About</a></li>
-                <li><a href="{{ url_for('symptoms') }}">Neurodevelompental Profiles</a></li>
+                <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
                 <li><a href="{{ url_for('activities') }}">Activities</a></li>
             </ul>
         </div>
 
         <main class="hero">
-            <h1 id="heroTitle" class="hero-title">Welcome to<br><span>StreakMate</span></h1>
+            <h1 id="heroTitle" class="hero-title">Welcome to<br><span>FocusSpark</span></h1>
             <div id="definitionBox" class="definition-box">
-                <p>This platform is built to support individuals by making task management simple, motivating, and fun. Through a gamified system, tasks become challenges that earn you points, streaks, and progress milestones.</p>
+                <p>
+    <strong>Build Independence, Stay Organized, and Celebrate Every Achievement.</strong><br><br>
+    
+    This platform transforms daily routines into an interactive and rewarding experience for adolescents with neurodivergence.
+</p>
             </div>
 
             <!-- small prompt box -> scroll to auth section -->
