@@ -1,52 +1,67 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-import sqlite3, bcrypt, os, smtplib, ssl, uuid, datetime
+from db_config import get_db_conn_wrapped
+import bcrypt, os, smtplib, ssl, uuid, datetime
 
 login_bp = Blueprint('auth', __name__)
 
 
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = get_db_conn_wrapped()
     c = conn.cursor()
 
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) UNIQUE,
             password TEXT,
-            role TEXT DEFAULT 'child',
-            parent_username TEXT
+            role VARCHAR(50) DEFAULT 'child',
+            parent_username VARCHAR(255)
         )
     ''')
 
     
-    c.execute("PRAGMA table_info(users)")
-    columns = [row[1] for row in c.fetchall()]
-    if "points" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
-    if "role" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'child'")
-    if "parent_username" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN parent_username TEXT")
-    # optional email fields for notifications and verification
-    if "email" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
-    if "email_verified" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0")
+    # add optional columns, ignore if already present
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN points INT DEFAULT 0")
+    except Exception as e:
+        # 1060 = duplicate column name, ignore
+        if hasattr(e, 'errno') and e.errno != 1060:
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'child'")
+    except Exception as e:
+        if hasattr(e, 'errno') and e.errno != 1060:
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN parent_username VARCHAR(255)")
+    except Exception as e:
+        if hasattr(e, 'errno') and e.errno != 1060:
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
+    except Exception as e:
+        if hasattr(e, 'errno') and e.errno != 1060:
+            raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN email_verified INT DEFAULT 0")
+    except Exception as e:
+        if hasattr(e, 'errno') and e.errno != 1060:
+            raise
 
     conn.commit()
     conn.close()
 
     # email verification tokens
-    conn = sqlite3.connect('database.db')
+    conn = get_db_conn_wrapped()
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS email_verifications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            token TEXT NOT NULL,
-            expires_at TEXT NOT NULL,
-            used INTEGER DEFAULT 0
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL,
+            token VARCHAR(255) NOT NULL,
+            expires_at VARCHAR(255) NOT NULL,
+            used INT DEFAULT 0
         )
     ''')
     conn.commit()
@@ -62,9 +77,11 @@ def register():
         role = request.form.get('role', 'child').lower()
         if role not in ("parent", "child"):
             role = 'child'
-        hashed_pw = bcrypt.hashpw(password, bcrypt.gensalt())
+        hashed_pw_bytes = bcrypt.hashpw(password, bcrypt.gensalt())
+        # store as utf-8 string so MySQL doesn't convert to blob
+        hashed_pw = hashed_pw_bytes.decode('utf-8')
 
-        conn = sqlite3.connect('database.db')
+        conn = get_db_conn_wrapped()
         c = conn.cursor()
         try:
             c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed_pw, role))
@@ -73,8 +90,10 @@ def register():
             session['user'] = username
             session['role'] = role
             return redirect(url_for('activities'))
-        except sqlite3.IntegrityError:
-            return "Username already exists!"
+        except Exception as e:
+            if 'duplicate' in str(e).lower() or 'unique' in str(e).lower():
+                return "Username already exists!"
+            return f"Registration error: {str(e)}"
         finally:
             conn.close()
 
@@ -87,17 +106,24 @@ def login():
         username = request.form['username']
         password = request.form['password'].encode('utf-8')
 
-        conn = sqlite3.connect('database.db')
+        conn = get_db_conn_wrapped()
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE username=?", (username,))
         user = c.fetchone()
         conn.close()
 
-        if user and bcrypt.checkpw(password, user[2]):
+        hashed = None
+        if user:
+            stored = user['password']
+            if isinstance(stored, str):
+                hashed = stored.encode('utf-8')
+            else:
+                hashed = stored
+        if user and hashed and bcrypt.checkpw(password, hashed):
             session['user'] = username
-            # store role in session (table columns: id, username, password, role, ...)
+            # store role in session
             try:
-                role = user[3] if len(user) > 3 else 'child'
+                role = user.get('role', 'child') if user else 'child'
             except Exception:
                 role = 'child'
             session['role'] = role
@@ -130,7 +156,7 @@ def change_password():
     if new_pw != confirm:
         return "New passwords do not match", 400
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_conn_wrapped()
     c = conn.cursor()
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
     row = c.fetchone()
@@ -138,12 +164,16 @@ def change_password():
         conn.close()
         return redirect(url_for('auth.login'))
 
-    if not bcrypt.checkpw(current, row[0]):
+    stored = row['password']
+    if isinstance(stored, str):
+        stored = stored.encode('utf-8')
+    if not bcrypt.checkpw(current, stored):
         conn.close()
         return "Current password incorrect", 400
 
-    hashed = bcrypt.hashpw(new_pw, bcrypt.gensalt())
-    c.execute("UPDATE users SET password = ? WHERE username = ?", (hashed, username))
+    hashed_pw_bytes = bcrypt.hashpw(new_pw, bcrypt.gensalt())
+    new_hashed = hashed_pw_bytes.decode('utf-8')
+    c.execute("UPDATE users SET password = ? WHERE username = ?", (new_hashed, username))
     conn.commit()
     conn.close()
     return redirect(url_for('activities'))
@@ -179,14 +209,14 @@ def send_verification():
     if not username:
         return redirect(url_for('auth.login'))
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_conn_wrapped()
     c = conn.cursor()
     c.execute("SELECT email FROM users WHERE username = ?", (username,))
     row = c.fetchone()
-    if not row or not row[0]:
+    if not row or not row['email']:
         conn.close()
         return "No email set for account", 400
-    email = row[0]
+    email = row['email']
     token = uuid.uuid4().hex
     expires = (datetime.datetime.utcnow() + datetime.timedelta(hours=24)).isoformat()
     c.execute("INSERT INTO email_verifications (username, token, expires_at) VALUES (?, ?, ?)", (username, token, expires))
@@ -207,14 +237,17 @@ def verify_email():
     token = request.args.get('token')
     if not token:
         return "Missing token", 400
-    conn = sqlite3.connect('database.db')
+    conn = get_db_conn_wrapped()
     c = conn.cursor()
     c.execute("SELECT id, username, expires_at, used FROM email_verifications WHERE token = ?", (token,))
     row = c.fetchone()
     if not row:
         conn.close()
         return "Invalid token", 400
-    vid, username, expires_at, used = row
+    vid = row['id']
+    username = row['username']
+    expires_at = row['expires_at']
+    used = row['used']
     if used:
         conn.close()
         return "Token already used", 400
