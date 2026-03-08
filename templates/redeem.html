@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Redeem Rewards</title>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
@@ -222,14 +225,18 @@
       <li><a href="{{ url_for('home') }}">Home</a></li>
       <li><a href="{{ url_for('about') }}">About</a></li>
       <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
       <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      <li><a href="{{ url_for('calm_room') }}" class="active">🧘 Calm Room</a></li>
     </ul>
   </div>
 
   <div class="front">
     <div class="front-header">
       <div class="front-header-left">
+
         <h1 class="page-title">Redeem Rewards</h1>
+
         <p class="description">Redeem your earned rewards.</p>
 
         <ul class="Tabs">

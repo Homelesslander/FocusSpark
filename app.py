@@ -823,6 +823,13 @@ def activities():
     return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
 
 
+@app.route('/calm_room')
+def calm_room():
+    """Render the calm room page with breathing exercises."""
+    username = session.get('user') if session else None
+    return render_template("calm_room.html", username=username)
+
+
 @app.route('/calendar')
 def calendar():
     """Render the standalone calendar page (14-day view)."""

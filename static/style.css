@@ -43,7 +43,7 @@
     padding: 20px;
     background-color: rgba(255, 255, 255, 0.8);
 }
-menu{ width: 400px; 
+menu{ width: 600px; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
@@ -55,12 +55,12 @@ ul {float: left;
     align-items: center; 
     list-style: none;}
 
-ul li {margin: 0 25px; 
+ul li {margin: 0 15px; 
     font-size: 14px;} 
 ul li a{
     text-decoration: none;
     color: black;
-    font-size: 18px;
+    font-size: 16px;
     font-family: Arial, Helvetica, sans-serif;
     padding: 6px 13px;
     border-radius: 3px;
@@ -100,7 +100,7 @@ position: relative;
     padding: 20px;
     background-color: rgba(255, 255, 255, 0.8);
 }
-menu{ width: 400px; 
+menu{ width: 600px; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
@@ -112,12 +112,12 @@ ul {float: left;
     align-items: center; 
     list-style: none;}
 
-ul li {margin: 0 25px; 
+ul li {margin: 0 15px; 
     font-size: 14px;} 
 ul li a{
     text-decoration: none;
     color: black;
-    font-size: 18px;
+    font-size: 16px;
     font-family: Arial, Helvetica, sans-serif;
     padding: 6px 13px;
     border-radius: 3px;
