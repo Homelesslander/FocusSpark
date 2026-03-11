@@ -26,11 +26,27 @@
       background-size: cover;
       background-position: center center;
       background-attachment: fixed;
-      filter: blur(6px) saturate(1.05);
       color: #333;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+    }
+
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('{{ url_for('static', filename='images/how-to-draw-sun-and-moon-step-6.jpg') }}');
+      background-size: cover;
+      background-position: center center;
+      filter: blur(6px) saturate(1.05);
+      opacity: 0.85;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .page-content {
+      position: relative;
+      z-index: 1;
     }
 
     .focus-container {
@@ -494,7 +510,9 @@
   </style>
 </head>
 <body>
-  <div class="focus-container">
+  <div class="page-bg" aria-hidden="true"></div>
+  <div class="page-content">
+    <div class="focus-container">
     <div class="focus-header">
       <h1>Focus Timer</h1>
       <p class="description">Stay focused with Pomodoro-style timing</p>
@@ -910,5 +928,6 @@
     updateCurrentTask();
     renderTaskList();
   </script>
+  </div>
 </body>
 </html>
