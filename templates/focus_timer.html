@@ -22,7 +22,11 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-image: url('{{ url_for('static', filename='images/how-to-draw-sun-and-moon-step-6.jpg') }}');
+      background-size: cover;
+      background-position: center center;
+      background-attachment: fixed;
+      filter: blur(6px) saturate(1.05);
       color: #333;
       min-height: 100vh;
       display: flex;
