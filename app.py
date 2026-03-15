@@ -1128,8 +1128,14 @@ def settings():
                 is_parent = True
         finally:
             conn.close()
+    
+    # Get user's badges for display
+    user_badges = []
+    if username and not is_parent:  # Only children can have badges
+        user_badges = get_redeemed_rewards(username)
+        user_badges = [badge for badge in user_badges if badge.get('reward_type') == 'badge']
 
-    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified, is_parent=is_parent)
+    return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified, is_parent=is_parent, user_badges=user_badges)
 
 
 @app.route('/settings/update', methods=['POST'])
@@ -2105,9 +2111,23 @@ def parent_attitude():
         if emotion_row:
             child_emotions[child['username']] = emotion_row
     
+    # Get parent attitude ratings for today
+    parent_attitudes = {}
+    c.execute("""
+        SELECT child_username, rating, created_at FROM attitude_logs 
+        WHERE parent_username = ? AND DATE(created_at) = ?
+        ORDER BY created_at DESC
+    """, (parent, today))
+    attitude_rows = c.fetchall()
+    for row in attitude_rows:
+        parent_attitudes[row['child_username']] = {
+            'rating': row['rating'],
+            'created_at': row['created_at']
+        }
+    
     conn.close()
     # determine if any children already logged today for display (optional)
-    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions)
+    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes)
 
 
 @app.route('/parent/add_custom_reward_child', methods=['POST'])

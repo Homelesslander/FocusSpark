@@ -154,6 +154,18 @@
     .history-details{flex:1}
     .history-emotion{font-weight:600;color:#333}
     .history-date{font-size:12px;color:#999;margin-top:4px}
+    
+    /* Recommendations Styling */
+    .recommendations{background:rgba(255,255,255,0.95);border-radius:12px;padding:20px;margin:20px 0;box-shadow:0 6px 18px rgba(0,0,0,0.1);border-left:4px solid #f39c12}
+    .recommendations h3{margin:0 0 16px 0;color:#333;font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+    .recommendation-item{margin-bottom:12px;padding:12px;background:rgba(243,156,18,0.1);border-radius:8px}
+    .recommendation-item h4{margin:0 0 8px 0;color:#f39c12;font-size:16px;font-weight:600}
+    .recommendation-item ul{margin:0;padding:0 0 0 20px}
+    .recommendation-item li{margin-bottom:6px;color:#444;font-size:14px;line-height:1.4}
+    .hide-btn{background:#f39c12;color:white;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.3s ease}
+    .hide-btn:hover{background:#e67e22;transform:scale(1.05)}
+    .recommendations-content{transition:all 0.3s ease}
+    .recommendations.hidden .recommendations-content{display:none}
   </style>
 </head>
 <body>
@@ -196,13 +208,13 @@
   </div>
 
   <div class="emotion-container">
-    {% if today_emotion %}
-    <div class="today-status">
-      ✓ You already shared your emotion today! Come back tomorrow to share again.
-    </div>
-    {% endif %}
-    
     <div class="emotion-picker">
+      {% if today_emotion %}
+      <div class="today-status">
+        ✓ You already shared your emotion today! Come back tomorrow to share again.
+      </div>
+      {% endif %}
+      
       <h2 class="picker-title">Feelings Thermometer</h2>
       
       <form method="post" action="{{ url_for('attitude') }}" id="emotionForm">
@@ -276,36 +288,99 @@
           </button>
         </div>
       </form>
-    </div>
-    
-    {% if emotion_history and emotion_history|length > 0 %}
-    <div class="emotion-history">
-      <h3>📊 Your Recent Emotions</h3>
-      {% for entry in emotion_history %}
-        <div class="history-item">
-          <div class="history-emoji">
-            {% if entry['emotion'] == 'furious' %}😡
-            {% elif entry['emotion'] == 'mad' %}😠
-            {% elif entry['emotion'] == 'worried' %}😰
-            {% elif entry['emotion'] == 'happy' %}😊
-            {% elif entry['emotion'] == 'sad' %}😢
-            {% endif %}
-          </div>
-          <div class="history-details">
-            <div class="history-emotion">
-              {% if entry['emotion'] == 'furious' %}Furious
-              {% elif entry['emotion'] == 'mad' %}Frustrated
-              {% elif entry['emotion'] == 'worried' %}Worried
-              {% elif entry['emotion'] == 'happy' %}Happy
-              {% elif entry['emotion'] == 'sad' %}Sad
+      
+      <!-- Recommendations (shows after submission) -->
+      {% if today_emotion %}
+      <div class="recommendations" id="recommendationsBox">
+        <h3>
+          💡 Recommendations for You
+          <button class="hide-btn" onclick="toggleRecommendations()">Hide</button>
+        </h3>
+        <div class="recommendations-content">
+          {% if today_emotion['emotion'] == 'furious' %}
+            <div class="recommendation-item">
+              <h4>😡 When You Feel Furious</h4>
+              <ul>
+                <li>Take 5 deep breaths and count to 10</li>
+                <li>Find a quiet space to calm down</li>
+                <li>Listen to calm music or draw something</li>
+                <li>Talk to a trusted adult about how you feel</li>
+              </ul>
+            </div>
+          {% elif today_emotion['emotion'] == 'mad' %}
+            <div class="recommendation-item">
+              <h4>😠 When You Feel Frustrated</h4>
+              <ul>
+                <li>Take a break from what you're doing</li>
+                <li>Do some jumping jacks or stretch</li>
+                <li>Listen to your favorite song</li>
+                <li>Try the activity again later</li>
+              </ul>
+            </div>
+          {% elif today_emotion['emotion'] == 'worried' %}
+            <div class="recommendation-item">
+              <h4>😰 When You Feel Worried</h4>
+              <ul>
+                <li>Talk to someone about your worries</li>
+                <li>Break big problems into small steps</li>
+                <li>Practice slow breathing: in for 4, out for 4</li>
+                <li>Remember: you've handled tough things before!</li>
+              </ul>
+            </div>
+          {% elif today_emotion['emotion'] == 'happy' %}
+            <div class="recommendation-item">
+              <h4>😊 When You Feel Happy</h4>
+              <ul>
+                <li>Share your happiness with others</li>
+                <li>Do something you really enjoy</li>
+                <li>Write down what made you happy today</li>
+                <li>Keep being awesome - you deserve it!</li>
+              </ul>
+            </div>
+          {% elif today_emotion['emotion'] == 'sad' %}
+            <div class="recommendation-item">
+              <h4>😢 When You Feel Sad</h4>
+              <ul>
+                <li>Talk to someone you trust about your feelings</li>
+                <li>Cuddle with a pet or stuffed animal</li>
+                <li>Watch a funny movie or video</li>
+                <li>Remember that sad feelings pass with time</li>
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if emotion_history and emotion_history|length > 0 %}
+      <div class="emotion-history">
+        <h3>📊 Your Recent Emotions</h3>
+        {% for entry in emotion_history %}
+          <div class="history-item">
+            <div class="history-emoji">
+              {% if entry['emotion'] == 'furious' %}😡
+              {% elif entry['emotion'] == 'mad' %}😠
+              {% elif entry['emotion'] == 'worried' %}😰
+              {% elif entry['emotion'] == 'happy' %}😊
+              {% elif entry['emotion'] == 'sad' %}😢
               {% endif %}
             </div>
-            <div class="history-date">{{ entry['created_at'] }}</div>
+            <div class="history-details">
+              <div class="history-emotion">
+                {% if entry['emotion'] == 'furious' %}Furious
+                {% elif entry['emotion'] == 'mad' %}Frustrated
+                {% elif entry['emotion'] == 'worried' %}Worried
+                {% elif entry['emotion'] == 'happy' %}Happy
+                {% elif entry['emotion'] == 'sad' %}Sad
+                {% endif %}
+              </div>
+              <div class="history-date">{{ entry['created_at'] }}</div>
+            </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
   </div>
   
@@ -332,6 +407,19 @@
         tips: '• Talk to family or friends\n• Hug someone you trust\n• Cuddle a stuffed animal\n• Ask for a break'
       }
     };
+
+    function toggleRecommendations() {
+      const recommendationsBox = document.getElementById('recommendationsBox');
+      const hideBtn = document.querySelector('.hide-btn');
+      
+      if (recommendationsBox.classList.contains('hidden')) {
+        recommendationsBox.classList.remove('hidden');
+        hideBtn.textContent = 'Hide';
+      } else {
+        recommendationsBox.classList.add('hidden');
+        hideBtn.textContent = 'Show';
+      }
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
       const emotionRadios = document.querySelectorAll('input[name="emotion"]');

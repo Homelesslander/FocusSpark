@@ -59,28 +59,6 @@
     </div>
   </div>
 
-  {% if child_emotions %}
-  <div style="max-width:700px;margin:24px auto;">
-    <h2 style="color:#333;margin-top:0;margin-bottom:16px">Children's Emotions Today 👀</h2>
-    {% for child_username, emotion_data in child_emotions.items() %}
-      <div style="background:rgba(255,255,255,0.9);border-radius:10px;padding:16px;margin-bottom:12px;border-left:4px solid #f39c12;display:flex;align-items:center;gap:16px">
-        <div style="font-size:36px;line-height:1">
-          {% if emotion_data['emotion'] == 'furious' %}😡
-          {% elif emotion_data['emotion'] == 'mad' %}😠
-          {% elif emotion_data['emotion'] == 'worried' %}😰
-          {% elif emotion_data['emotion'] == 'happy' %}😊
-          {% elif emotion_data['emotion'] == 'sad' %}😢
-          {% endif %}
-        </div>
-        <div style="flex:1">
-          <div style="font-weight:600;color:#333;font-size:16px;text-transform:capitalize">{{ child_username }}: {{ emotion_data['emotion'] }}</div>
-          <div style="font-size:13px;color:#999;margin-top:4px">{{ emotion_data['created_at'] }}</div>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <div class="attitude-form">
     <form method="post" action="{{ url_for('parent_attitude') }}">
       <label for="child_username">Rate Child's Attitude</label>
@@ -113,6 +91,51 @@
       </div>
     </form>
   </div>
+
+  {% if child_emotions %}
+  <div style="max-width:700px;margin:24px auto;">
+    <h2 style="color:#333;margin-top:0;margin-bottom:16px">Children's Attitude Today 👀</h2>
+    {% for child_username, emotion_data in child_emotions.items() %}
+      <div style="background:rgba(255,255,255,0.9);border-radius:10px;padding:16px;margin-bottom:12px;border-left:4px solid #f39c12;display:flex;align-items:center;gap:16px">
+        <div style="font-size:36px;line-height:1">
+          {% if emotion_data['emotion'] == 'furious' %}😡
+          {% elif emotion_data['emotion'] == 'mad' %}😠
+          {% elif emotion_data['emotion'] == 'worried' %}😰
+          {% elif emotion_data['emotion'] == 'happy' %}😊
+          {% elif emotion_data['emotion'] == 'sad' %}😢
+          {% endif %}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:600;color:#333;font-size:16px;text-transform:capitalize">{{ child_username }}: {{ emotion_data['emotion'] }}</div>
+          <div style="font-size:13px;color:#999;margin-top:4px">{{ emotion_data['created_at'] }}</div>
+        </div>
+      </div>
+    {% endfor %}
+    
+    <div style="margin-top:24px;background:rgba(255,255,255,0.95);border-radius:10px;padding:20px;border-left:4px solid #f39c12;">
+      <h3 style="margin:0 0 16px 0;color:#333;font-size:16px">💡 Recommendations for Parents</h3>
+      
+      {% for child_username, emotion_data in child_emotions.items() %}
+        <div style="background:rgba(243,156,18,0.1);border-left:4px solid #f39c12;padding:12px;margin-bottom:12px;border-radius:6px;">
+          <h4 style="margin:0 0 8px 0;color:#f39c12;font-size:14px;">{{ child_username }} - {{ emotion_data['emotion']|title }}</h4>
+          <p style="margin:0;font-size:13px;color:#555;line-height:1.4;">
+            {% if emotion_data['emotion'] == 'furious' %}
+              Take a deep breath. Offer a quiet space and time to cool down. Use calming activities like drawing or listening to music.
+            {% elif emotion_data['emotion'] == 'mad' %}
+              Acknowledge their feelings. Suggest physical activity to release energy and talk about what's bothering them.
+            {% elif emotion_data['emotion'] == 'worried' %}
+              Listen to their concerns. Break down worries into smaller parts and practice deep breathing together.
+            {% elif emotion_data['emotion'] == 'happy' %}
+              Celebrate their joy! Share in their excitement and reinforce positive behaviors with praise.
+            {% elif emotion_data['emotion'] == 'sad' %}
+              Offer comfort and understanding. Sometimes just being present and listening is the best support.
+            {% endif %}
+          </p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
   </div>
 </body>
 </html>

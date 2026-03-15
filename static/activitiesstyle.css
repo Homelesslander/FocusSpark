@@ -48,6 +48,13 @@ ul li a:hover{
   color: #fb8500;
 }
 
+/* White text for home page navigation */
+.home-page .menu ul li a {
+    color: white !important;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 /* Active state matching the Tabs style */
 .Tabs li a {
   display: inline-block;

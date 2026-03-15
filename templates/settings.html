@@ -86,6 +86,25 @@
   <div class="settings-page-content" style="max-width:700px;margin:24px auto;">
     <p>Signed in as: <strong>{{ username if username else 'Not signed in' }}</strong></p>
 
+    {% if user_badges %}
+    <section class="settings-box">
+      <h3>🏆 Your Badges</h3>
+      <p>Badges you've earned by completing tasks and earning points!</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:16px;">
+        {% for badge in user_badges %}
+          <div style="background:linear-gradient(180deg,#fff,#f7fbff);border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+            <div style="font-size:32px;margin-bottom:8px;">{{ badge.icon or '🏆' }}</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px;">{{ badge.title }}</div>
+            <div style="font-size:11px;color:#666;">Earned</div>
+          </div>
+        {% endfor %}
+      </div>
+      {% if not user_badges %}
+      <p style="color:#666;font-style:italic;">No badges earned yet. Keep completing tasks to earn points and unlock badges!</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     <section class="settings-box">
       <h3>Points</h3>
       {% if username %}
