@@ -624,6 +624,153 @@ h1 {
   color: white;
 }
 
+/* Recurring Tasks Styling - Match Regular Task Colors */
+.recurring-task-section {
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recurring-task-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.recurring-task-section h2 {
+  text-align: center;
+  margin-bottom: 18px;
+  font-size: 1.3rem;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Recurring Major Tasks - Warm, calm orange */
+.recurring-major h2 {
+  background: linear-gradient(135deg, #ffb366, #ff9966);
+  color: white;
+  box-shadow: 0 3px 10px rgba(255, 153, 102, 0.3);
+}
+
+/* Recurring Medium Tasks - Soft teal */
+.recurring-medium h2 {
+  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
+  color: white;
+  box-shadow: 0 3px 10px rgba(94, 179, 170, 0.3);
+}
+
+/* Recurring Minor Tasks - Light lavender */
+.recurring-minor h2 {
+  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+  color: white;
+  box-shadow: 0 3px 10px rgba(177, 156, 217, 0.3);
+}
+
+.recurring-task-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recurring-task-section ul li {
+  display: block;
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 10px;
+  border-left: 5px solid;
+  font-size: 1.02rem;
+  transition: all 0.3s ease;
+}
+
+/* Recurring Major Tasks - Warm, calm orange border and hover */
+.recurring-major ul li {
+  border-left-color: #ff9966;
+  background: linear-gradient(135deg, rgba(255, 153, 102, 0.08), rgba(255, 179, 102, 0.05));
+}
+
+.recurring-major ul li:hover {
+  background: linear-gradient(135deg, rgba(255, 153, 102, 0.15), rgba(255, 179, 102, 0.1));
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(255, 153, 102, 0.2);
+}
+
+/* Recurring Medium Tasks - Soft teal border and hover */
+.recurring-medium ul li {
+  border-left-color: #5eb3aa;
+  background: linear-gradient(135deg, rgba(94, 179, 170, 0.08), rgba(74, 157, 148, 0.05));
+}
+
+.recurring-medium ul li:hover {
+  background: linear-gradient(135deg, rgba(94, 179, 170, 0.15), rgba(74, 157, 148, 0.1));
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(94, 179, 170, 0.2);
+}
+
+/* Recurring Minor Tasks - Light lavender border and hover */
+.recurring-minor ul li {
+  border-left-color: #b19cd9;
+  background: linear-gradient(135deg, rgba(177, 156, 217, 0.08), rgba(155, 132, 217, 0.05));
+}
+
+.recurring-minor ul li:hover {
+  background: linear-gradient(135deg, rgba(177, 156, 217, 0.15), rgba(155, 132, 217, 0.1));
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(177, 156, 217, 0.2);
+}
+
+/* Recurring Task Buttons - Match Regular Task Colors */
+.recurring-major li button {
+  background: linear-gradient(135deg, #ff9966, #ff8552);
+  color: white;
+  box-shadow: 0 2px 6px rgba(255, 153, 102, 0.3);
+}
+
+.recurring-major li button:hover {
+  background: linear-gradient(135deg, #ff8552, #ff7033);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 153, 102, 0.4);
+}
+
+.recurring-medium li button {
+  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
+  color: white;
+  box-shadow: 0 2px 6px rgba(94, 179, 170, 0.3);
+}
+
+.recurring-medium li button:hover {
+  background: linear-gradient(135deg, #4a9d94, #3d8a82);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(94, 179, 170, 0.4);
+}
+
+.recurring-minor li button {
+  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+  color: white;
+  box-shadow: 0 2px 6px rgba(177, 156, 217, 0.3);
+}
+
+.recurring-minor li button:hover {
+  background: linear-gradient(135deg, #9b84d9, #8a6fc7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(177, 156, 217, 0.4);
+}
+
+.recurring-task-section li.empty {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  border-left: none;
+  background: none;
+}
+
+.recurring-task-section li.empty:hover {
+  transform: none;
+  box-shadow: none;
+  background: none;
+}
+
 /* Layout with sidebar */
 .activities-container {
   display: flex;
@@ -847,6 +994,31 @@ h1 {
   max-width: 500px;
   pointer-events: none;
   border: 2px solid #45a049;
+}
+
+.achievement-notification.achievement-major {
+  background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+  color: #fff !important;
+  border: 3px solid #FF6B6B !important;
+  font-size: 24px !important;
+  font-weight: bold !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+}
+
+.achievement-notification.achievement-medium {
+  background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+  color: #fff !important;
+  border: 3px solid #2196F3 !important;
+  font-size: 20px !important;
+  font-weight: bold !important;
+}
+
+.achievement-notification.achievement-minor {
+  background: linear-gradient(135deg, #2196F3, #1976D2) !important;
+  color: #fff !important;
+  border: 3px solid #4CAF50 !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
 }
 
 .achievement-notification.fade-out {

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Focus Timer - ADHD Task Manager</title>
   
   <div class="menu">
@@ -16,13 +16,14 @@
   </div>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}"
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
   
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background-image: url('{{ url_for('static', filename='images/how-to-draw-sun-and-moon-step-6.jpg') }}');
+      background-image: url('{{ url_for('static', filename='images/sun-background.png') }}');
       background-size: cover;
       background-position: center center;
       background-attachment: fixed;
@@ -35,11 +36,11 @@
     .page-bg {
       position: fixed;
       inset: 0;
-      background-image: url('{{ url_for('static', filename='images/how-to-draw-sun-and-moon-step-6.jpg') }}');
+      background-image: url('{{ url_for('static', filename='images/sun-background.png') }}');
       background-size: cover;
       background-position: center center;
-      filter: blur(6px) saturate(1.05);
-      opacity: 0.85;
+      filter: blur(6px) saturate(0.8) brightness(0.9);
+      opacity: 0.75;
       z-index: -1;
       pointer-events: none;
     }

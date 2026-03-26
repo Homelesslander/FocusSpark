@@ -10,8 +10,24 @@
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='box.css') }}">
   <style>
-    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
-    .page-content{position:relative;z-index:1}
+    .page-bg{
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
+      background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
+      background-size:cover;
+      background-position:center center;
+      filter:blur(6px) saturate(1.05);
+      opacity:0.85;
+      z-index:-1;
+      pointer-events:none
+    }
+    .page-content{
+      position:relative;
+      z-index:1
+    }
   </style>
 </head>
 <body>
@@ -132,6 +148,114 @@
         {% endfor %}
       </ul>
     </div>
+
+    <!-- Recurring Tasks Section -->
+    
+    <!-- Major Recurring Tasks -->
+    {% if recurring_tasks['Major'] %}
+    <div class="recurring-major recurring-task-section">
+      <h2>🔄 Major Recurring Tasks <span class="task-count">({{ recurring_tasks['Major']|length }})</span></h2>
+      <ul>
+        {% for task in recurring_tasks['Major'] %}
+        <li class="recurring-task">
+          <strong>{{ task.name }}</strong> — 
+          <small>
+            {% if task.repeat_type == 'daily' %}
+              Every {{ task.repeat_interval }} day(s)
+            {% elif task.repeat_type == 'weekly' %}
+              Every {{ task.repeat_interval }} week(s)
+            {% elif task.repeat_type == 'specific_days' %}
+              {{ task.repeat_days }}
+            {% endif %}
+            {% if task.time %} at {{ task.time }}{% endif %}
+          </small>
+          {% if task.description %}<br><em>{{ task.description }}</em>{% endif %}
+          <br>
+          <form action="{{ url_for('complete_recurring_task_route', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit">✅ Complete</button>
+          </form>
+          <form action="{{ url_for('delete_recurring_task_route', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Medium Recurring Tasks -->
+    {% if recurring_tasks['Medium'] %}
+    <div class="recurring-medium recurring-task-section">
+      <h2>🔄 Medium Recurring Tasks <span class="task-count">({{ recurring_tasks['Medium']|length }})</span></h2>
+      <ul>
+        {% for task in recurring_tasks['Medium'] %}
+        <li class="recurring-task">
+          <strong>{{ task.name }}</strong> — 
+          <small>
+            {% if task.repeat_type == 'daily' %}
+              Every {{ task.repeat_interval }} day(s)
+            {% elif task.repeat_type == 'weekly' %}
+              Every {{ task.repeat_interval }} week(s)
+            {% elif task.repeat_type == 'specific_days' %}
+              {{ task.repeat_days }}
+            {% endif %}
+            {% if task.time %} at {{ task.time }}{% endif %}
+          </small>
+          {% if task.description %}<br><em>{{ task.description }}</em>{% endif %}
+          <br>
+          <form action="{{ url_for('complete_recurring_task_route', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit">✅ Complete</button>
+          </form>
+          <form action="{{ url_for('delete_recurring_task_route', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Minor Recurring Tasks -->
+    {% if recurring_tasks['Minor'] %}
+    <div class="recurring-minor recurring-task-section">
+      <h2>🔄 Minor Recurring Tasks <span class="task-count">({{ recurring_tasks['Minor']|length }})</span></h2>
+      <ul>
+        {% for task in recurring_tasks['Minor'] %}
+        <li class="recurring-task">
+          <strong>{{ task.name }}</strong> — 
+          <small>
+            {% if task.repeat_type == 'daily' %}
+              Every {{ task.repeat_interval }} day(s)
+            {% elif task.repeat_type == 'weekly' %}
+              Every {{ task.repeat_interval }} week(s)
+            {% elif task.repeat_type == 'specific_days' %}
+              {{ task.repeat_days }}
+            {% endif %}
+            {% if task.time %} at {{ task.time }}{% endif %}
+          </small>
+          {% if task.description %}<br><em>{{ task.description }}</em>{% endif %}
+          <br>
+          <form action="{{ url_for('complete_recurring_task_route', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit">✅ Complete</button>
+          </form>
+          <form action="{{ url_for('delete_recurring_task_route', task_id=task.id) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- No recurring tasks message -->
+    {% if recurring_tasks['Major']|length == 0 and recurring_tasks['Medium']|length == 0 and recurring_tasks['Minor']|length == 0 %}
+    <div class="recurring-task-section">
+      <h2>🔄 Recurring Tasks <span class="task-count">(0)</span></h2>
+      <ul>
+        <li class="empty">No recurring tasks yet.</li>
+      </ul>
+    </div>
+    {% endif %}
 
       </div>
     </div> <!-- End activities-main -->

@@ -16,14 +16,31 @@
       border-left: 6px solid #fb8500;
       margin-bottom: 18px;
     }
-    .settings-box h3 { margin-top: 0; color: #2c3e50; }
-    .settings-box p { color: #444; }
-    .settings-box button { background: #fb8500; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
-    .settings-box button:hover { background: #ff8c42; }
+    .settings-box h3 { 
+      margin-top: 0; 
+      color: #2c3e50; 
+    }
+    .settings-box p { 
+      color: #444; 
+    }
+    .settings-box button { 
+      background: #fb8500; 
+      color: #fff; 
+      border: none; 
+      padding: 8px 14px; 
+      border-radius: 6px; 
+      cursor: pointer; 
+    }
+    .settings-box button:hover { 
+      background: #ff8c42; 
+    }
     /* Background image for settings page with blur */
     .settings-bg {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background-image: url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
       background-size: cover;
       background-position: center center;
@@ -33,7 +50,10 @@
       pointer-events: none;
     }
     /* Ensure page content sits above background */
-    .settings-page-content { position: relative; z-index: 1; }
+    .settings-page-content { 
+      position: relative; 
+      z-index: 1; 
+    }
   </style>
 </head>
 <body>

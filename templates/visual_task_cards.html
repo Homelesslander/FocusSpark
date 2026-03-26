@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Visual Task Cards</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}">
   <style>
     .upload-section {
       background: white;
@@ -253,6 +254,11 @@
           </div>
           
           <div class="form-group" style="grid-column:1/3;">
+            <label for="description">Task Description</label>
+            <textarea id="description" name="description" placeholder="Describe the task for your child (optional)" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-family:inherit;resize:vertical;"></textarea>
+          </div>
+          
+          <div class="form-group" style="grid-column:1/3;">
             <label for="image">Upload Image *</label>
             <div class="file-input-wrapper">
               <input type="file" id="image" name="image" accept="image/*" required onchange="updateFileName(this)">
@@ -272,9 +278,12 @@
         <div class="cards-grid">
           {% for card in custom_cards %}
             <div class="card-item">
-              <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image">
+              <img src="{{ url_for('static', filename=card.image_path) }}" alt="{{ card.title }}" class="card-image">
               <div class="card-content">
                 <h3 class="card-title">{{ card.title }}</h3>
+                {% if card.description %}
+                <p class="card-description" style="color:#666;font-size:14px;margin:8px 0;line-height:1.4;">{{ card.description }}</p>
+                {% endif %}
                 <div class="card-points">{{ card.points }} pts</div>
                 <small style="color:#999;">Created: {{ card.created_at[:10] }}</small>
                 <div class="card-actions" style="margin-top:10px;">

@@ -92,6 +92,22 @@
 .edit-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;color:white;background:linear-gradient(90deg,#7c4dff,#b388ff);box-shadow:0 8px 20px rgba(124,77,255,0.16)}
 .edit-btn:hover{transform:translateY(-3px)}
 
+/* Button icon and colorful variants */
+.btn-icon{display:inline-block;margin-right:8px;font-size:1.1rem;line-height:1}
+.btn-text{vertical-align:middle}
+
+.btn-add{background:linear-gradient(90deg,#00c853,#b2ff59);color:#012;box-shadow:0 8px 20px rgba(0,200,83,0.18)}
+.btn-add:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,200,83,0.25)}
+
+.btn-complete{background:linear-gradient(90deg,#00a8ff,#00e5ff);color:#022;box-shadow:0 8px 20px rgba(0,168,255,0.18)}
+.btn-complete:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,168,255,0.25)}
+
+.btn-delete{background:linear-gradient(90deg,#ff5252,#ff8a80);color:#210;box-shadow:0 8px 20px rgba(255,82,82,0.16)}
+.btn-delete:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(255,82,82,0.24)}
+
+.edit-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;color:white;background:linear-gradient(90deg,#7c4dff,#b388ff);box-shadow:0 8px 20px rgba(124,77,255,0.16)}
+.edit-btn:hover{transform:translateY(-3px)}
+
 .auto-breakdown-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;color:white;background:linear-gradient(90deg,#ffb300,#ffd54f);box-shadow:0 8px 20px rgba(255,179,0,0.14)}
 .auto-breakdown-btn:hover{transform:translateY(-3px)}
 
