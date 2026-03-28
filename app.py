@@ -2761,8 +2761,36 @@ def parent_dashboard():
     # list children assigned to this parent
     c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
     children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+
+    # total visual task cards created by this parent
+    c.execute("SELECT COUNT(*) AS cnt FROM visual_task_cards WHERE parent_username = ?", (username,))
+    row = c.fetchone()
+    total_task_cards = row['cnt'] if row else 0
+
+    # active tasks for child accounts
+    child_usernames = [child['username'] for child in children]
+    active_tasks_count = 0
+    today_child_attitude = None
+
+    if child_usernames:
+        placeholders = ','.join(['?'] * len(child_usernames))
+        # count active tasks (not completed)
+        c.execute(f"SELECT COUNT(*) AS cnt FROM tasks WHERE completed = 0 AND user IN ({placeholders})", child_usernames)
+        active_tasks_count = c.fetchone()['cnt'] or 0
+
+        # get most recent emotion logged today for any child
+        today = datetime.datetime.now().date().isoformat()
+        c.execute(f"SELECT child_username, emotion FROM emotion_logs WHERE child_username IN ({placeholders}) AND DATE(created_at) = ? ORDER BY created_at DESC LIMIT 1", (*child_usernames, today))
+        mood_row = c.fetchone()
+        if mood_row:
+            today_child_attitude = f"{mood_row['child_username']}: {mood_row['emotion'].capitalize()}"
+
     conn.close()
-    return render_template('parent_dashboard.html', username=username, children=children, is_parent=True)
+
+    return render_template('parent_dashboard.html', username=username, children=children, is_parent=True,
+                           total_task_cards=total_task_cards,
+                           active_tasks_count=active_tasks_count,
+                           today_child_attitude=today_child_attitude)
 
 
 @app.route('/parent/add_child', methods=['POST'])

@@ -303,24 +303,43 @@ body {
   color: #fb8500;
   border-color: transparent;
   box-shadow: 0 14px 48px rgba(251,133,0,0.28), 0 6px 24px rgba(251,133,0,0.18);
-.task-section:nth-child(1) h2 {
-  background: linear-gradient(135deg, #ffb366, #ff9966);
-  color: white;
-  box-shadow: 0 3px 10px rgba(255, 153, 102, 0.3);
+.task-section.major h2 {
+  background: linear-gradient(135deg, #ff4500, #ff6347) !important;
+  color: white !important;
+  border: 3px solid #ff4500 !important;
+  border-radius: 12px 12px 0 0 !important;
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.35) !important;
+  padding: 14px 16px !important;
+  margin: -22px -22px 12px -22px !important;
 }
 
-/* Medium Tasks - Soft teal */
-.task-section:nth-child(2) h2 {
-  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
-  color: white;
-  box-shadow: 0 3px 10px rgba(94, 179, 170, 0.3);
+.task-section.medium h2 {
+  background: linear-gradient(135deg, #00ced1, #20b2aa) !important;
+  color: white !important;
+  border: 3px solid #00ced1 !important;
+  border-radius: 12px 12px 0 0 !important;
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.35) !important;
+  padding: 14px 16px !important;
+  margin: -22px -22px 12px -22px !important;
 }
 
-/* Minor Tasks - Light lavender */
-.task-section:nth-child(3) h2 {
-  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+.task-section.minor h2 {
+  background: linear-gradient(135deg, #9370db, #8a2be2) !important;
+  color: white !important;
+  border: 3px solid #9370db !important;
+  border-radius: 12px 12px 0 0 !important;
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.35) !important;
+  padding: 14px 16px !important;
+  margin: -22px -22px 12px -22px !important;
+}
+
+
+.task-section.minor h2 {
+  background: linear-gradient(135deg, #9370db, #8a2be2);
   color: white;
-  box-shadow: 0 3px 10px rgba(177, 156, 217, 0.3);
+  border: 3px solid #9370db;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.35);
 }
 
 .task-section ul {
@@ -339,40 +358,40 @@ body {
   font-size: 1.02rem;
 }
 
-/* Major Tasks - Warm, calm orange border and hover */
-.task-section:nth-child(1) ul li {
-  border-left-color: #ff9966;
-  background: linear-gradient(135deg, rgba(255, 153, 102, 0.08), rgba(255, 179, 102, 0.05));
+/* Major Tasks - Warm orange border and hover */
+.task-section.major ul li {
+  border-left-color: #ff4500;
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.08), rgba(255, 99, 71, 0.05));
 }
 
-.task-section:nth-child(1) ul li:hover {
-  background: linear-gradient(135deg, rgba(255, 153, 102, 0.15), rgba(255, 179, 102, 0.1));
+.task-section.major ul li:hover {
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.15), rgba(255, 99, 71, 0.12));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(255, 153, 102, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.2);
 }
 
-/* Medium Tasks - Soft teal border and hover */
-.task-section:nth-child(2) ul li {
-  border-left-color: #5eb3aa;
-  background: linear-gradient(135deg, rgba(94, 179, 170, 0.08), rgba(74, 157, 148, 0.05));
+/* Medium Tasks - Teal border and hover */
+.task-section.medium ul li {
+  border-left-color: #00ced1;
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.08), rgba(32, 178, 170, 0.05));
 }
 
-.task-section:nth-child(2) ul li:hover {
-  background: linear-gradient(135deg, rgba(94, 179, 170, 0.15), rgba(74, 157, 148, 0.1));
+.task-section.medium ul li:hover {
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.15), rgba(32, 178, 170, 0.12));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(94, 179, 170, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.2);
 }
 
-/* Minor Tasks - Light lavender border and hover */
-.task-section:nth-child(3) ul li {
-  border-left-color: #b19cd9;
-  background: linear-gradient(135deg, rgba(177, 156, 217, 0.08), rgba(155, 132, 217, 0.05));
+/* Minor Tasks - Lavender border and hover */
+.task-section.minor ul li {
+  border-left-color: #9370db;
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.08), rgba(138, 43, 226, 0.05));
 }
 
-.task-section:nth-child(3) ul li:hover {
-  background: linear-gradient(135deg, rgba(177, 156, 217, 0.15), rgba(155, 132, 217, 0.1));
+.task-section.minor ul li:hover {
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.15), rgba(138, 43, 226, 0.12));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(177, 156, 217, 0.2);
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.2);
 }
 
 .task-section li {
@@ -399,43 +418,43 @@ body {
   margin-bottom: 5px;
 }
 
-/* Major Tasks - Warm orange buttons */
-.task-section:nth-child(1) li button {
-  background: linear-gradient(135deg, #ff9966, #ff8552);
+/* Major Tasks - Orange buttons */
+.task-section.major li button {
+  background: linear-gradient(135deg, #ff4500, #ff6347);
   color: white;
-  box-shadow: 0 2px 6px rgba(255, 153, 102, 0.3);
+  box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
 }
 
-.task-section:nth-child(1) li button:hover {
-  background: linear-gradient(135deg, #ff8552, #ff7033);
+.task-section.major li button:hover {
+  background: linear-gradient(135deg, #ff6347, #ff7f50);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 153, 102, 0.4);
+  box-shadow: 0 4px 8px rgba(255, 69, 0, 0.4);
 }
 
-/* Medium Tasks - Soft teal buttons */
-.task-section:nth-child(2) li button {
-  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
+/* Medium Tasks - Teal buttons */
+.task-section.medium li button {
+  background: linear-gradient(135deg, #00ced1, #20b2aa);
   color: white;
-  box-shadow: 0 2px 6px rgba(94, 179, 170, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 206, 209, 0.3);
 }
 
-.task-section:nth-child(2) li button:hover {
-  background: linear-gradient(135deg, #4a9d94, #3d8a82);
+.task-section.medium li button:hover {
+  background: linear-gradient(135deg, #20b2aa, #008b8b);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(94, 179, 170, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 206, 209, 0.4);
 }
 
-/* Minor Tasks - Light lavender buttons */
-.task-section:nth-child(3) li button {
-  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+/* Minor Tasks - Lavender buttons */
+.task-section.minor li button {
+  background: linear-gradient(135deg, #9370db, #8a2be2);
   color: white;
-  box-shadow: 0 2px 6px rgba(177, 156, 217, 0.3);
+  box-shadow: 0 2px 6px rgba(147, 112, 219, 0.3);
 }
 
-.task-section:nth-child(3) li button:hover {
-  background: linear-gradient(135deg, #9b84d9, #8a6fc7);
+.task-section.minor li button:hover {
+  background: linear-gradient(135deg, #8a2be2, #9932cc);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(177, 156, 217, 0.4);
+  box-shadow: 0 4px 8px rgba(147, 112, 219, 0.4);
 }
 
 .task-section li.empty {
@@ -858,70 +877,57 @@ body {
 
 /* Recurring Tasks Styling - Match Regular Task Colors */
 .recurring-task-section {
-  background: #fff;
-  padding: 20px;
-  border-radius: 15px;
-  border: 2px solid #ffffff;
-  box-shadow: 0 8px 26px rgba(16,24,40,0.14);
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 16px;
+  border: 2px solid #e8e8e8;
+  box-shadow: 0 8px 26px rgba(16, 24, 40, 0.12);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .recurring-task-section:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(16,24,40,0.18);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
 }
 
-.recurring-task-section h2 {
-  text-align: center;
-  margin-bottom: 18px;
-  font-size: 1.3rem;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #e5f6ff, #d5f0ff);
-  color: #0e5a7f;
-  border: 1px solid rgba(0,128,192,0.15);
+.recurring-major { 
+  border-left: 4px solid #ff4500 !important; 
 }
 
-/* Add a subtle left accent to recurring sections to match other task cards */
-.recurring-task-section {
-  border-left: 8px solid rgba(0,0,0,0.05);
+.recurring-medium { 
+  border-left: 4px solid #00ced1 !important; 
 }
 
-.recurring-major { border-left-color: #ff9966 !important; }
-.recurring-medium { border-left-color: #5eb3aa !important; }
-.recurring-minor { border-left-color: #b19cd9 !important; }
-
-
-/* Settings page: nudge the H1 down so it lines up with subtabs and other pages */
-.settings-page .front-header-left h1,
-.settings-page .front-header-left .page-title {
-  margin-top: 8px;
+.recurring-minor { 
+  border-left: 4px solid #9370db !important; 
 }
 
-/* Move the whole Settings page content down a bit to match Add/Delete layout */
-
-
-/* Recurring Major Tasks - Warm, calm orange */
+/* Recurring Major Tasks - Orange */
 .recurring-major h2 {
-  background: linear-gradient(135deg, #ffb366, #ff9966);
+  background: linear-gradient(135deg, #ff4500, #ff6347);
   color: white;
-  box-shadow: 0 3px 10px rgba(255, 153, 102, 0.3);
+  border: 3px solid #ff4500;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.35);
 }
 
-/* Recurring Medium Tasks - Soft teal */
+/* Recurring Medium Tasks - Teal */
 .recurring-medium h2 {
-  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
+  background: linear-gradient(135deg, #00ced1, #20b2aa);
   color: white;
-  box-shadow: 0 3px 10px rgba(94, 179, 170, 0.3);
+  border: 3px solid #00ced1;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.35);
 }
 
-/* Recurring Minor Tasks - Light lavender */
+/* Recurring Minor Tasks - Lavender */
 .recurring-minor h2 {
-  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+  background: linear-gradient(135deg, #9370db, #8a2be2);
   color: white;
-  box-shadow: 0 3px 10px rgba(177, 156, 217, 0.3);
+  border: 3px solid #9370db;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.35);
 }
 
 .recurring-task-section ul {
@@ -948,75 +954,75 @@ body {
 
 /* Recurring Major Tasks - Warm, calm orange border and hover */
 .recurring-major ul li {
-  border-left-color: #ff9966;
-  background: linear-gradient(135deg, rgba(255, 153, 102, 0.08), rgba(255, 179, 102, 0.05));
+  border-left-color: #ff4500;
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.08), rgba(255, 99, 71, 0.05));
 }
 
 .recurring-major ul li:hover {
-  background: linear-gradient(135deg, rgba(255, 153, 102, 0.15), rgba(255, 179, 102, 0.1));
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.15), rgba(255, 99, 71, 0.1));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(255, 153, 102, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.2);
 }
 
 /* Recurring Medium Tasks - Soft teal border and hover */
 .recurring-medium ul li {
-  border-left-color: #5eb3aa;
-  background: linear-gradient(135deg, rgba(94, 179, 170, 0.08), rgba(74, 157, 148, 0.05));
+  border-left-color: #00ced1;
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.08), rgba(32, 178, 170, 0.05));
 }
 
 .recurring-medium ul li:hover {
-  background: linear-gradient(135deg, rgba(94, 179, 170, 0.15), rgba(74, 157, 148, 0.1));
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.15), rgba(32, 178, 170, 0.1));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(94, 179, 170, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.2);
 }
 
 /* Recurring Minor Tasks - Light lavender border and hover */
 .recurring-minor ul li {
-  border-left-color: #b19cd9;
-  background: linear-gradient(135deg, rgba(177, 156, 217, 0.08), rgba(155, 132, 217, 0.05));
+  border-left-color: #9370db;
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.08), rgba(138, 43, 226, 0.05));
 }
 
 .recurring-minor ul li:hover {
-  background: linear-gradient(135deg, rgba(177, 156, 217, 0.15), rgba(155, 132, 217, 0.1));
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.15), rgba(138, 43, 226, 0.1));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(177, 156, 217, 0.2);
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.2);
 }
 
 /* Recurring Task Buttons - Match Regular Task Colors */
 .recurring-major li button {
-  background: linear-gradient(135deg, #ff9966, #ff8552);
+  background: linear-gradient(135deg, #ff4500, #ff6347);
   color: white;
-  box-shadow: 0 2px 6px rgba(255, 153, 102, 0.3);
+  box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
 }
 
 .recurring-major li button:hover {
-  background: linear-gradient(135deg, #ff8552, #ff7033);
+  background: linear-gradient(135deg, #ff6347, #ff7f50);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 153, 102, 0.4);
+  box-shadow: 0 4px 8px rgba(255, 69, 0, 0.4);
 }
 
 .recurring-medium li button {
-  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
+  background: linear-gradient(135deg, #00ced1, #20b2aa);
   color: white;
-  box-shadow: 0 2px 6px rgba(94, 179, 170, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 206, 209, 0.3);
 }
 
 .recurring-medium li button:hover {
-  background: linear-gradient(135deg, #4a9d94, #3d8a82);
+  background: linear-gradient(135deg, #20b2aa, #008b8b);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(94, 179, 170, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 206, 209, 0.4);
 }
 
 .recurring-minor li button {
-  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+  background: linear-gradient(135deg, #9370db, #8a2be2);
   color: white;
-  box-shadow: 0 2px 6px rgba(177, 156, 217, 0.3);
+  box-shadow: 0 2px 6px rgba(147, 112, 219, 0.3);
 }
 
 .recurring-minor li button:hover {
-  background: linear-gradient(135deg, #9b84d9, #8a6fc7);
+  background: linear-gradient(135deg, #8a2be2, #9932cc);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(177, 156, 217, 0.4);
+  box-shadow: 0 4px 8px rgba(147, 112, 219, 0.4);
 }
 
 .recurring-task-section li.empty {
