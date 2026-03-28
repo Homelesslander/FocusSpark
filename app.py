@@ -1238,9 +1238,13 @@ def activities():
     to render the activities dashboard where users add/edit/complete tasks.
     """
     username = session.get('user') if session else None
-    tasks = get_tasks_grouped(username)
-    recurring_tasks = get_recurring_tasks_grouped(username)
-    calendar_tasks = get_calendar_tasks(username)
+    tasks_username = username
+    tasks = {}
+    recurring_tasks = {}
+    calendar_tasks = {}
+    children = []
+    selected_child = None
+
     # determine whether the current user is a parent (used to show parent-specific UI)
     is_parent = False
     if username:
@@ -1251,10 +1255,28 @@ def activities():
             row = c.fetchone()
             if row and ('role' in row.keys() and row['role'] == 'parent'):
                 is_parent = True
+
+            if is_parent:
+                c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
+                children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+                selected_child = request.args.get('child')
+
+                if selected_child and any(ch['username'] == selected_child for ch in children):
+                    tasks_username = selected_child
+                elif children:
+                    selected_child = children[0]['username']
+                    tasks_username = selected_child
+                else:
+                    tasks_username = username
         finally:
             conn.close()
+
+    tasks = get_tasks_grouped(tasks_username)
+    recurring_tasks = get_recurring_tasks_grouped(tasks_username)
+    calendar_tasks = get_calendar_tasks(tasks_username)
+
     # this week (0-7 days)
-    upcoming_tasks = get_upcoming_tasks(username, days=7) if username else []
+    upcoming_tasks = get_upcoming_tasks(tasks_username, days=7) if tasks_username else []
     # next week: days 8-14
     upcoming_all_14 = get_upcoming_tasks(username, days=14) if username else []
     today = datetime.datetime.now().date()
@@ -1272,7 +1294,7 @@ def activities():
         conn.close()
         streak = get_user_streak(username)
 
-    return render_template("activities.html", tasks=tasks, recurring_tasks=recurring_tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
+    return render_template("activities.html", tasks=tasks, recurring_tasks=recurring_tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent, children=children, selected_child=selected_child)
 
 
 @app.route('/calm_room')
@@ -1783,12 +1805,30 @@ def add_task():
 
     if task_name and importance in ("Major", "Medium", "Minor"):
         username = session.get('user') if session else None
-        
+        task_user = request.form.get("task_user") or username
+
+        # if parent and child selected, validate assignment
+        if username and task_user and task_user != username:
+            conn = get_db_conn()
+            c = conn.cursor()
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            role_row = c.fetchone()
+            if role_row and role_row['role'] == 'parent':
+                c.execute("SELECT 1 FROM users WHERE username = ? AND parent_username = ?", (task_user, username))
+                if not c.fetchone():
+                    task_user = username
+            else:
+                task_user = username
+            conn.close()
+
+        if not task_user:
+            task_user = username
+
         # Check if this is a recurring task (repeatable but no due date)
         if repeat_type != "none" and not task_date:
             # Create recurring task
             create_recurring_task(
-                task_name, task_description, task_time, importance, username,
+                task_name, task_description, task_time, importance, task_user,
                 repeat_type, repeat_interval, repeat_days_str
             )
         elif repeat_type != "none" and task_date:
@@ -1798,7 +1838,7 @@ def add_task():
             
             # Use the repeatable task function
             create_repeatable_task(
-                task_name, task_date, task_time, importance, username,
+                task_name, task_date, task_time, importance, task_user,
                 repeat_type, repeat_interval, repeat_days_str
             )
         else:
@@ -1844,10 +1884,12 @@ def add_task():
             
             # Use regular task creation
             if task_time:
-                insert_task_db_with_time(task_name, task_date, task_time, importance, username)
+                insert_task_db_with_time(task_name, task_date, task_time, importance, task_user)
             else:
-                insert_task_db(task_name, task_date, importance, username)
+                insert_task_db(task_name, task_date, importance, task_user)
         
+        if task_user and task_user != username:
+            return redirect(url_for('activities', child=task_user))
         return redirect(url_for('activities'))
     
     return "Invalid task data", 400
