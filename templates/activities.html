@@ -349,6 +349,11 @@
             </form>
             <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Major", "description": task.description}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
           </div>
+          <div class="task-actions task-actions-secondary">
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post" class="auto-breakdown-form">
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
+            </form>
+          </div>
           {% if task.subtasks %}
           <div class="subtasks">
             <h4 onclick="toggleSubtasks(this)">
@@ -406,6 +411,11 @@
             </form>
             <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Medium", "description": task.description}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
           </div>
+          <div class="task-actions task-actions-secondary">
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post" class="auto-breakdown-form">
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
+            </form>
+          </div>
           
           {% if task.subtasks %}
           <div class="subtasks">
@@ -431,7 +441,7 @@
           
           <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
             <input type="text" name="subtask_name" placeholder="Add subtask..." required />
-            <button type="submit">+ Add</button>
+            <button type="submit" class="btn-add-subtask" aria-label="Add subtask"><span class="btn-icon">➕</span><span class="btn-text">Add</span></button>
           </form>
         </li>
         {% else %}
@@ -463,7 +473,9 @@
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
             <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Minor", "description": task.description}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
-            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
+          </div>
+          <div class="task-actions task-actions-secondary">
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post" class="auto-breakdown-form">
               <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
             </form>
           </div>
@@ -492,7 +504,7 @@
           
           <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
             <input type="text" name="subtask_name" placeholder="Add subtask..." required />
-            <button type="submit">+ Add</button>
+            <button type="submit" class="btn-add-subtask" aria-label="Add subtask"><span class="btn-icon">➕</span><span class="btn-text">Add</span></button>
           </form>
         </li>
         {% else %}

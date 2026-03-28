@@ -57,6 +57,7 @@
       background: #f1f8f4;
       border-color: #4caf50;
       opacity: 0.8;
+      display: none;
     }
     
     .card-image-wrapper {
@@ -74,7 +75,19 @@
       transition: transform 0.3s ease;
     }
     
-    .task-card:hover:not(.completed) .card-image {
+    .card-image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: white;
+      transition: transform 0.3s ease;
+    }
+    
+    .task-card:hover:not(.completed) .card-image,
+    .task-card:hover:not(.completed) .card-image-placeholder {
       transform: scale(1.05);
     }
     
@@ -295,7 +308,7 @@
       </div>
 
       <div class="front-header-right">
-        <!-- header right left intentionally minimal; stats moved to corner-stats -->
+        <h3 style="text-align:right;margin:0;padding-top:8px;">Points: {{ points }}</h3>
       </div>
     </div>
   </div>
@@ -310,7 +323,32 @@
       {% for card in cards %}
         <div class="task-card {% if card.completed %}completed{% endif %}" id="card-{{ card.id }}" data-card-id="{{ card.id }}" data-title="{{ card.title|e }}" data-description="{{ card.description|e }}" data-image-path="{{ card.image_path|e }}" data-points="{{ card.points }}" data-importance="{{ card.importance }}">
           <div class="card-image-wrapper">
-            <img src="{{ url_for('static', filename=card.image_path) }}" alt="{{ card.title }}" class="card-image {% if card.completed %}completed-fade{% endif %}">
+            {% if card.image_path.startswith('recommended/') %}
+              {% set category = card.image_path.split('/')[1].split('.')[0] %}
+              {% if category == 'morning-routine' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                  <span style="font-size:2rem;">🎒</span>
+                </div>
+              {% elif category == 'school-work' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                  <span style="font-size:2rem;">📚</span>
+                </div>
+              {% elif category == 'chores' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                  <span style="font-size:2rem;">🏠</span>
+                </div>
+              {% elif category == 'self-care' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #f857a6 0%, #ff5858 100%);">
+                  <span style="font-size:2rem;">💚</span>
+                </div>
+              {% else %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ddd 0%, #bbb 100%);">
+                  <span style="font-size:2rem;">📋</span>
+                </div>
+              {% endif %}
+            {% else %}
+              <img src="{{ url_for('static', filename=card.image_path) }}" alt="{{ card.title }}" class="card-image {% if card.completed %}completed-fade{% endif %}">
+            {% endif %}
             {% if card.completed %}
               <div class="completed-badge">✓ Completed</div>
             {% endif %}
@@ -346,7 +384,7 @@
         <button class="modal-close" id="modalCloseBtn">&times;</button>
       </div>
       <div class="modal-body">
-        <img id="modalImage" src="" alt="Task Image" class="modal-image">
+        <div id="modalImageContainer" class="modal-image"></div>
         <p id="modalDescription" class="modal-description">Task description will appear here.</p>
         <div id="modalPoints" class="modal-points">🪙 0 Points</div>
         <button id="modalCompleteBtn" class="modal-complete-btn">🎯 Mark Complete</button>
@@ -358,7 +396,7 @@
     // Modal functionality
     const modal = document.getElementById('taskModal');
     const modalTitle = document.getElementById('modalTitle');
-    const modalImage = document.getElementById('modalImage');
+    const modalImageContainer = document.getElementById('modalImageContainer');
     const modalDescription = document.getElementById('modalDescription');
     const modalPoints = document.getElementById('modalPoints');
     const modalCompleteBtn = document.getElementById('modalCompleteBtn');
@@ -376,7 +414,17 @@
         
         // Populate modal with card data
         modalTitle.textContent = card.dataset.title;
-        modalImage.src = card.querySelector('.card-image').src;
+        
+        // Handle image
+        const cardImage = card.querySelector('.card-image');
+        const cardPlaceholder = card.querySelector('.card-image-placeholder');
+        if (cardImage) {
+          modalImageContainer.innerHTML = `<img src="${cardImage.src}" alt="Task Image" class="modal-image">`;
+        } else if (cardPlaceholder) {
+          modalImageContainer.innerHTML = cardPlaceholder.outerHTML.replace('card-image-placeholder', 'modal-image');
+        } else {
+          modalImageContainer.innerHTML = '<div class="modal-image" style="background:#f5f5f5;"></div>';
+        }
         
         // Handle description - use dataset description first, then fallback to element text
         const description = card.dataset.description || card.querySelector('.card-description').textContent || 'No description available';
@@ -415,8 +463,17 @@
     });
 
     function completeCard(cardId, importance) {
+      console.log('completeCard called with', cardId, importance);
       const card = document.getElementById(`card-${cardId}`);
+      if (!card) {
+        console.error('No card element found for', cardId);
+        return;
+      }
       const btn = card.querySelector('.complete-btn');
+      if (!btn) {
+        console.error('No complete button found for card', cardId);
+        return;
+      }
       
       if (btn.disabled) return;
       
@@ -455,24 +512,29 @@
       .then(data => {
         console.log('Parsed data:', data);
         if (data.success) {
-          // Update UI
-          card.classList.add('completed');
-          btn.textContent = '✓ Already Completed';
-          
-          // Add completed badge
-          const badge = document.createElement('div');
-          badge.className = 'completed-badge';
-          badge.textContent = '✓ Completed';
-          card.querySelector('.card-image-wrapper').appendChild(badge);
-          
-          // Fade image
-          card.querySelector('.card-image').classList.add('completed-fade');
-          
-          // Update modal if it's open
-          if (modal.style.display === 'block') {
-            modalCompleteBtn.disabled = true;
-            modalCompleteBtn.textContent = '✓ Already Completed';
+          console.log('Complete card success response', data);
+          // Remove card from DOM, hide as fallback
+          if (card) {
+            card.remove();
           }
+          
+          // Update points display
+          const pointsElement = document.querySelector('.front-header-right h3');
+          if (pointsElement && data.points_awarded) {
+            const currentPoints = parseInt(pointsElement.textContent.replace('Points: ', '')) || 0;
+            pointsElement.textContent = `Points: ${currentPoints + data.points_awarded}`;
+          }
+          
+          // Close modal if open
+          modal.style.display = 'none';
+          
+          // If card still present, hide as robust fallback
+          if (card && card.parentElement) {
+            card.style.display = 'none';
+          }
+          
+          // https://stackoverflow.com/questions/14701433/how-to-trigger-a-full-page-refresh-on-a-timespan
+          window.setTimeout(() => { if (document.getElementById(`card-${cardId}`)) { console.warn('Card still present after remove, reloading'); location.reload(); } }, 300);
         } else {
           // Re-enable button if failed
           btn.disabled = false;

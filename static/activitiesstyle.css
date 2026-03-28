@@ -265,19 +265,21 @@ body {
 }
 .task-sections {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
   gap: 30px;
   margin: 24px auto;
   align-items: start;
 }
 
 .task-section {
-  background: rgba(255,255,255,0.85);
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 6px 20px rgba(16,24,40,0.06);
+  background: rgba(255,255,255,0.95);
+  padding: 22px;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(16,24,40,0.10);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
 }
+
 
 .task-section:hover {
   transform: translateY(-2px);
@@ -479,15 +481,17 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .task-section li .task-name {
-  font-weight: bold;
-  font-size: 1em;
+  font-weight: 800;
+  font-size: 1.05em;
   margin-right: 10px;
-  flex: 1;
+  flex: 1 1 60%;
+  min-width: 0;
 }
 
 .task-section li .task-date {
@@ -513,37 +517,127 @@ body {
 
 .task-section li .task-actions {
   display: flex;
-  gap: 5px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 18px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.task-section li .task-actions form,
+.task-section li .task-actions button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 120px;
+  max-width: calc(100% - 20px);
+}
+
+.task-section li .auto-breakdown-form {
+  flex: 1 1 100%;
+  margin-top: 6px;
+}
+
+.task-section li .auto-breakdown-form button {
+  width: 100%;
+  justify-content: center;
+  min-width: 0;
 }
 
 .task-section li button {
-  padding: 6px 10px;
+  padding: 10px 14px;
   border: none;
-  background-color: #e74c3c;
   color: white;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.95em;
+  font-weight: 700;
   white-space: nowrap;
+  min-height: 40px;
 }
 
-.task-section li button:hover {
-  background-color: #c0392b;
+
+/* Complete / delete / edit button styling moved higher to per-importance to keep color-coding. */
+
+.btn-add-subtask {
+  background: linear-gradient(135deg,#60a5fa,#3b82f6);
+  border: 1px solid rgba(30, 100, 210, 0.8);
+  border-radius: 8px;
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.btn-add-subtask:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.35);
 }
 
 .auto-breakdown-btn {
-  background-color: #27ae60 !important;
+  background: linear-gradient(135deg,#27ae60,#1e8449) !important;
+  border: 1px solid rgba(18,120,60,0.9) !important;
+  color: #fff !important;
 }
 
 .auto-breakdown-btn:hover {
-  background-color: #229954 !important;
+  background: linear-gradient(135deg,#229954,#196f3d) !important;
+}
+
+.add-subtask-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.add-subtask-form input {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid #ccd6dd;
+  border-radius: 8px;
+  font-size: 0.95em;
+}
+
+.add-subtask-form button {
+  min-width: 80px;
+}
+
+.btn-complete {
+  background: linear-gradient(135deg, #16a085, #1abc9c) !important;
+  border: 1px solid rgba(26, 188, 156, 0.9) !important;
+}
+
+.btn-complete:hover {
+  background: linear-gradient(135deg, #138d75, #17a589) !important;
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+  border: 1px solid rgba(192, 57, 43, 0.9) !important;
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226) !important;
 }
 
 .edit-btn {
-  background-color: #3498db !important;
+  background: linear-gradient(135deg, #3498db, #2980b9) !important;
+  border: 1px solid rgba(41, 128, 185, 0.9) !important;
 }
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #2c81bd, #1f6fb7) !important;
+}
+
+.auto-breakdown-btn {
+  background: linear-gradient(135deg,#27ae60,#1e8449) !important;
+  border: 1px solid rgba(18,120,60,0.9) !important;
+  color: #fff !important;
+}
+
+.auto-breakdown-btn:hover {
+  background: linear-gradient(135deg,#229954,#196f3d) !important;
+}
+
 
 .edit-btn:hover {
   background-color: #2980b9 !important;
