@@ -711,10 +711,12 @@ def complete_recurring_task(task_id, username):
         points = {"Major": 30, "Medium": 20, "Minor": 10}.get(task_dict['importance'], 10)
         add_points(username, points)
         
-        # Send email reminder for next occurrence
-        send_recurring_task_reminder(username, task_dict, next_due)
-        
         conn.commit()
+        
+        # Send email reminder in background thread to avoid blocking
+        reminder_thread = threading.Thread(target=send_recurring_task_reminder, args=(username, task_dict, next_due), daemon=True)
+        reminder_thread.start()
+        
         return True
     except Exception as e:
         conn.rollback()
@@ -994,20 +996,20 @@ def delete_task_db(task_id):
     conn.close()
 
 
-def edit_task_db(task_id, name, date, importance):
+def edit_task_db(task_id, name, date, importance, description=None):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("UPDATE tasks SET name = ?, date = ?, importance = ? WHERE id = ?", 
-              (name, date, importance, task_id))
+    c.execute("UPDATE tasks SET name = ?, date = ?, importance = ?, description = ? WHERE id = ?", 
+              (name, date, importance, description, task_id))
     conn.commit()
     conn.close()
 
 
-def edit_task_db_with_time(task_id, name, date, time_str, importance):
+def edit_task_db_with_time(task_id, name, date, time_str, importance, description=None):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ? WHERE id = ?", 
-              (name, date, time_str, importance, task_id))
+    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ?, description = ? WHERE id = ?", 
+              (name, date, time_str, importance, description, task_id))
     conn.commit()
     conn.close()
 
@@ -1271,7 +1273,21 @@ def activities():
 def calm_room():
     """Render the calm room page with breathing exercises."""
     username = session.get('user') if session else None
-    return render_template("calm_room.html", username=username)
+    
+    # determine parent role so template can show parent-only links
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    
+    return render_template("calm_room.html", username=username, is_parent=is_parent)
 
 
 @app.route('/calendar')
@@ -1484,7 +1500,7 @@ def progress():
     return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
         'completed': AttrDict(breakdown.get('completed', {})),
         'pending': AttrDict(breakdown.get('pending', {})),
-    }), username=username, streak=streak)
+    }), username=username, streak=streak, is_parent=is_parent)
     
 
 
@@ -2088,13 +2104,14 @@ def edit_task(task_id):
     task_name = request.form.get("task_name")
     task_date = request.form.get("task_date")
     task_time = request.form.get("task_time")
+    task_description = request.form.get("task_description")
     importance = request.form.get("importance")
     
     if task_name and task_date and importance in ("Major", "Medium", "Minor"):
-        if task_time is not None:
-            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance)
+        if task_time:
+            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance, task_description)
         else:
-            edit_task_db(task_id, task_name, task_date, importance)
+            edit_task_db(task_id, task_name, task_date, importance, task_description)
     
     return redirect(url_for("activities"))
 
@@ -2859,7 +2876,7 @@ def parent_attitude():
     
     conn.close()
     # determine if any children already logged today for display (optional)
-    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes)
+    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes, is_parent=True)
 
 
 @app.route('/parent/add_custom_reward_child', methods=['POST'])
@@ -2996,10 +3013,10 @@ def visual_task_cards():
         
         conn.close()
         
-        return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards)
+        return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards, is_parent=True)
     except Exception as e:
         print(f"Visual task cards error: {e}")
-        return render_template('visual_task_cards.html', custom_cards=[], recommended_cards=[])
+        return render_template('visual_task_cards.html', custom_cards=[], recommended_cards=[], is_parent=True)
 
 
 @app.route('/delete-task-card/<int:card_id>', methods=['POST'])

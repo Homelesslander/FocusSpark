@@ -13,6 +13,9 @@
       <li><a href="{{ url_for('activities') }}">Activities</a></li>
       <li><a class="active" href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
       <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
+      {% if is_parent %}
+      <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+      {% endif %}
     </ul>
   </div>
 

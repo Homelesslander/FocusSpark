@@ -764,25 +764,18 @@ body {
 
 /* Recurring Tasks Styling - Match Regular Task Colors */
 .recurring-task-section {
-  background: rgba(255,255,255,0.85);
+  background: #fff;
   padding: 20px;
   border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border: 2px solid #ffffff;
+  box-shadow: 0 8px 26px rgba(16,24,40,0.14);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 22px;
 }
-
-/* Add a subtle left accent to recurring sections to match other task cards */
-.recurring-task-section {
-  border-left: 6px solid rgba(0,0,0,0.06);
-}
-
-.recurring-major { border-left-color: #ff9966 !important; }
-.recurring-medium { border-left-color: #5eb3aa !important; }
-.recurring-minor { border-left-color: #b19cd9 !important; }
 
 .recurring-task-section:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 30px rgba(16,24,40,0.18);
 }
 
 .recurring-task-section h2 {
@@ -792,7 +785,20 @@ body {
   padding: 12px;
   border-radius: 10px;
   font-weight: 600;
+  background: linear-gradient(135deg, #e5f6ff, #d5f0ff);
+  color: #0e5a7f;
+  border: 1px solid rgba(0,128,192,0.15);
 }
+
+/* Add a subtle left accent to recurring sections to match other task cards */
+.recurring-task-section {
+  border-left: 8px solid rgba(0,0,0,0.05);
+}
+
+.recurring-major { border-left-color: #ff9966 !important; }
+.recurring-medium { border-left-color: #5eb3aa !important; }
+.recurring-minor { border-left-color: #b19cd9 !important; }
+
 
 /* Settings page: nudge the H1 down so it lines up with subtabs and other pages */
 .settings-page .front-header-left h1,
@@ -833,10 +839,17 @@ body {
   display: block;
   margin-bottom: 18px;
   padding: 18px;
-  border-radius: 10px;
+  border-radius: 12px;
   border-left: 5px solid;
   font-size: 1.02rem;
   transition: all 0.3s ease;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(16,24,40,0.08);
+}
+
+.recurring-task-section ul li:hover {
+  transform: translateX(3px);
+  box-shadow: 0 6px 14px rgba(16,24,40,0.14);
 }
 
 /* Recurring Major Tasks - Warm, calm orange border and hover */
@@ -918,13 +931,13 @@ body {
   text-align: center;
   padding: 20px;
   border-left: none;
-  background: none;
+  background: rgba(255,255,255,0.85);
 }
 
 .recurring-task-section li.empty:hover {
   transform: none;
   box-shadow: none;
-  background: none;
+  background: rgba(255,255,255,0.85);
 }
 
 /* Layout with sidebar */
