@@ -2498,28 +2498,20 @@ def redeem_badge(badge_id):
         return "Unknown badge", 400
     _, title, cost, icon = matched
     
-    # Check current points balance
-    current_points = get_user_points(username)
-    print(f"DEBUG: Current points for {username}: {current_points}")
+    total_earned = get_user_total_earned(username)
+    print(f"DEBUG: Total earned points for {username}: {total_earned}")
     
-    # Only allow purchase if user has enough points
-    if current_points < cost:
-        print(f"DEBUG: Blocking purchase - not enough points: {current_points} < {cost}")
-        return "Not enough points to claim this badge", 400
+    # Only allow claim if total earned points have reached required threshold
+    if total_earned < cost:
+        print(f"DEBUG: Blocking badge claim - total earned too low: {total_earned} < {cost}")
+        return "Not enough total earned points to claim this badge", 400
     
     # Ensure badge not already claimed
     if has_claimed_badge(username, badge_id):
         return "Badge already claimed", 400
-    
-    # Claim badge and deduct points
+
+    # Claim badge (no deduction from current points)
     log_redemption(username, 'badge', badge_id, title, cost)
-    
-    # Actually deduct points from user's current balance
-    conn = get_db_conn()
-    c = conn.cursor()
-    c.execute("UPDATE users SET points = points - ? WHERE username = ?", (cost, username))
-    conn.commit()
-    conn.close()
     return redirect(url_for('rewards'))
 
 
@@ -2538,12 +2530,22 @@ BADGES = [
 
 def get_badges_for_display(username):
     current_points = get_user_points(username)
+    total_earned = get_user_total_earned(username)
     badges = []
     for bid, title, cost, icon in BADGES:
         already = has_claimed_badge(username, bid)
-        # Only allow purchase if user has enough points
-        claimable = (not already) and (current_points >= cost)
-        badge_data = {'id': bid, 'title': title, 'cost': cost, 'icon': icon, 'claimable': claimable, 'claimed': already}
+        # Badge requires total earned points threshold, not current points balance.
+        claimable = (not already) and (total_earned >= cost)
+        badge_data = {
+            'id': bid,
+            'title': title,
+            'cost': cost,
+            'icon': icon,
+            'claimable': claimable,
+            'claimed': already,
+            'current_points': current_points,
+            'total_earned': total_earned
+        }
         badges.append(badge_data)
     return badges
 
