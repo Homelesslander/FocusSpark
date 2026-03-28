@@ -158,7 +158,7 @@
   width: 100%;
   margin: 0;
   padding: 32px;
-  background: white;
+  background: rgba(255,255,255,0.9);
 }
 
 .upcoming-tasks-sidebar {
@@ -186,11 +186,11 @@
 }
 
 .upcoming-tasks-list li {
-  background: white;
+  background: rgba(255,255,255,0.92);
   border-left: 4px solid #fb8500;
   border-radius: 6px;
   padding: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(16,24,40,0.06);
   transition: all 0.2s ease;
 }
 

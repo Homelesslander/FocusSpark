@@ -277,7 +277,8 @@
       <li><a href="{{ url_for('about') }}">About</a></li>
       <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
       <li><a href="{{ url_for('activities') }}">Activities</a></li>
-      <li><a href="{{ url_for('calm_room') }}">🧘 Calm Room</a></li>
+      <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+      <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
     </ul>
   </div>
   <div class="front">
@@ -288,17 +289,7 @@
           Complete visual task cards to earn points and build your streak!
         </p>
 
-        <ul class="Tabs">
-          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-          <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
-          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-          <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
-          <li><a href="{{ url_for('child_task_cards') }}" class="active">Task Cards</a></li>
-          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-          <li><a href="{{ url_for('rewards') }}">Badges</a></li>
-          <li><a href="{{ url_for('settings') }}">Settings</a></li>
-        </ul>
+        {% include 'subtabs.html' %}
 
         <h2 id="greeting">Hello, {{ username }}!</h2>
       </div>

@@ -30,10 +30,10 @@
 
 /* Individual task card */
 .task-card {
-  background: white;
+  background: rgba(255,255,255,0.9);
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(16,24,40,0.08);
   transition: all 0.3s ease;
   cursor: pointer;
   position: relative;

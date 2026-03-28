@@ -11,8 +11,9 @@
       <li><a href="{{ url_for('about') }}">About</a></li>
       <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
       <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
-      <li><a href="{{ url_for('activities') }}">Activities</a></li>
-      <li><a href="{{ url_for('calm_room') }}" class="active">🧘 Calm Room</a></li>
+      <li><a href="{{ url_for('activities') }}" class="active">Activities</a></li>
+      <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+      <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
     </ul>
   </div>
 
@@ -59,21 +60,7 @@
         <h1>Badges</h1>
         <p class="description">View and claim badges based on total points you have earned from completing tasks.</p>
 
-        <ul class="Tabs">
-          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-          {% if not is_parent %}
-          <li><a class="active" href="{{ url_for('rewards') }}">Badges</a></li>
-          {% endif %}
-          {% if is_parent %}
-          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-          <li><a href="{{ url_for('parent_attitude') }}">Attitude</a></li>
-          {% endif %}
-          <li><a href="{{ url_for('settings') }}">Settings</a></li>
-        </ul>
+        {% include 'subtabs.html' %}
 
         <h2 id="greeting">Hello, {{ username }}!</h2>
       </div>

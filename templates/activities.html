@@ -91,8 +91,9 @@
       <li><a href="{{ url_for('home') }}">Home</a></li>
       <li><a href="{{ url_for('about') }}">About</a></li>
       <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
-      <li><a href="{{ url_for('activities') }}">Activities</a></li>
-      <li><a href="{{ url_for('calm_room') }}" class="active"> Calm Room</a></li>
+      <li><a href="{{ url_for('activities') }}" class="active">Activities</a></li>
+      <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+      <li><a href="{{ url_for('calm_room') }}"> Calm Room</a></li>
     </ul>
   </div>
   <div class="front">
@@ -104,27 +105,43 @@
           You can manage your tasks, track your progress, redeem rewards, and customize your settings.
         </p>
 
-        <ul class="Tabs">
-          
-          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-          <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
-          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-          {% if not is_parent %}
-          <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
-          <li><a href="{{ url_for('child_task_cards') }}">Task Cards</a></li>
-          {% endif %}
-          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-          {% if not is_parent %}
-          <li><a href="{{ url_for('rewards') }}">Badges</a></li>
-          {% endif %}
-          {% if is_parent %}
-          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-          {% endif %}
-          <li><a href="{{ url_for('settings') }}">Settings</a></li>
-        </ul>
+        {% include 'subtabs.html' %}
 
         <h2 id="greeting">Hello, {{ username }}!</h2>
+
+        <script>
+          // If the page H1 is the generic "Activities", replace it with the active subtab title (e.g., "Add/Delete Tasks")
+          (function(){
+            try{
+              const hdr = document.querySelector('.front-header-left h1');
+              const desc = document.querySelector('.front-header-left .description');
+              if(!hdr || !desc) return;
+              const current = hdr.textContent && hdr.textContent.trim();
+              // Only override when the header is the generic Activities header
+              if(current && current.toLowerCase().indexOf('activit') !== -1){
+                const activeTab = document.querySelector('.Tabs a.active');
+                if(activeTab){
+                  const txt = activeTab.textContent.trim();
+                  // Use the tab text as the H1 when appropriate
+                  hdr.textContent = txt;
+                  // Provide a concise description for Add/Delete Tasks specifically
+                  if(/add\/?delete/i.test(txt)){
+                    desc.textContent = 'Add/Delete Tasks — create new tasks or remove existing ones.';
+                  } else if(/view tasks/i.test(txt)){
+                    desc.textContent = 'View your tasks and their details. Filter, sort, and manage subtasks.';
+                  } else if(/calendar/i.test(txt)){
+                    desc.textContent = 'Calendar view of your tasks and scheduled focus sessions.';
+                  } else if(/progress/i.test(txt)){
+                    desc.textContent = 'Track your progress, streaks, and earned rewards.';
+                  } else {
+                    // fallback: keep the original generic paragraph but centered
+                    // do not change if desc already meaningful
+                  }
+                }
+              }
+            }catch(e){/* noop */}
+          })();
+        </script>
       </div>
 
       <div class="front-header-right">
@@ -321,7 +338,7 @@
             <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Major"}|tojson }}' onclick="openEditModalFromButton(this)"><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Major"}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
           </div>
           {% if task.subtasks %}
           <div class="subtasks">
@@ -378,7 +395,7 @@
             <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Medium"}|tojson }}' onclick="openEditModalFromButton(this)"><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Medium"}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
           </div>
           
           {% if task.subtasks %}
@@ -436,7 +453,7 @@
             <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Minor"}|tojson }}' onclick="openEditModalFromButton(this)"><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Minor"}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
             <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
               <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
             </form>
@@ -941,38 +958,7 @@
       }
     }
 
-    function openEditModal(taskId, taskName, taskDate, taskTime, importance) {
-      document.getElementById('editTaskId').value = taskId;
-      document.getElementById('editTaskName').value = taskName;
-      document.getElementById('editTaskDate').value = taskDate;
-      // set time if provided (empty string allowed)
-      const timeInput = document.getElementById('editTaskTime');
-      if(timeInput){ timeInput.value = taskTime || ''; }
-      document.getElementById('editTaskImportance').value = importance;
-      document.getElementById('editModal').classList.add('show');
-    }
-
-    function openEditModalFromButton(btn){
-      try{
-        const data = JSON.parse(btn.getAttribute('data-task') || '{}');
-        openEditModal(data.id, data.name || '', data.date || '', data.time || '', data.importance || 'Major');
-        // set form action (in case override isn't applied yet)
-        document.getElementById('editForm').action = `/edit_task/${data.id}`;
-      }catch(e){
-        console.error('Could not open edit modal', e);
-      }
-    }
-
-    function closeEditModal() {
-      document.getElementById('editModal').classList.remove('show');
-    }
-
-    window.onclick = function(event) {
-      const modal = document.getElementById('editModal');
-      if (event.target === modal) {
-        closeEditModal();
-      }
-    }
+    /* Edit modal removed per user request */
 
     function handleCompletion(event, importance) {
       event.preventDefault();
@@ -1031,98 +1017,44 @@
       const btn = document.getElementById('cornerToggleBtn');
       const content = document.getElementById('cornerContent');
       const panel = document.querySelector('.corner-upcoming');
-      const handle = panel && panel.querySelector('.corner-handle');
       if(!btn || !content || !panel) return;
 
-      // restore state
       const key = 'cornerUpcomingCollapsed';
+
+      const setCollapsed = (collapsed) => {
+        if (collapsed) {
+          content.classList.add('collapsed');
+          panel.classList.add('collapsed');
+          btn.textContent = 'Show';
+          btn.setAttribute('aria-expanded', 'false');
+          localStorage.setItem(key, '1');
+        } else {
+          content.classList.remove('collapsed');
+          panel.classList.remove('collapsed');
+          btn.textContent = 'Hide';
+          btn.setAttribute('aria-expanded', 'true');
+          localStorage.removeItem(key);
+        }
+      };
+
+      // restore state
       const stored = localStorage.getItem(key);
-      if(stored === '1'){
-        content.classList.add('collapsed');
-        panel.classList.add('collapsed');
-        btn.textContent = 'Show';
-        btn.setAttribute('aria-expanded','false');
-      } else {
-        content.classList.remove('collapsed');
-        panel.classList.remove('collapsed');
-        btn.textContent = 'Hide';
-        btn.setAttribute('aria-expanded','true');
-      }
+      setCollapsed(stored === '1');
 
-      function updateTimer() {
-        const textEl = document.getElementById('timerText');
-        const arcEl = document.getElementById('timerArc');
-        if (!textEl || !arcEl) return;
+      // Toggle when user clicks the button
+      btn.addEventListener('click', () => {
+        const collapsed = content.classList.toggle('collapsed');
+        panel.classList.toggle('collapsed', collapsed);
+        setCollapsed(collapsed);
+      });
 
-        // Update center text
-        textEl.textContent = formatTime(timerSeconds);
-
-        // Fraction of time remaining
-        const fraction = totalSeconds > 0 ? (timerSeconds / totalSeconds) : 0;
-
-        // Stroke dash calculations
-        const r = parseFloat(arcEl.getAttribute('r')) || 70;
-        const circumference = 2 * Math.PI * r;
-        arcEl.setAttribute('stroke-dasharray', String(circumference));
-        const offset = circumference * (1 - fraction);
-        arcEl.setAttribute('stroke-dashoffset', String(offset));
-
-        // Color transitions
-        let color = '#4CAF50';
-        if (fraction > 0.5) color = '#4CAF50';
-        else if (fraction > 0.25) color = '#FFC107';
-        else if (fraction > 0.1) color = '#FF9800';
-        else color = '#F44336';
-        arcEl.setAttribute('stroke', color);
-      }
+      // Also allow clicking the small handle to toggle
+      const handle = panel.querySelector('.corner-handle');
+      if(handle) handle.addEventListener('click', () => btn.click());
+    })();
   </script>
 
-  <!-- Edit Task Modal -->
-  <div id="editModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Edit Task</h2>
-        <button class="close-modal" onclick="closeEditModal()">&times;</button>
-      </div>
-      <form id="editForm" method="post" class="edit-form">
-        <div>
-          <label for="editTaskName">Task Name:</label>
-          <input type="text" id="editTaskName" name="task_name" required />
-        </div>
-        <div>
-          <label for="editTaskDate">Due Date:</label>
-          <input type="date" id="editTaskDate" name="task_date" required />
-        </div>
-        <div>
-          <label for="editTaskTime">Due Time (optional):</label>
-          <input type="time" id="editTaskTime" name="task_time" />
-        </div>
-        <div>
-          <label for="editTaskImportance">Importance:</label>
-          <select id="editTaskImportance" name="importance" required>
-            <option value="Major">Major</option>
-            <option value="Medium">Medium</option>
-            <option value="Minor">Minor</option>
-          </select>
-        </div>
-        <div class="edit-form-buttons">
-          <button type="submit" class="btn-save">Save Changes</button>
-          <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <input type="hidden" id="editTaskId" />
-
-  <script>
-    // Update form action when opening modal
-    const originalOpenEditModal = openEditModal;
-    openEditModal = function(taskId, taskName, taskDate, taskTime, importance) {
-      originalOpenEditModal(taskId, taskName, taskDate, taskTime, importance);
-      document.getElementById('editForm').action = `/edit_task/${taskId}`;
-    };
-  </script>
+  <!-- Edit modal removed -->
 
 </body>
 </html>
