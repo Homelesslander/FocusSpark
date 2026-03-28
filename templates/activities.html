@@ -326,7 +326,7 @@
   <div class="task-sections">
 
     
-    <div class="task-section">
+    <div class="task-section major">
       <h2>Major Tasks <span class="task-count">({{ tasks['Major']|length }})</span></h2>
       <ul>
         {% for task in tasks['Major'] %}
@@ -388,7 +388,7 @@
     </div>
 
     <!-- MEDIUM TASKS SECTION -->
-    <div class="task-section">
+    <div class="task-section medium">
       <h2>Medium Tasks <span class="task-count">({{ tasks['Medium']|length }})</span></h2>
       <ul>
         {% for task in tasks['Medium'] %}
@@ -451,7 +451,7 @@
     </div>
 
     
-    <div class="task-section">
+    <div class="task-section minor">
       <h2>Minor Tasks <span class="task-count">({{ tasks['Minor']|length }})</span></h2>
       <ul>
         {% for task in tasks['Minor'] %}

@@ -85,12 +85,16 @@
       <div class="badge-card">
         <div class="badge-icon">{{ badge.icon }}</div>
         <div class="badge-title">{{ badge.title }}</div>
-        <div class="badge-cost">Required: {{ badge.cost }} pts</div>
+        <div class="badge-cost">Unlocks at {{ badge.cost }} total earned pts</div>
         <form action="{{ url_for('redeem_badge', badge_id=badge.id) }}" method="post">
           {% if badge.claimed %}
             <button type="button" class="btn-redeem" disabled>Claimed</button>
           {% else %}
-            <button type="submit" class="btn-redeem" {% if not badge.claimable %}disabled{% endif %}>Claim</button>
+            {% if badge.claimable %}
+              <button type="submit" class="btn-redeem">Claim</button>
+            {% else %}
+              <button type="button" class="btn-redeem" disabled>Locked</button>
+            {% endif %}
           {% endif %}
         </form>
       </div>
