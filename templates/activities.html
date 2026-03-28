@@ -257,7 +257,18 @@
       </div>
       
       <textarea name="task_description" id="taskDescription" placeholder="Enter task description (optional)" rows="3" style="width: 100%; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"></textarea>
-      
+      {% if is_parent and children %}
+      <div style="margin-bottom: 12px;">
+        <label for="taskUser" style="font-weight:600; display:block; margin-bottom:6px;">Assign To</label>
+        <select name="task_user" id="taskUser" style="width: 100%; padding: 10px; border:2px solid #e0e0e0; border-radius:8px;">
+          <option value="{{ username }}" {% if not selected_child %}selected{% endif %}>Parent: {{ username }}</option>
+          {% for child in children %}
+          <option value="{{ child.username }}" {% if selected_child == child.username %}selected{% endif %}>Child: {{ child.username }} ({{ child.points }} pts)</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
         <input type="time" name="task_time" id="taskTime" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
         <select name="importance" id="taskImportance" required style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
