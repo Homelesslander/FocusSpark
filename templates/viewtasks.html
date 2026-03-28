@@ -37,11 +37,13 @@
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
       <li><a href="{{ url_for('about') }}">About</a></li>
-      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
       <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
       <li><a href="{{ url_for('activities') }}" class="active">Activities</a></li>
       <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
       <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
+      {% if is_parent %}
+      <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+      {% endif %}
     </ul>
   </div>
 
@@ -133,8 +135,12 @@
     </div>
 
     <!-- Recurring Tasks Section -->
-    
-    <!-- Major Recurring Tasks -->
+    <div class="activities-main">
+      <div class="task-section recurring-tasks-box">
+        <h2>🔁 Recurring Tasks</h2>
+        <div class="task-sections">
+          
+          <!-- Major Recurring Tasks -->
     {% if recurring_tasks['Major'] %}
     <div class="recurring-major recurring-task-section">
       <h2>🔄 Major Recurring Tasks <span class="task-count">({{ recurring_tasks['Major']|length }})</span></h2>
@@ -240,8 +246,13 @@
     </div>
     {% endif %}
 
-      </div>
+        </div> <!-- End task-sections -->
+      </div> <!-- End recurring-tasks-box -->
     </div> <!-- End activities-main -->
+
+    </div>
+
+    <!-- Task Box Widget -->
   </div> <!-- End activities-container -->
   <!-- Task Box Widget -->
   <div id="task-box" class="task-box" aria-hidden="false">

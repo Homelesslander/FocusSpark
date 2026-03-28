@@ -487,13 +487,16 @@ def get_box_stats(username=None, limit=10):
     return [dict(r) for r in rows]
 
 
-def get_tasks_grouped():
+def get_tasks_grouped(username=None):
     
     conn = get_db_conn()
     c = conn.cursor()
     
     # Exclude tasks currently placed in the box
-    c.execute("SELECT id, name, date, time, importance, description FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY id")
+    if username:
+        c.execute("SELECT id, name, date, time, importance, description FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) AND user = ? ORDER BY id", (username,))
+    else:
+        c.execute("SELECT id, name, date, time, importance, description FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY id")
     rows = c.fetchall()
     conn.close()
 
@@ -525,12 +528,15 @@ def get_tasks_grouped():
     return grouped
 
 
-def get_calendar_tasks():
+def get_calendar_tasks(username=None):
     """Get tasks organized by date for calendar view"""
     conn = get_db_conn()
     c = conn.cursor()
     # Exclude boxed tasks from calendar view
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY date")
+    if username:
+        c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) AND user = ? ORDER BY date", (username,))
+    else:
+        c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY date")
     rows = c.fetchall()
     conn.close()
     
@@ -711,10 +717,12 @@ def complete_recurring_task(task_id, username):
         points = {"Major": 30, "Medium": 20, "Minor": 10}.get(task_dict['importance'], 10)
         add_points(username, points)
         
-        # Send email reminder for next occurrence
-        send_recurring_task_reminder(username, task_dict, next_due)
-        
         conn.commit()
+        
+        # Send email reminder in background thread to avoid blocking
+        reminder_thread = threading.Thread(target=send_recurring_task_reminder, args=(username, task_dict, next_due), daemon=True)
+        reminder_thread.start()
+        
         return True
     except Exception as e:
         conn.rollback()
@@ -994,20 +1002,20 @@ def delete_task_db(task_id):
     conn.close()
 
 
-def edit_task_db(task_id, name, date, importance):
+def edit_task_db(task_id, name, date, importance, description=None):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("UPDATE tasks SET name = ?, date = ?, importance = ? WHERE id = ?", 
-              (name, date, importance, task_id))
+    c.execute("UPDATE tasks SET name = ?, date = ?, importance = ?, description = ? WHERE id = ?", 
+              (name, date, importance, description, task_id))
     conn.commit()
     conn.close()
 
 
-def edit_task_db_with_time(task_id, name, date, time_str, importance):
+def edit_task_db_with_time(task_id, name, date, time_str, importance, description=None):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ? WHERE id = ?", 
-              (name, date, time_str, importance, task_id))
+    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ?, description = ? WHERE id = ?", 
+              (name, date, time_str, importance, description, task_id))
     conn.commit()
     conn.close()
 
@@ -1229,10 +1237,10 @@ def activities():
     Loads grouped tasks, calendar snippet data, user points and upcoming tasks
     to render the activities dashboard where users add/edit/complete tasks.
     """
-    tasks = get_tasks_grouped()
-    recurring_tasks = get_recurring_tasks_grouped()
-    calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
+    tasks = get_tasks_grouped(username)
+    recurring_tasks = get_recurring_tasks_grouped(username)
+    calendar_tasks = get_calendar_tasks(username)
     # determine whether the current user is a parent (used to show parent-specific UI)
     is_parent = False
     if username:
@@ -1271,14 +1279,28 @@ def activities():
 def calm_room():
     """Render the calm room page with breathing exercises."""
     username = session.get('user') if session else None
-    return render_template("calm_room.html", username=username)
+    
+    # determine parent role so template can show parent-only links
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    
+    return render_template("calm_room.html", username=username, is_parent=is_parent)
 
 
 @app.route('/calendar')
 def calendar():
     """Render the standalone calendar page (14-day view)."""
-    calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
+    calendar_tasks = get_calendar_tasks(username)
     upcoming_tasks = get_upcoming_tasks(username) if username else []
 
     points = 0
@@ -1409,9 +1431,9 @@ def focus_timer():
 @app.route('/viewtasks')
 def view_tasks():
     """Render a focused view of pending tasks grouped by importance."""
-    tasks = get_tasks_grouped()
-    recurring_tasks = get_recurring_tasks_grouped()
     username = session.get('user') if session else None
+    tasks = get_tasks_grouped(username)
+    recurring_tasks = get_recurring_tasks_grouped(username)
 
     points = 0
     if username:
@@ -1484,7 +1506,7 @@ def progress():
     return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
         'completed': AttrDict(breakdown.get('completed', {})),
         'pending': AttrDict(breakdown.get('pending', {})),
-    }), username=username, streak=streak)
+    }), username=username, streak=streak, is_parent=is_parent)
     
 
 
@@ -1783,9 +1805,9 @@ def add_task():
             # For non-repeatable tasks, date is required
             if not task_date:
                 # Get all required data to re-render the page
-                tasks = get_tasks_grouped()
-                recurring_tasks = get_recurring_tasks_grouped()
-                calendar_tasks = get_calendar_tasks()
+                tasks = get_tasks_grouped(username)
+                recurring_tasks = get_recurring_tasks_grouped(username)
+                calendar_tasks = get_calendar_tasks(username)
                 points = get_points()
                 streak = get_user_streak(username)
                 upcoming_tasks = get_upcoming_tasks(username, days=7) if username else []
@@ -1833,7 +1855,8 @@ def add_task():
 
 @app.route("/delete_task/<importance>/<int:task_index>", methods=["POST"])
 def delete_task(importance, task_index):
-    grouped = get_tasks_grouped()
+    username = session.get('user')
+    grouped = get_tasks_grouped(username)
     if importance in grouped and 0 <= task_index < len(grouped[importance]):
         task_id = grouped[importance][task_index].get('id')
         if task_id:
@@ -1843,8 +1866,8 @@ def delete_task(importance, task_index):
 
 @app.route("/complete_task/<importance>/<int:task_index>", methods=["POST"])
 def complete_task(importance, task_index):
-    grouped = get_tasks_grouped()
     username = session.get('user')
+    grouped = get_tasks_grouped(username)
     if importance in grouped and 0 <= task_index < len(grouped[importance]) and username:
         task_id = grouped[importance][task_index].get('id')
         if task_id:
@@ -2088,13 +2111,14 @@ def edit_task(task_id):
     task_name = request.form.get("task_name")
     task_date = request.form.get("task_date")
     task_time = request.form.get("task_time")
+    task_description = request.form.get("task_description")
     importance = request.form.get("importance")
     
     if task_name and task_date and importance in ("Major", "Medium", "Minor"):
-        if task_time is not None:
-            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance)
+        if task_time:
+            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance, task_description)
         else:
-            edit_task_db(task_id, task_name, task_date, importance)
+            edit_task_db(task_id, task_name, task_date, importance, task_description)
     
     return redirect(url_for("activities"))
 
@@ -2738,7 +2762,7 @@ def parent_dashboard():
     c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
     children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
     conn.close()
-    return render_template('parent_dashboard.html', username=username, children=children)
+    return render_template('parent_dashboard.html', username=username, children=children, is_parent=True)
 
 
 @app.route('/parent/add_child', methods=['POST'])
@@ -2859,7 +2883,7 @@ def parent_attitude():
     
     conn.close()
     # determine if any children already logged today for display (optional)
-    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes)
+    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes, is_parent=True)
 
 
 @app.route('/parent/add_custom_reward_child', methods=['POST'])
@@ -2898,6 +2922,58 @@ def parent_add_custom_reward_child():
     conn.commit()
     conn.close()
     return redirect(url_for('parent_dashboard'))
+
+
+@app.route('/add-recommended-card', methods=['POST'])
+def add_recommended_card():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    # Verify this user actually has role = 'parent'
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (parent,))
+    row = c.fetchone()
+    if not row or row['role'] != 'parent':
+        conn.close()
+        return "Only parent accounts can add recommended task cards", 403
+    
+    # Get data from form
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    points_str = request.form.get('points', '').strip()
+    category = request.form.get('category', '').strip()
+    
+    if not title or not points_str:
+        conn.close()
+        return "Title and points are required", 400
+    
+    try:
+        points = int(points_str)
+    except ValueError:
+        conn.close()
+        return "Points must be a number", 400
+    
+    # Use a placeholder image path for recommended cards
+    image_path = f"recommended/{category}.png"  # Placeholder path
+    
+    # Store in database
+    created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    c.execute(
+        "INSERT INTO visual_task_cards (parent_username, title, description, image_path, points, created_at, is_recommended) VALUES (?, ?, ?, ?, ?, ?, 1)",
+        (parent, title, description, image_path, points, created_at)
+    )
+    
+    # Ensure id is set
+    c.execute(
+        "UPDATE visual_task_cards SET id = rowid WHERE id IS NULL AND parent_username = ? AND title = ? AND created_at = ?",
+        (parent, title, created_at)
+    )
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('visual_task_cards'))
 
 
 @app.route('/upload-task-card', methods=['POST'])
@@ -2996,10 +3072,10 @@ def visual_task_cards():
         
         conn.close()
         
-        return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards)
+        return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards, is_parent=True)
     except Exception as e:
         print(f"Visual task cards error: {e}")
-        return render_template('visual_task_cards.html', custom_cards=[], recommended_cards=[])
+        return render_template('visual_task_cards.html', custom_cards=[], recommended_cards=[], is_parent=True)
 
 
 @app.route('/delete-task-card/<int:card_id>', methods=['POST'])
@@ -3080,13 +3156,18 @@ def child_task_cards():
     c.execute("SELECT card_id FROM task_completions WHERE child_username = ?", (child,))
     completed_ids = set(row['card_id'] for row in c.fetchall())
     
+    # Get child's points
+    c.execute("SELECT points FROM users WHERE username = ?", (child,))
+    points_row = c.fetchone()
+    points = (points_row['points'] or 0) if points_row else 0
+    
     conn.close()
     
     # Mark completed cards
     for card in cards:
         card['completed'] = card['id'] in completed_ids
     
-    response = make_response(render_template('child_task_cards.html', cards=cards, username=child))
+    response = make_response(render_template('child_task_cards.html', cards=cards, username=child, points=points))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -3109,13 +3190,20 @@ def complete_task_card():
     conn = get_db_conn()
     c = conn.cursor()
     
-    # Get card details
-    c.execute("SELECT id, points FROM visual_task_cards WHERE id = ?", (card_id,))
+    # Get card details and verify ownership
+    c.execute("SELECT id, points, parent_username FROM visual_task_cards WHERE id = ?", (card_id,))
     card = c.fetchone()
     
     if not card:
         conn.close()
         return jsonify({'success': False, 'error': 'Card not found'}), 404
+    
+    # Verify the card belongs to this child's parent
+    c.execute("SELECT parent_username FROM users WHERE username = ?", (child,))
+    child_row = c.fetchone()
+    if not child_row or child_row['parent_username'] != card['parent_username']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     
     # Check if already completed
     c.execute("SELECT id FROM task_completions WHERE card_id = ? AND child_username = ?", (card_id, child))
@@ -3132,7 +3220,12 @@ def complete_task_card():
     
     # Award points
     points = card['points']
-    c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, child))
+    print(f"DEBUG: Awarding {points} points to child {child} for card {card_id}")
+    c.execute("UPDATE users SET points = COALESCE(points, 0) + ? WHERE username = ?", (points, child))
+    
+    # Debug check
+    c.execute("SELECT points FROM users WHERE username = ?", (child,))
+    print('DEBUG: New points for', child, c.fetchone()['points'])
     
     conn.commit()
     conn.close()

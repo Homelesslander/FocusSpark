@@ -27,6 +27,7 @@ def get_db_conn():
             try:
                 # Enable WAL mode and set timeout for better concurrency
                 conn = sqlite3.connect(db_path, timeout=60.0, check_same_thread=False)
+                conn.row_factory = sqlite3.Row
                 conn.execute('PRAGMA journal_mode=WAL')
                 conn.execute('PRAGMA synchronous=NORMAL')
                 conn.execute('PRAGMA cache_size=10000')

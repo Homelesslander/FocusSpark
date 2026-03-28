@@ -37,6 +37,8 @@
       z-index: 10000;
       animation: achievementPop 0.5s ease-out;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background: #2ecc71;
+      color: #fff;
     }
     
     .achievement-major {
@@ -244,17 +246,21 @@
 
   
   <div class="task-input">
-    <form action="/add_task" method="POST">
+    <form id="taskForm" action="/add_task" method="POST">
+      <input type="hidden" name="task_id" id="taskId" />
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-        <input type="text" name="task_name" placeholder="Enter task" required style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
-        <input type="date" name="task_date" id="taskDate" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
+        <input type="text" name="task_name" id="taskName" placeholder="Enter task" required style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
+        <div style="display: flex; flex-direction: column;">
+          <input type="date" name="task_date" id="taskDate" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
+          <span id="dateErrorMessage" style="display:none;color:#d63031;font-size:0.9rem;margin-top:4px;">Please pick a date in the calendar.</span>
+        </div>
       </div>
       
-      <textarea name="task_description" placeholder="Enter task description (optional)" rows="3" style="width: 100%; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"></textarea>
+      <textarea name="task_description" id="taskDescription" placeholder="Enter task description (optional)" rows="3" style="width: 100%; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"></textarea>
       
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-        <input type="time" name="task_time" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
-        <select name="importance" required style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+        <input type="time" name="task_time" id="taskTime" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;" />
+        <select name="importance" id="taskImportance" required style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
           <option value="Major">Major</option>
           <option value="Medium">Medium</option>
           <option value="Minor">Minor</option>
@@ -305,7 +311,10 @@
         </div>
       </div>
       
-      <button type="submit" class="btn-add" aria-label="Add task"><span class="btn-icon">➕</span><span class="btn-text">Add Task</span></button>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button type="submit" id="submitBtn" class="btn-add" aria-label="Add task"><span class="btn-icon">➕</span><span class="btn-text">Add Task</span></button>
+        <button type="button" id="cancelEditBtn" style="display: none; padding: 12px 20px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer;">Cancel Edit</button>
+      </div>
     </form>
   </div>
 
@@ -338,7 +347,12 @@
             <form action="{{ url_for('delete_task', importance='Major', task_index=loop.index0) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Major"}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Major", "description": task.description}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+          </div>
+          <div class="task-actions task-actions-secondary">
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post" class="auto-breakdown-form">
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
+            </form>
           </div>
           {% if task.subtasks %}
           <div class="subtasks">
@@ -395,7 +409,12 @@
             <form action="{{ url_for('delete_task', importance='Medium', task_index=loop.index0) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Medium"}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Medium", "description": task.description}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+          </div>
+          <div class="task-actions task-actions-secondary">
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post" class="auto-breakdown-form">
+              <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
+            </form>
           </div>
           
           {% if task.subtasks %}
@@ -422,7 +441,7 @@
           
           <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
             <input type="text" name="subtask_name" placeholder="Add subtask..." required />
-            <button type="submit">+ Add</button>
+            <button type="submit" class="btn-add-subtask" aria-label="Add subtask"><span class="btn-icon">➕</span><span class="btn-text">Add</span></button>
           </form>
         </li>
         {% else %}
@@ -453,8 +472,10 @@
             <form action="{{ url_for('delete_task', importance='Minor', task_index=loop.index0) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Minor"}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
-            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post">
+            <button type="button" class="edit-btn" data-task='{{ {"id": task.id, "name": task.name, "date": task.date, "time": task.time, "importance": "Minor", "description": task.description}|tojson }}'><span class="btn-icon">✏️</span><span class="btn-text">Edit</span></button>
+          </div>
+          <div class="task-actions task-actions-secondary">
+            <form action="{{ url_for('auto_breakdown_task_route', parent_task_id=task.id) }}" method="post" class="auto-breakdown-form">
               <button type="submit" class="auto-breakdown-btn" aria-label="Auto breakdown"><span class="btn-icon">🤖</span><span class="btn-text">Auto-Breakdown</span></button>
             </form>
           </div>
@@ -483,7 +504,7 @@
           
           <form action="{{ url_for('add_subtask', parent_task_id=task.id) }}" method="post" class="add-subtask-form">
             <input type="text" name="subtask_name" placeholder="Add subtask..." required />
-            <button type="submit">+ Add</button>
+            <button type="submit" class="btn-add-subtask" aria-label="Add subtask"><span class="btn-icon">➕</span><span class="btn-text">Add</span></button>
           </form>
         </li>
         {% else %}
@@ -499,9 +520,11 @@
 
   <!-- Recurring Tasks Section -->
   <div class="activities-main">
-  <div class="task-sections">
-    
-    <!-- Major Recurring Tasks -->
+    <div class="task-section recurring-tasks-box">
+      <h2>🔁 Recurring Tasks</h2>
+      <div class="task-sections">
+        
+        <!-- Major Recurring Tasks -->
     {% if recurring_tasks['Major'] %}
     <div class="recurring-major recurring-task-section">
       <h2>🔄 Major Recurring Tasks <span class="task-count">({{ recurring_tasks['Major']|length }})</span></h2>
@@ -535,9 +558,6 @@
             </form>
             <form action="{{ url_for('delete_recurring_task_route', task_id=task.id) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete recurring task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
-            </form>
-            <form action="{{ url_for('box_add_recurring', task_id=task.id) }}" method="post">
-              <button type="submit" class="box-btn" aria-label="Put recurring task in box"><span class="btn-icon">📦</span><span class="btn-text">Box</span></button>
             </form>
           </div>
         </li>
@@ -581,9 +601,6 @@
             <form action="{{ url_for('delete_recurring_task_route', task_id=task.id) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete recurring task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <form action="{{ url_for('box_add_recurring', task_id=task.id) }}" method="post">
-              <button type="submit" class="box-btn" aria-label="Put recurring task in box"><span class="btn-icon">📦</span><span class="btn-text">Box</span></button>
-            </form>
           </div>
         </li>
         {% endfor %}
@@ -626,9 +643,6 @@
             <form action="{{ url_for('delete_recurring_task_route', task_id=task.id) }}" method="post">
               <button type="submit" class="btn-delete" aria-label="Delete recurring task"><span class="btn-icon">🗑️</span><span class="btn-text">Delete</span></button>
             </form>
-            <form action="{{ url_for('box_add_recurring', task_id=task.id) }}" method="post">
-              <button type="submit" class="box-btn" aria-label="Put recurring task in box"><span class="btn-icon">📦</span><span class="btn-text">Box</span></button>
-            </form>
           </div>
         </li>
         {% endfor %}
@@ -646,7 +660,8 @@
     </div>
     {% endif %}
 
-  </div>
+      </div> <!-- End task-sections -->
+    </div> <!-- End recurring-tasks-box -->
   </div> <!-- End recurring tasks -->
 
   </div> <!-- End activities-container -->
@@ -958,19 +973,100 @@
       }
     }
 
+    // Ensure user is prompted to choose a date before submitting non-repeat tasks
+    function validateTaskForm(event) {
+      const taskDate = document.getElementById('taskDate');
+      const repeatType = document.getElementById('repeatType').value;
+      const dateError = document.getElementById('dateErrorMessage');
+
+      if (repeatType === 'none' && !taskDate.value) {
+        event.preventDefault();
+        dateError.textContent = 'Please select a calendar date for this task.';
+        dateError.style.display = 'block';
+        taskDate.focus();
+        return false;
+      }
+
+      dateError.style.display = 'none';
+      return true;
+    }
+
+    document.getElementById('taskForm').addEventListener('submit', validateTaskForm);
+
     /* Edit modal removed per user request */
+
+    // Edit task functionality
+    function setupEditButtons() {
+      document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const taskData = JSON.parse(this.getAttribute('data-task'));
+          
+          // Populate form with task data
+          document.getElementById('taskId').value = taskData.id;
+          document.getElementById('taskName').value = taskData.name;
+          document.getElementById('taskDate').value = taskData.date || '';
+          document.getElementById('taskTime').value = taskData.time || '';
+          document.getElementById('taskImportance').value = taskData.importance;
+          document.getElementById('taskDescription').value = taskData.description || '';
+          
+          // Change form action to edit
+          document.getElementById('taskForm').action = `/edit_task/${taskData.id}`;
+          
+          // Show cancel button
+          document.getElementById('cancelEditBtn').style.display = 'inline-block';
+          
+          // Scroll to form
+          document.querySelector('.task-input').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }
+
+    // Cancel edit functionality
+    document.getElementById('cancelEditBtn').addEventListener('click', function() {
+      // Reset form
+      document.getElementById('taskForm').reset();
+      document.getElementById('taskId').value = '';
+      document.getElementById('taskForm').action = '/add_task';
+      this.style.display = 'none';
+      
+      // Reset repeat options
+      toggleRepeatOptions();
+    });
+
+    // Initialize edit buttons when page loads
+    setupEditButtons();
 
     function handleCompletion(event, importance) {
       event.preventDefault();
       
       console.log('DEBUG: handleCompletion called with importance:', importance);
       
+      // Get the form
+      const form = event.target;
+      
       // Trigger celebration
       celebrateTaskCompletion(importance);
       
       // Submit form after a short delay to show celebration
       setTimeout(() => {
-        event.target.submit();
+        console.log('DEBUG: Submitting form with action:', form.action);
+        // Create a new submit button and click it to bypass the formaction
+        try {
+          form.submit();
+          console.log('DEBUG: Form submitted successfully');
+        } catch (err) {
+          console.error('DEBUG: Error submitting form:', err);
+          // Fallback: manually post to the form action
+          fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams(new FormData(form))
+          }).then(() => {
+            window.location.href = form.action.replace('/complete_recurring_task/', '/activities');
+          });
+        }
       }, 500);
     }
   </script>
