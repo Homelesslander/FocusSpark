@@ -1,14 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Task Cards</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Task Cards - ADHD Task Manager</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='child_task_cards.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
   <style>
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');
+      background-size: cover;
+      background-position: center center;
+      filter: blur(6px) saturate(1.05);
+      opacity: 0.85;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .page-content { position: relative; z-index: 1; }
+    
     .cards-container {
       max-width: 1200px;
       margin: 30px auto;
@@ -24,7 +38,7 @@
     
     .task-card {
       background: white;
-      border: 3px solid #e0e0e0;
+      border: 2px solid #ccc;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -43,6 +57,7 @@
       background: #f1f8f4;
       border-color: #4caf50;
       opacity: 0.8;
+      display: none;
     }
     
     .card-image-wrapper {
@@ -57,359 +72,308 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      display: block;
+      transition: transform 0.3s ease;
     }
     
-    .card-image.completed-fade {
-      opacity: 0.5;
-      filter: grayscale(50%);
-    }
-    
-    .completion-badge {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(76, 175, 80, 0.95);
-      color: white;
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
+    .card-image-placeholder {
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 48px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-      z-index: 10;
+      font-size: 2rem;
+      color: white;
+      transition: transform 0.3s ease;
     }
     
-    .task-card.completed .completion-badge {
-      opacity: 1;
+    .task-card:hover:not(.completed) .card-image,
+    .task-card:hover:not(.completed) .card-image-placeholder {
+      transform: scale(1.05);
     }
     
     .card-content {
       padding: 15px;
-    }
-    
-    /* Modal Styles */
-    .task-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    .task-modal.active {
-      display: flex;
-    }
-    
-    .modal-content {
-      background: white;
-      border-radius: 20px;
-      padding: 30px;
-      max-width: 600px;
-      max-height: 80vh;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      position: relative;
-      animation: slideUp 0.3s ease;
-      overflow-y: auto;
-    }
-    
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #f0f0f0;
-    }
-    
-    .modal-title {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: #333;
-      margin: 0;
-      flex: 1;
-    }
-    
-    .modal-close {
-      background: #ff4757;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 1.5rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .modal-close:hover {
-      background: #dc3545;
-      transform: scale(1.1);
-    }
-    
-    .modal-image {
-      width: 100%;
-      max-height: 300px;
-      object-fit: cover;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .modal-description {
-      font-size: 1.1rem;
-      line-height: 1.6;
-      color: #555;
-      margin-bottom: 20px;
-    }
-    
-    .modal-points {
-      background: linear-gradient(135deg, #ffd700, #ffed4e);
-      color: #333;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 1.2rem;
-      font-weight: 700;
       text-align: center;
-      box-shadow: 0 4px 12px rgba(255,215,0,0.3);
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes slideUp {
-      from { 
-        opacity: 0;
-        transform: translateY(50px) scale(0.9);
-      }
-      to { 
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
     }
     
     .card-title {
-      font-weight: 700;
-      font-size: 18px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
       color: #333;
-      margin: 0 0 10px 0;
-      min-height: 48px;
-      display: flex;
-      align-items: center;
     }
     
-    .card-points-display {
-      background: linear-gradient(135deg, #ffd700, #ffed4e);
-      color: #333;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 16px;
-      display: inline-block;
+    .card-description {
+      font-size: 14px;
+      color: #666;
       margin-bottom: 12px;
-      box-shadow: 0 2px 6px rgba(255, 215, 0, 0.3);
+      line-height: 1.4;
+    }
+    
+    .card-points {
+      font-size: 18px;
+      font-weight: bold;
+      color: #4caf50;
+      margin-bottom: 15px;
     }
     
     .complete-btn {
-      width: 100%;
-      padding: 12px;
       background: linear-gradient(135deg, #4caf50, #45a049);
       color: white;
       border: none;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 16px;
+      padding: 10px 20px;
+      border-radius: 25px;
       cursor: pointer;
+      font-weight: 600;
       transition: all 0.3s ease;
-      margin-top: 8px;
+      width: 100%;
     }
     
     .complete-btn:hover:not(:disabled) {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+      background: linear-gradient(135deg, #45a049, #3d8b40);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
     }
     
     .complete-btn:disabled {
       background: #ccc;
       cursor: not-allowed;
-      opacity: 0.7;
+      opacity: 0.6;
     }
     
-    .completed-text {
-      color: #4caf50;
-      font-weight: 700;
-      text-align: center;
-      padding: 12px;
+    .completed-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #4caf50;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
     }
     
-    .no-cards-message {
-      text-align: center;
-      padding: 60px 20px;
-      color: #999;
-      font-size: 18px;
+    .completed-fade {
+      opacity: 0.6;
+      filter: grayscale(50%);
     }
     
-    .particle {
-      position: fixed;
-      pointer-events: none;
-      font-size: 24px;
-      z-index: 1000;
-      animation: float-up 2s ease-out forwards;
-    }
-    
-    @keyframes float-up {
-      0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-150px) scale(0.5) rotate(180deg);
-      }
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-    }
-    
-    .completing {
-      animation: pulse 0.3s ease-in-out;
-    }
-    
-    .loading-spinner {
+    .task-modal {
       display: none;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,0.3);
-      border-top: 3px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
     }
     
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      animation: modalSlideIn 0.3s ease-out;
     }
     
-    .complete-btn.loading .loading-spinner {
-      display: block;
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     
-    .complete-btn.loading {
-      pointer-events: none;
-      opacity: 0.8;
+    .modal-header {
+      background: linear-gradient(135deg, #4caf50, #45a049);
+      color: white;
+      padding: 20px;
+      border-radius: 15px 15px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-
-    .info-section {
-      background: #e3f2fd;
-      color: #1565c0;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 20px;
-      text-align: center;
+    
+    .modal-title {
+      margin: 0;
+      font-size: 24px;
       font-weight: 600;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+    }
+    
+    .modal-close:hover {
+      background-color: rgba(255,255,255,0.2);
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .modal-description {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .modal-points {
+      font-size: 20px;
+      font-weight: bold;
+      color: #4caf50;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-complete-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #4caf50, #45a049);
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .modal-complete-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #45a049, #3d8b40);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+    
+    .modal-complete-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
   </style>
 </head>
-<body>
-
-  <style>
-    .page-bg{position:fixed;inset:0;background-image:url('{{ url_for('static', filename='images/world-environment-day-concept-green-mountains-and-beautiful-blue-sky-clouds.png') }}');background-size:cover;background-position:center center;filter:blur(6px) saturate(1.05);opacity:0.85;z-index:-1;pointer-events:none}
-    .page-content{position:relative;z-index:1}
-  </style>
+<body class="home-page">
   <div class="page-bg" aria-hidden="true"></div>
   <div class="page-content">
+  <div class="menu">
+    <ul>
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('about') }}">About</a></li>
+      <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
+      <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+      <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
+    </ul>
+  </div>
+  <div class="front">
+    <div class="front-header">
+      <div class="front-header-left">
+        <h1>Task Cards</h1>
+        <p class="description">
+          Complete visual task cards to earn points and build your streak!
+        </p>
 
-    <div class="menu">
-      <ul>
-        <li><a href="{{ url_for('home') }}">Home</a></li>
-        <li><a href="{{ url_for('about') }}">About</a></li>
-        <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
-        <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
-        <li><a href="{{ url_for('activities') }}">Activities</a></li>
-        <li><a href="{{ url_for('calm_room') }}" class="active">🧘 Calm Room</a></li>
-      </ul>
-    </div>
+        {% include 'subtabs.html' %}
 
-    <div class="front">
-      <div class="front-header">
-        <div class="front-header-left">
-          <h1>Task Cards</h1>
-          <p class="description">Complete visual task cards to earn points!</p>
-          
-          <ul class="Tabs">
-            <li><a href="{{ url_for('activities') }}">Activities</a></li>
-            <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-            <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-            <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-            <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
-            <li><a href="{{ url_for('child_task_cards') }}">Task Cards</a></li>
-            <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-            <li><a href="{{ url_for('settings') }}">Settings</a></li>
-          </ul>
-        </div>
-        <div class="front-header-right">
-          <h3 style="text-align:right;margin:0;padding-top:8px;">Complete Tasks!</h3>
-        </div>
+        <h2 id="greeting">Hello, {{ username }}!</h2>
+      </div>
+
+      <div class="front-header-right">
+        <h3 style="text-align:right;margin:0;padding-top:8px;">Points: {{ points }}</h3>
       </div>
     </div>
+  </div>
 
-    <div class="cards-container">
-      {% if cards %}
-        <div class="info-section">
-          ✨ Click "Mark Complete" to finish a task and earn points! Each card can only be completed once.
+  <div class="cards-container">
+    <h3 style="text-align: center; margin-bottom: 10px; color: #333;">🎯 Complete Task Cards & Earn Points!</h3>
+    <p style="text-align: center; margin-bottom: 30px; color: #666;">
+      Click "Mark Complete" to finish a task and earn points! Each card can only be completed once.
+    </p>
+    
+    <div class="cards-grid">
+      {% for card in cards %}
+        <div class="task-card {% if card.completed %}completed{% endif %}" id="card-{{ card.id }}" data-card-id="{{ card.id }}" data-title="{{ card.title|e }}" data-description="{{ card.description|e }}" data-image-path="{{ card.image_path|e }}" data-points="{{ card.points }}" data-importance="{{ card.importance }}">
+          <div class="card-image-wrapper">
+            {% if card.image_path.startswith('recommended/') %}
+              {% set category = card.image_path.split('/')[1].split('.')[0] %}
+              {% if category == 'morning-routine' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                  <span style="font-size:2rem;">🎒</span>
+                </div>
+              {% elif category == 'school-work' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                  <span style="font-size:2rem;">📚</span>
+                </div>
+              {% elif category == 'chores' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                  <span style="font-size:2rem;">🏠</span>
+                </div>
+              {% elif category == 'self-care' %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #f857a6 0%, #ff5858 100%);">
+                  <span style="font-size:2rem;">💚</span>
+                </div>
+              {% else %}
+                <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ddd 0%, #bbb 100%);">
+                  <span style="font-size:2rem;">📋</span>
+                </div>
+              {% endif %}
+            {% else %}
+              <img src="{{ url_for('static', filename=card.image_path) }}" alt="{{ card.title }}" class="card-image {% if card.completed %}completed-fade{% endif %}">
+            {% endif %}
+            {% if card.completed %}
+              <div class="completed-badge">✓ Completed</div>
+            {% endif %}
+          </div>
+          <div class="card-content">
+            <h3 class="card-title">{{ card.title }}</h3>
+            <p class="card-description">{{ card.description }}</p>
+            <div class="card-points">🪙 {{ card.points }} Points</div>
+            <button class="complete-btn" onclick="event.stopPropagation(); completeCard({{ card.id }}, '{{ card.importance }}')" {% if card.completed %}disabled{% endif %}>
+              {% if card.completed %}✓ Already Completed{% else %}🎯 Mark Complete{% endif %}
+            </button>
+          </div>
         </div>
-        
-        <div class="cards-grid">
-          {% for card in cards %}
-            <div class="task-card {% if card.completed %}completed{% endif %}" id="card-{{ card.id }}" onclick="openTaskModal({{ card.id }}, '{{ card.title }}', '{{ card.description }}', '{{ card.image_path }}', {{ card.points }})">
-              <div class="card-image-wrapper">
-                <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image {% if card.completed %}completed-fade{% endif %}">
-                <div class="completion-badge">✓</div>
-              </div>
-              
-              <div class="card-content">
-                <h3 class="card-title">{{ card.title }}</h3>
-                <div class="card-points-display">{{ card.points }} points</div>
-                
-                {% if card.completed %}
-                  <div class="completed-text">✓ Completed!</div>
-                {% else %}
-                  <button class="complete-btn" onclick="completeCard({{ card.id }}, event)">
-                    Mark Complete
-                    <div class="loading-spinner"></div>
-                  </button>
-                {% endif %}
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="no-cards-message">
-          <p>🎯 No task cards available yet.</p>
-          <p>Check back later for new challenges!</p>
-        </div>
-      {% endif %}
+      {% endfor %}
     </div>
 
+    {% if not cards %}
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No task cards available right now.</h3>
+        <p>Check back later for new tasks!</p>
+      </div>
+    {% endif %}
+  </div>
+
+  </div>
   </div>
 
   <!-- Task Modal -->
@@ -417,236 +381,175 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 class="modal-title" id="modalTitle">Task Title</h2>
-        <button class="modal-close" onclick="closeTaskModal()">×</button>
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
       </div>
-      <img id="modalImage" src="" alt="Task Image" class="modal-image">
-      <p id="modalDescription" class="modal-description">Task description will appear here.</p>
-      <div id="modalPoints" class="modal-points">0 points</div>
-      <button id="modalCompleteBtn" class="complete-btn" onclick="completeTaskFromModal()">
-        Mark Complete
-        <div class="loading-spinner"></div>
-      </button>
+      <div class="modal-body">
+        <div id="modalImageContainer" class="modal-image"></div>
+        <p id="modalDescription" class="modal-description">Task description will appear here.</p>
+        <div id="modalPoints" class="modal-points">🪙 0 Points</div>
+        <button id="modalCompleteBtn" class="modal-complete-btn">🎯 Mark Complete</button>
+      </div>
     </div>
   </div>
 
   <script>
-    async function completeCard(cardId, event) {
-      event.preventDefault();
-      const button = event.target.closest('.complete-btn');
-      const card = document.getElementById(`card-${cardId}`);
-      
-      if (button.disabled) return;
-      
-      button.disabled = true;
-      button.classList.add('loading');
-      button.innerHTML = '<div class="loading-spinner"></div>';
-      
-      try {
-        const response = await fetch('{{ url_for("complete_task_card") }}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ card_id: cardId })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Animate card completion
-          card.classList.add('completing');
-          
-          setTimeout(() => {
-            card.classList.add('completed');
-            card.classList.remove('completing');
-            
-            // Hide button and show completed message
-            button.replaceWith(document.createElement('div')).outerHTML = 
-              '<div class="completed-text">✓ Completed!</div>';
-            
-            // Fade image
-            card.querySelector('.card-image').classList.add('completed-fade');
-            
-            // Fire particles
-            fireParticles(card, data.points_awarded);
-            
-            // Trigger celebration
-            if (window.triggerCelebration) {
-              triggerCelebration();
-            }
-          }, 300);
-        } else {
-          alert('Error: ' + (data.error || 'Could not complete card'));
-          button.disabled = false;
-          button.classList.remove('loading');
-          button.textContent = 'Mark Complete';
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to complete card');
-        button.disabled = false;
-        button.classList.remove('loading');
-        button.textContent = 'Mark Complete';
-      }
-    }
+    // Modal functionality
+    const modal = document.getElementById('taskModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalImageContainer = document.getElementById('modalImageContainer');
+    const modalDescription = document.getElementById('modalDescription');
+    const modalPoints = document.getElementById('modalPoints');
+    const modalCompleteBtn = document.getElementById('modalCompleteBtn');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
     
-    function fireParticles(element, points) {
-      const rect = element.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      
-      const particles = ['⭐', '✨', '🎉', '🌟', '💫', '👏'];
-      
-      for (let i = 0; i < 12; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.textContent = particles[Math.floor(Math.random() * particles.length)];
-        particle.style.left = centerX + 'px';
-        particle.style.top = centerY + 'px';
-        particle.style.transform = `translate(${(Math.random() - 0.5) * 200}px, ${(Math.random() - 0.5) * 200}px)`;
-        document.body.appendChild(particle);
-        
-        setTimeout(() => particle.remove(), 2000);
-      }
-      
-      // Show points popup
-      const pointsPopup = document.createElement('div');
-      pointsPopup.textContent = `+${points} points!`;
-      pointsPopup.style.position = 'fixed';
-      pointsPopup.style.left = centerX + 'px';
-      pointsPopup.style.top = centerY + 'px';
-      pointsPopup.style.color = '#4caf50';
-      pointsPopup.style.fontSize = '24px';
-      pointsPopup.style.fontWeight = 'bold';
-      pointsPopup.style.zIndex = '1000';
-      pointsPopup.style.pointerEvents = 'none';
-      pointsPopup.style.animation = 'float-up 2s ease-out forwards';
-      document.body.appendChild(pointsPopup);
-      
-      setTimeout(() => pointsPopup.remove(), 2000);
-    }
-    
-    // Modal Functions
     let currentCardId = null;
-    
-    function openTaskModal(cardId, title, description, imagePath, points) {
-      currentCardId = cardId;
-      const modal = document.getElementById('taskModal');
-      const modalTitle = document.getElementById('modalTitle');
-      const modalDescription = document.getElementById('modalDescription');
-      const modalImage = document.getElementById('modalImage');
-      const modalPoints = document.getElementById('modalPoints');
-      const modalCompleteBtn = document.getElementById('modalCompleteBtn');
-      
-      modalTitle.textContent = title;
-      modalDescription.textContent = description || 'Complete this task to earn points!';
-      modalImage.src = imagePath;
-      modalPoints.textContent = points + ' points';
-      
-      // Show/hide complete button based on whether card is completed
-      const card = document.getElementById(`card-${cardId}`);
-      if (card && card.classList.contains('completed')) {
-        modalCompleteBtn.style.display = 'none';
-      } else {
-        modalCompleteBtn.style.display = 'block';
-      }
-      
-      modal.classList.add('active');
-    }
-    
-    function closeTaskModal() {
-      const modal = document.getElementById('taskModal');
-      modal.classList.remove('active');
-      currentCardId = null;
-    }
-    
-    // Complete task from modal
-    async function completeTaskFromModal() {
-      if (!currentCardId) return;
-      
-      const modalBtn = document.getElementById('modalCompleteBtn');
-      const card = document.getElementById(`card-${currentCardId}`);
-      
-      if (modalBtn.disabled) return;
-      
-      modalBtn.disabled = true;
-      modalBtn.classList.add('loading');
-      modalBtn.innerHTML = '<div class="loading-spinner"></div>';
-      
-      try {
-        const response = await fetch('{{ url_for("complete_task_card") }}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ card_id: currentCardId })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Animate card completion
-          card.classList.add('completing');
-          
-          setTimeout(() => {
-            card.classList.add('completed');
-            card.classList.remove('completing');
-            
-            // Hide button and show completed message
-            modalBtn.style.display = 'none';
-            
-            // Update the card's button as well
-            const cardBtn = card.querySelector('.complete-btn');
-            if (cardBtn) {
-              cardBtn.replaceWith(document.createElement('div')).outerHTML = 
-                '<div class="completed-text">✓ Completed!</div>';
-            }
-            
-            // Fade image
-            card.querySelector('.card-image').classList.add('completed-fade');
-            
-            // Fire particles
-            fireParticles(card, data.points_awarded);
-            
-            // Trigger celebration
-            if (window.triggerCelebration) {
-              triggerCelebration();
-            }
-            
-            // Close modal after a short delay
-            setTimeout(() => {
-              closeTaskModal();
-            }, 1500);
-          }, 300);
-        } else {
-          alert('Error: ' + (data.error || 'Could not complete card'));
-          modalBtn.disabled = false;
-          modalBtn.classList.remove('loading');
-          modalBtn.textContent = 'Mark Complete';
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to complete card');
-        modalBtn.disabled = false;
-        modalBtn.classList.remove('loading');
-        modalBtn.textContent = 'Mark Complete';
-      }
-    }
-    
-    // Close modal when clicking outside
-    document.getElementById('taskModal').addEventListener('click', function(event) {
-      if (event.target === this) {
-        closeTaskModal();
-      }
-    });
-    
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(event) {
-      if (event.key === 'Escape') {
-        closeTaskModal();
-      }
-    });
-  </script>
+    let currentImportance = null;
 
+    // Open modal when clicking on a task card
+    document.addEventListener('click', function(e) {
+      const card = e.target.closest('.task-card');
+      if (card && !e.target.closest('.complete-btn')) {
+        currentCardId = card.dataset.cardId;
+        currentImportance = card.dataset.importance;
+        
+        // Populate modal with card data
+        modalTitle.textContent = card.dataset.title;
+        
+        // Handle image
+        const cardImage = card.querySelector('.card-image');
+        const cardPlaceholder = card.querySelector('.card-image-placeholder');
+        if (cardImage) {
+          modalImageContainer.innerHTML = `<img src="${cardImage.src}" alt="Task Image" class="modal-image">`;
+        } else if (cardPlaceholder) {
+          modalImageContainer.innerHTML = cardPlaceholder.outerHTML.replace('card-image-placeholder', 'modal-image');
+        } else {
+          modalImageContainer.innerHTML = '<div class="modal-image" style="background:#f5f5f5;"></div>';
+        }
+        
+        // Handle description - use dataset description first, then fallback to element text
+        const description = card.dataset.description || card.querySelector('.card-description').textContent || 'No description available';
+        modalDescription.textContent = description;
+        
+        modalPoints.textContent = card.querySelector('.card-points').textContent;
+        
+        // Update complete button
+        const isCompleted = card.classList.contains('completed');
+        modalCompleteBtn.disabled = isCompleted;
+        modalCompleteBtn.textContent = isCompleted ? '✓ Already Completed' : '🎯 Mark Complete';
+        
+        // Show modal
+        modal.style.display = 'block';
+      }
+    });
+
+    // Close modal when clicking the X
+    modalCloseBtn.addEventListener('click', function() {
+      modal.style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+
+    // Handle completion from modal
+    modalCompleteBtn.addEventListener('click', function() {
+      if (currentCardId && !this.disabled) {
+        completeCard(currentCardId, currentImportance);
+        modal.style.display = 'none';
+      }
+    });
+
+    function completeCard(cardId, importance) {
+      console.log('completeCard called with', cardId, importance);
+      const card = document.getElementById(`card-${cardId}`);
+      if (!card) {
+        console.error('No card element found for', cardId);
+        return;
+      }
+      const btn = card.querySelector('.complete-btn');
+      if (!btn) {
+        console.error('No complete button found for card', cardId);
+        return;
+      }
+      
+      if (btn.disabled) return;
+      
+      // Disable button immediately
+      btn.disabled = true;
+      btn.textContent = '⏳ Completing...';
+      
+      // Task cards don't trigger celebrations - only main activities page
+      
+      // Send completion request
+      console.log(`Attempting to complete card ${cardId}`);
+      console.log('Sending card_id:', cardId, 'Type:', typeof cardId);
+      fetch(`/complete-task-card`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ card_id: cardId })
+      })
+      .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        console.log('Response type:', response.headers.get('content-type'));
+        
+        // Try to get response text first to see raw response
+        return response.text().then(text => {
+          console.log('Raw response text:', text);
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('Failed to parse JSON:', e);
+            return { success: false, error: 'Invalid JSON response: ' + text };
+          }
+        });
+      })
+      .then(data => {
+        console.log('Parsed data:', data);
+        if (data.success) {
+          console.log('Complete card success response', data);
+          // Remove card from DOM, hide as fallback
+          if (card) {
+            card.remove();
+          }
+          
+          // Update points display
+          const pointsElement = document.querySelector('.front-header-right h3');
+          if (pointsElement && data.points_awarded) {
+            const currentPoints = parseInt(pointsElement.textContent.replace('Points: ', '')) || 0;
+            pointsElement.textContent = `Points: ${currentPoints + data.points_awarded}`;
+          }
+          
+          // Close modal if open
+          modal.style.display = 'none';
+          
+          // If card still present, hide as robust fallback
+          if (card && card.parentElement) {
+            card.style.display = 'none';
+          }
+          
+          // https://stackoverflow.com/questions/14701433/how-to-trigger-a-full-page-refresh-on-a-timespan
+          window.setTimeout(() => { if (document.getElementById(`card-${cardId}`)) { console.warn('Card still present after remove, reloading'); location.reload(); } }, 300);
+        } else {
+          // Re-enable button if failed
+          btn.disabled = false;
+          btn.textContent = '🎯 Mark Complete';
+          console.error('Server error:', data.error);
+          alert(`Failed to complete task: ${data.error || 'Unknown error'}. Please try again.`);
+        }
+      })
+      .catch(error => {
+        console.error('Network error:', error);
+        btn.disabled = false;
+        btn.textContent = '🎯 Mark Complete';
+        alert('Network error completing task. Please try again.');
+      });
+    }
+  </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, make_response
 from login import login_bp
 from db_config import get_db_conn_wrapped
 import datetime
@@ -7,6 +7,7 @@ import smtplib
 import ssl
 import threading
 import time
+import sqlite3
 
 TASK_BREAKDOWN_PATTERNS = {
     "write": [
@@ -96,6 +97,9 @@ def auto_breakdown_task(task_name):
 
 
 def get_db_conn():
+    # Use absolute path for database to fix PythonAnywhere path issues
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATABASE_PATH = os.path.join(BASE_DIR, 'adhd_app.db')
     return get_db_conn_wrapped()
 
 
@@ -106,51 +110,113 @@ def ensure_users_table():
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(255) UNIQUE NOT NULL,
-            password TEXT NOT NULL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            points INTEGER DEFAULT 0,
+            total_earned INTEGER DEFAULT 0,
+            email TEXT,
+            reminders_enabled INTEGER DEFAULT 0,
+            reminder_frequency TEXT,
+            email_verified INTEGER DEFAULT 0,
+            role TEXT DEFAULT 'child'
         )
     ''')
     
-    # Get existing columns using MySQL DESCRIBE command
+    # Add missing columns to existing table
     try:
-        c.execute("DESCRIBE users")
-        columns = [row[0] for row in c.fetchall()]
-    except Exception:
-        columns = []
+        c.execute("ALTER TABLE users ADD COLUMN total_earned INTEGER DEFAULT 0")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding total_earned column: {e}")
     
-    if "points" not in columns:
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    if "total_earned" not in columns:
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN total_earned INTEGER DEFAULT 0")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    # Add optional email and reminder preferences columns if missing
-    if "email" not in columns:
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN email TEXT")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    if "reminders_enabled" not in columns:
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    if "reminder_frequency" not in columns:
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 0")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding reminders_enabled column: {e}")
     
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding reminder_frequency column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding email_verified column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'child'")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding role column: {e}")
+    
+    conn.commit()
+    conn.close()
+
+
+def ensure_recurring_tasks_table():
+    """Create the recurring_tasks table for tasks that repeat without specific due dates"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS recurring_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            time TEXT,
+            importance TEXT,
+            completed INTEGER DEFAULT 0,
+            user TEXT,
+            repeat_type TEXT DEFAULT 'none',
+            repeat_interval INTEGER DEFAULT 1,
+            repeat_days TEXT,
+            next_due TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_completed_date TEXT,
+            completion_period TEXT
+        )
+    ''')
+    
+    # Add in_box column to recurring_tasks table if it doesn't exist
+    try:
+        c.execute("ALTER TABLE recurring_tasks ADD COLUMN in_box INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    # Add task_type column to box_moves table if it doesn't exist
+    try:
+        c.execute("ALTER TABLE box_moves ADD COLUMN task_type TEXT DEFAULT 'regular'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    # Add last_completed_date column if it doesn't exist
+    try:
+        c.execute("ALTER TABLE recurring_tasks ADD COLUMN last_completed_date TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    # Add completion_period column if it doesn't exist
+    try:
+        c.execute("ALTER TABLE recurring_tasks ADD COLUMN completion_period TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add reminders_enabled column to users table if it doesn't exist
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminders_enabled INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add reminder_frequency column to users table if it doesn't exist
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reminder_frequency TEXT DEFAULT 'daily'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     conn.commit()
     conn.close()
 
@@ -161,52 +227,59 @@ def ensure_tasks_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS tasks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            date VARCHAR(50),
-            time VARCHAR(50),
-            importance VARCHAR(50) NOT NULL,
-            user VARCHAR(255),
-            completed INT DEFAULT 0,
-            completed_at VARCHAR(255)
+            date TEXT,
+            time TEXT,
+            importance TEXT,
+            completed INTEGER DEFAULT 0,
+            user TEXT,
+            in_box INTEGER DEFAULT 0,
+            repeat_type TEXT DEFAULT 'none',
+            repeat_interval INTEGER DEFAULT 1,
+            repeat_days TEXT,
+            next_due TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
    
-    # ensure all necessary columns exist (handles migrations for MySQL)
+    # Add missing columns to existing table
     try:
-        c.execute("DESCRIBE tasks")
-        existing_cols = [row[0] for row in c.fetchall()]
-    except Exception:
-        existing_cols = []
-    if "completed" not in existing_cols:
-        try:
-            c.execute("ALTER TABLE tasks ADD COLUMN completed INT DEFAULT 0")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    if "completed_at" not in existing_cols:
-        try:
-            c.execute("ALTER TABLE tasks ADD COLUMN completed_at VARCHAR(255)")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    if "time" not in existing_cols:
-        try:
-            c.execute("ALTER TABLE tasks ADD COLUMN time VARCHAR(50)")
-        except Exception as e:
-            if not (hasattr(e, 'errno') and e.errno == 1060):
-                raise
-    # Add box-related columns for Option B
-    if "in_box" not in existing_cols:
-        try:
-            c.execute("ALTER TABLE tasks ADD COLUMN in_box INTEGER DEFAULT 0")
-        except Exception:
-            pass
-    if "box_count" not in existing_cols:
-        try:
-            c.execute("ALTER TABLE tasks ADD COLUMN box_count INTEGER DEFAULT 0")
-        except Exception:
-            pass
+        c.execute("ALTER TABLE tasks ADD COLUMN repeat_type TEXT DEFAULT 'none'")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding repeat_type column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER DEFAULT 1")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding repeat_interval column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN repeat_days TEXT")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding repeat_days column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN next_due TEXT")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding next_due column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN description TEXT")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding description column: {e}")
+    
+    try:
+        c.execute("ALTER TABLE tasks ADD COLUMN box_count INTEGER DEFAULT 0")
+    except Exception as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Error adding box_count column: {e}")
+    
     conn.commit()
     conn.close()
 
@@ -216,18 +289,13 @@ def ensure_custom_rewards_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS custom_rewards (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(255) NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            cost INT NOT NULL,
-            duration_minutes INT DEFAULT 0
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            title TEXT NOT NULL,
+            cost INTEGER NOT NULL,
+            duration_minutes INTEGER DEFAULT 0
         )
     ''')
-    try:
-        c.execute("ALTER TABLE custom_rewards ADD COLUMN duration_minutes INT DEFAULT 0")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
     conn.commit()
     conn.close()
 
@@ -238,11 +306,11 @@ def ensure_subtasks_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS subtasks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            parent_task_id INT NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            completed INT DEFAULT 0,
-            completed_at VARCHAR(255),
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_task_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            completed INTEGER DEFAULT 0,
+            completed_at TEXT,
             FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
         )
     ''')
@@ -256,22 +324,17 @@ def ensure_redemptions_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS redemptions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(255) NOT NULL,
-            reward_type VARCHAR(50) NOT NULL,
-            reward_id INT NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            cost INT NOT NULL,
-            redeemed_at VARCHAR(255) NOT NULL,
-            expires_at VARCHAR(255),
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            reward_type TEXT NOT NULL,
+            reward_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            cost INTEGER NOT NULL,
+            redeemed_at TEXT NOT NULL,
+            expires_at TEXT,
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
-    try:
-        c.execute("ALTER TABLE redemptions ADD COLUMN expires_at VARCHAR(255)")
-    except Exception as e:
-        if not (hasattr(e, 'errno') and e.errno == 1060):
-            raise
     conn.commit()
     conn.close()
 
@@ -287,11 +350,11 @@ def ensure_streaks_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS streaks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(255) UNIQUE NOT NULL,
-            current_streak INT DEFAULT 0,
-            last_completion_date VARCHAR(255),
-            longest_streak INT DEFAULT 0,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            current_streak INTEGER DEFAULT 0,
+            last_completion_date TEXT,
+            longest_streak INTEGER DEFAULT 0,
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
@@ -299,38 +362,63 @@ def ensure_streaks_table():
     conn.close()
 
 
-def ensure_box_moves_table():
-    """Create the `box_moves` table to store move history for analytics.
-
-    The SQL is written differently depending on whether we're using MySQL
-    or SQLite. MySQL requires `AUTO_INCREMENT` while SQLite uses
-    `AUTOINCREMENT` (or simply `INTEGER PRIMARY KEY`). We try the MySQL
-    form first and fall back to the SQLite form if it fails.
-    """
+def ensure_visual_task_cards_table():
+    """Create visual task cards table for parent-created task cards"""
     conn = get_db_conn()
     c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS visual_task_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_username TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            image_path TEXT NOT NULL,
+            points INTEGER NOT NULL,
+            created_at TEXT,
+            is_recommended INTEGER DEFAULT 0
+        )
+    ''')
+    conn.commit()
+
+    # Add description column if it doesn't exist (for existing tables)
     try:
-        # attempt MySQL‑style creation
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS box_moves (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                task_id INT NOT NULL,
-                username VARCHAR(255),
-                moved_at VARCHAR(255) NOT NULL,
-                FOREIGN KEY (task_id) REFERENCES tasks(id)
-            )
-        ''')
-    except Exception:
-        # fallback for SQLite or other DBs
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS box_moves (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                task_id INTEGER NOT NULL,
-                username TEXT,
-                moved_at TEXT NOT NULL,
-                FOREIGN KEY (task_id) REFERENCES tasks(id)
-            )
-        ''')
+        c.execute("ALTER TABLE visual_task_cards ADD COLUMN description TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    conn.close()
+
+
+def ensure_task_completions_table():
+    """Create task completions table for tracking child task card completions"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS task_completions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER NOT NULL,
+            child_username TEXT NOT NULL,
+            completed_at TEXT NOT NULL,
+            FOREIGN KEY (card_id) REFERENCES visual_task_cards(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def ensure_box_moves_table():
+    """Create the `box_moves` table to store move history for analytics."""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS box_moves (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            username TEXT,
+            moved_at TEXT NOT NULL,
+            FOREIGN KEY (task_id) REFERENCES tasks(id)
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -399,13 +487,16 @@ def get_box_stats(username=None, limit=10):
     return [dict(r) for r in rows]
 
 
-def get_tasks_grouped():
+def get_tasks_grouped(username=None):
     
     conn = get_db_conn()
     c = conn.cursor()
     
     # Exclude tasks currently placed in the box
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY id")
+    if username:
+        c.execute("SELECT id, name, date, time, importance, description FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) AND user = ? ORDER BY id", (username,))
+    else:
+        c.execute("SELECT id, name, date, time, importance, description FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY id")
     rows = c.fetchall()
     conn.close()
 
@@ -426,6 +517,7 @@ def get_tasks_grouped():
             "name": r['name'],
             "date": r['date'],
             "time": r['time'] if 'time' in r.keys() else None,
+            "description": r['description'] if 'description' in r.keys() else None,
             "subtasks": subtasks
         })
     
@@ -436,12 +528,15 @@ def get_tasks_grouped():
     return grouped
 
 
-def get_calendar_tasks():
+def get_calendar_tasks(username=None):
     """Get tasks organized by date for calendar view"""
     conn = get_db_conn()
     c = conn.cursor()
     # Exclude boxed tasks from calendar view
-    c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY date")
+    if username:
+        c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) AND user = ? ORDER BY date", (username,))
+    else:
+        c.execute("SELECT id, name, date, time, importance FROM tasks WHERE (completed = 0 OR completed IS NULL) AND (in_box = 0 OR in_box IS NULL) ORDER BY date")
     rows = c.fetchall()
     conn.close()
     
@@ -531,6 +626,339 @@ def insert_subtask_db(parent_task_id, name):
     return task_id
 
 
+def create_recurring_task(name, description, time, importance, username, repeat_type='none', repeat_interval=1, repeat_days=None):
+    """Create a new recurring task"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Calculate next due date based on repeat settings
+    next_due = calculate_next_due(datetime.datetime.now().date().isoformat(), repeat_type, repeat_interval, repeat_days)
+    
+    c.execute('''
+        INSERT INTO recurring_tasks (name, description, time, importance, user, repeat_type, repeat_interval, repeat_days, next_due)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (name, description, time, importance, username, repeat_type, repeat_interval, repeat_days, next_due))
+    
+    task_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return task_id
+
+
+def get_recurring_tasks_grouped(username=None):
+    """Get all recurring tasks grouped by importance"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    today = datetime.datetime.now().date()
+    current_period = get_current_period(today, 'daily', 1)
+    
+    if username:
+        c.execute("""
+            SELECT * FROM recurring_tasks 
+            WHERE user = ?
+            ORDER BY importance DESC, next_due ASC
+        """, (username,))
+    else:
+        c.execute("""
+            SELECT * FROM recurring_tasks 
+            ORDER BY importance DESC, next_due ASC
+        """, ())
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    grouped = {"Major": [], "Medium": [], "Minor": []}
+    for r in rows:
+        importance = r['importance']
+        if importance in grouped:
+            task_dict = dict(r)
+            # Check if task can be completed today
+            task_period = get_current_period(today, task_dict['repeat_type'], task_dict['repeat_interval'])
+            task_dict['can_complete'] = task_dict['completion_period'] != task_period
+            task_dict['completion_status'] = 'Completed' if task_dict['completion_period'] == task_period else 'Pending'
+            grouped[importance].append(task_dict)
+    
+    return grouped
+
+
+def complete_recurring_task(task_id, username):
+    conn = get_db_conn()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT * FROM recurring_tasks WHERE id = ?", (task_id,))
+        task = c.fetchone()
+        if not task:
+            conn.close()
+            return False
+        task_dict = dict(task)
+        
+        today = datetime.datetime.now().date()
+        current_period = get_current_period(today, task_dict['repeat_type'], task_dict['repeat_interval'])
+        
+        # Check if already completed in this period
+        if task_dict['completion_period'] == current_period:
+            print(f"Task {task_dict['name']} already completed in period {current_period}")
+            conn.close()
+            return False
+        
+        # Mark as completed for this period
+        c.execute("UPDATE recurring_tasks SET completed = 1, last_completed_date = ?, completion_period = ? WHERE id = ?", 
+                 (today.isoformat(), current_period, task_id))
+        
+        # Reset completed status for next period (so it can be completed again when period changes)
+        c.execute("UPDATE recurring_tasks SET completed = 0 WHERE id = ?", (task_id,))
+        
+        # Calculate next due date
+        next_due = calculate_next_due(today.isoformat(), task_dict['repeat_type'], task_dict['repeat_interval'], task_dict['repeat_days'])
+        c.execute("UPDATE recurring_tasks SET next_due = ? WHERE id = ?", (next_due, task_id))
+        
+        # Award points
+        points = {"Major": 30, "Medium": 20, "Minor": 10}.get(task_dict['importance'], 10)
+        add_points(username, points)
+        
+        conn.commit()
+        
+        # Send email reminder in background thread to avoid blocking
+        reminder_thread = threading.Thread(target=send_recurring_task_reminder, args=(username, task_dict, next_due), daemon=True)
+        reminder_thread.start()
+        
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error completing recurring task: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_current_period(date, repeat_type, repeat_interval):
+    """Get the current period identifier for a given date and repeat pattern"""
+    if repeat_type == 'daily':
+        return date.strftime('%Y-%m-%d')
+    elif repeat_type == 'weekly':
+        # Get the start of the current week (Monday)
+        week_start = date - datetime.timedelta(days=date.weekday())
+        return week_start.strftime('%Y-%m-%d')
+    elif repeat_type == 'specific_days':
+        return date.strftime('%Y-%m-%d')
+    else:
+        return date.strftime('%Y-%m-%d')
+
+
+def send_recurring_task_reminder(username, task, next_due):
+    """Send email reminder for next recurring task occurrence"""
+    try:
+        # Get user email
+        conn = get_db_conn()
+        c = conn.cursor()
+        c.execute("SELECT email, reminders_enabled FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+        conn.close()
+        
+        if not user or not user['email'] or not user['reminders_enabled']:
+            return
+        
+        # Parse next due date
+        if isinstance(next_due, str):
+            next_due_date = datetime.datetime.fromisoformat(next_due.replace('Z', '+00:00')).date()
+        else:
+            next_due_date = next_due
+        
+        # Send reminder email
+        subject = f"🔄 Recurring Task Reminder: {task['name']}"
+        body = f"""
+Hi {username},
+
+This is a reminder for your recurring task:
+
+📋 Task: {task['name']}
+🎯 Next Due: {next_due_date.strftime('%A, %B %d, %Y')}
+⏰ Time: {task.get('time', 'No specific time')}
+📊 Importance: {task['importance']}
+
+Your task has been completed for the current period and is now scheduled for the next occurrence.
+
+Keep up the great work!
+
+Best regards,
+ADHD Task Manager
+"""
+        
+        send_email(user['email'], subject, body)
+        print(f"Sent recurring task reminder to {user['email']}")
+        
+    except Exception as e:
+        print(f"Error sending recurring task reminder: {e}")
+
+
+def move_recurring_task_to_box(task_id, username):
+    """Move a recurring task to the box"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Insert into box_moves table
+    c.execute("INSERT INTO box_moves (task_id, username, task_type) VALUES (?, ?, 'recurring')", (task_id, username))
+    
+    # Mark the recurring task as in box
+    c.execute("UPDATE recurring_tasks SET in_box = 1 WHERE id = ?", (task_id,))
+    
+    conn.commit()
+    conn.close()
+
+
+def restore_recurring_task_from_box(task_id, username):
+    """Restore a recurring task from the box"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Remove from box_moves table
+    c.execute("DELETE FROM box_moves WHERE task_id = ? AND username = ?", (task_id, username))
+    
+    # Mark the recurring task as not in box
+    c.execute("UPDATE recurring_tasks SET in_box = 0 WHERE id = ?", (task_id,))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_recurring_box_items(username):
+    """Get all recurring tasks in the box for a user"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT r.id, r.name, r.description, r.time, r.importance, r.repeat_type, r.repeat_interval, r.repeat_days
+        FROM recurring_tasks r
+        JOIN box_moves b ON r.id = b.task_id
+        WHERE b.username = ? AND b.task_type = 'recurring'
+        ORDER BY 
+          CASE r.importance 
+            WHEN 'Major' THEN 1 
+            WHEN 'Medium' THEN 2 
+            WHEN 'Minor' THEN 3 
+            ELSE 4 
+          END
+    """, (username,))
+    items = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return items
+
+
+def delete_recurring_task(task_id):
+    """Delete a recurring task"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("DELETE FROM recurring_tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+
+def create_repeatable_task(name, date, time, importance, username, repeat_type='none', repeat_interval=1, repeat_days=None):
+    """Create a new repeatable task"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Calculate next due date based on repeat settings
+    next_due = calculate_next_due(date, repeat_type, repeat_interval, repeat_days)
+    
+    c.execute('''
+        INSERT INTO tasks (name, date, time, importance, user, repeat_type, repeat_interval, repeat_days, next_due)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (name, date, time, importance, username, repeat_type, repeat_interval, repeat_days, next_due))
+    
+    task_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return task_id
+
+
+def calculate_next_due(base_date, repeat_type, repeat_interval, repeat_days=None):
+    """Calculate the next due date for a repeatable task"""
+    if repeat_type == 'none':
+        return base_date
+    
+    base_dt = datetime.datetime.strptime(base_date, '%Y-%m-%d')
+    
+    if repeat_type == 'daily':
+        next_dt = base_dt + datetime.timedelta(days=repeat_interval)
+        return next_dt.strftime('%Y-%m-%d')
+    
+    elif repeat_type == 'weekly':
+        next_dt = base_dt + datetime.timedelta(weeks=repeat_interval)
+        return next_dt.strftime('%Y-%m-%d')
+    
+    elif repeat_type == 'specific_days' and repeat_days:
+        # Parse repeat_days like "0,2,4" (Sun, Tue, Thu) or "1,3,5" (Mon, Wed, Fri)
+        days = [int(d.strip()) for d in repeat_days.split(',')]
+        current_weekday = base_dt.weekday()  # Monday=0, Sunday=6
+        
+        # Find next occurrence
+        days_ahead = 7
+        for day in sorted(days):
+            if day > current_weekday:
+                days_ahead = day - current_weekday
+                break
+        
+        next_dt = base_dt + datetime.timedelta(days=days_ahead)
+        return next_dt.strftime('%Y-%m-%d')
+    
+    return base_date
+
+
+def generate_repeated_tasks():
+    """Generate new instances of repeatable tasks that are due"""
+    conn = get_db_conn()
+    c = conn.cursor()
+    
+    # Get all repeatable tasks that need new instances
+    today = datetime.datetime.now().date().isoformat()
+    c.execute('''
+        SELECT * FROM tasks 
+        WHERE repeat_type != 'none' 
+        AND next_due <= ? 
+        AND (completed = 0 OR completed IS NULL)
+    ''', (today,))
+    
+    repeatable_tasks = c.fetchall()
+    
+    for task in repeatable_tasks:
+        task_dict = dict(task)
+        
+        # Create new instance
+        new_date = calculate_next_due(
+            task_dict['next_due'], 
+            task_dict['repeat_type'], 
+            task_dict['repeat_interval'], 
+            task_dict['repeat_days']
+        )
+        
+        # Insert new task instance
+        c.execute('''
+            INSERT INTO tasks (name, date, time, importance, user, repeat_type, repeat_interval, repeat_days, next_due)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            task_dict['name'], 
+            new_date, 
+            task_dict['time'], 
+            task_dict['importance'], 
+            task_dict['user'],
+            task_dict['repeat_type'],
+            task_dict['repeat_interval'],
+            task_dict['repeat_days'],
+            new_date
+        ))
+        
+        # Update the original task's next due date
+        c.execute('''
+            UPDATE tasks 
+            SET next_due = ? 
+            WHERE id = ?
+        ''', (new_date, task_dict['id']))
+    
+    conn.commit()
+    conn.close()
+
+
 def delete_subtask_db(subtask_id):
     conn = get_db_conn()
     c = conn.cursor()
@@ -574,20 +1002,20 @@ def delete_task_db(task_id):
     conn.close()
 
 
-def edit_task_db(task_id, name, date, importance):
+def edit_task_db(task_id, name, date, importance, description=None):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("UPDATE tasks SET name = ?, date = ?, importance = ? WHERE id = ?", 
-              (name, date, importance, task_id))
+    c.execute("UPDATE tasks SET name = ?, date = ?, importance = ?, description = ? WHERE id = ?", 
+              (name, date, importance, description, task_id))
     conn.commit()
     conn.close()
 
 
-def edit_task_db_with_time(task_id, name, date, time_str, importance):
+def edit_task_db_with_time(task_id, name, date, time_str, importance, description=None):
     conn = get_db_conn()
     c = conn.cursor()
-    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ? WHERE id = ?", 
-              (name, date, time_str, importance, task_id))
+    c.execute("UPDATE tasks SET name = ?, date = ?, time = ?, importance = ?, description = ? WHERE id = ?", 
+              (name, date, time_str, importance, description, task_id))
     conn.commit()
     conn.close()
 
@@ -695,8 +1123,15 @@ def complete_task_and_award(task_id, username):
         points = POINTS.get(importance, 0)
 
         c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, username))
-        # also increment historical total earned for badges tracking
-        c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, username))
+        
+        # Try to update total_earned, but handle gracefully if column doesn't exist
+        try:
+            c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, username))
+        except Exception as e:
+            if "no such column: total_earned" in str(e):
+                print("total_earned column doesn't exist, skipping update")
+            else:
+                raise e
 
         completed_at = datetime.datetime.now().isoformat()
         c.execute("UPDATE tasks SET completed = 1, completed_at = ? WHERE id = ?", (completed_at, task_id))
@@ -710,15 +1145,19 @@ def complete_task_and_award(task_id, username):
 
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.debug = True  # Enable debug mode to show errors in browser
+# Use environment variable for secret key in production
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key')
 app.register_blueprint(login_bp)
 
 # File upload configuration
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Ensure uploads directory exists
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -727,11 +1166,14 @@ def allowed_file(filename):
 
 ensure_users_table()
 ensure_tasks_table()
+ensure_recurring_tasks_table()
 ensure_custom_rewards_table()
 ensure_subtasks_table()
 ensure_redemptions_table()
 ensure_box_moves_table()
 ensure_streaks_table()
+ensure_visual_task_cards_table()
+ensure_task_completions_table()
 ensure_attitude_table_called = False
 
 
@@ -740,12 +1182,12 @@ def ensure_attitude_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS attitude_logs (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            parent_username VARCHAR(255) NOT NULL,
-            child_username VARCHAR(255) NOT NULL,
-            rating VARCHAR(50) NOT NULL,
-            points_awarded INT NOT NULL,
-            created_at VARCHAR(255) NOT NULL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_username TEXT NOT NULL,
+            child_username TEXT NOT NULL,
+            rating TEXT NOT NULL,
+            points_awarded INTEGER NOT NULL,
+            created_at TEXT NOT NULL
         )
     ''')
     conn.commit()
@@ -757,44 +1199,10 @@ def ensure_emotion_logs_table():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS emotion_logs (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            child_username VARCHAR(255) NOT NULL,
-            emotion VARCHAR(100) NOT NULL,
-            created_at VARCHAR(255) NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-
-def ensure_visual_task_cards_table():
-    conn = get_db_conn()
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS visual_task_cards (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            parent_username VARCHAR(255) NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            image_path VARCHAR(255) NOT NULL,
-            points INT NOT NULL,
-            is_recommended INT DEFAULT 0,
-            created_at VARCHAR(255) NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-
-def ensure_task_completions_table():
-    conn = get_db_conn()
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS task_completions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            card_id INT NOT NULL,
-            child_username VARCHAR(255) NOT NULL,
-            completed_at VARCHAR(255) NOT NULL,
-            FOREIGN KEY (card_id) REFERENCES visual_task_cards(id)
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            child_username TEXT NOT NULL,
+            emotion TEXT NOT NULL,
+            created_at TEXT NOT NULL
         )
     ''')
     conn.commit()
@@ -804,11 +1212,6 @@ def ensure_task_completions_table():
 # ensure tables exist
 ensure_attitude_table()
 ensure_emotion_logs_table()
-ensure_visual_task_cards_table()
-ensure_task_completions_table()
-
-
-
 
 
 @app.route("/")
@@ -834,9 +1237,14 @@ def activities():
     Loads grouped tasks, calendar snippet data, user points and upcoming tasks
     to render the activities dashboard where users add/edit/complete tasks.
     """
-    tasks = get_tasks_grouped()
-    calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
+    tasks_username = username
+    tasks = {}
+    recurring_tasks = {}
+    calendar_tasks = {}
+    children = []
+    selected_child = None
+
     # determine whether the current user is a parent (used to show parent-specific UI)
     is_parent = False
     if username:
@@ -847,10 +1255,28 @@ def activities():
             row = c.fetchone()
             if row and ('role' in row.keys() and row['role'] == 'parent'):
                 is_parent = True
+
+            if is_parent:
+                c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
+                children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+                selected_child = request.args.get('child')
+
+                if selected_child and any(ch['username'] == selected_child for ch in children):
+                    tasks_username = selected_child
+                elif children:
+                    selected_child = children[0]['username']
+                    tasks_username = selected_child
+                else:
+                    tasks_username = username
         finally:
             conn.close()
+
+    tasks = get_tasks_grouped(tasks_username)
+    recurring_tasks = get_recurring_tasks_grouped(tasks_username)
+    calendar_tasks = get_calendar_tasks(tasks_username)
+
     # this week (0-7 days)
-    upcoming_tasks = get_upcoming_tasks(username, days=7) if username else []
+    upcoming_tasks = get_upcoming_tasks(tasks_username, days=7) if tasks_username else []
     # next week: days 8-14
     upcoming_all_14 = get_upcoming_tasks(username, days=14) if username else []
     today = datetime.datetime.now().date()
@@ -868,21 +1294,35 @@ def activities():
         conn.close()
         streak = get_user_streak(username)
 
-    return render_template("activities.html", tasks=tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent)
+    return render_template("activities.html", tasks=tasks, recurring_tasks=recurring_tasks, calendar_tasks=calendar_tasks, username=username, points=points, upcoming_tasks=upcoming_tasks, upcoming_tasks_next=upcoming_tasks_next, streak=streak, today=datetime.datetime.now(), timedelta=datetime.timedelta, is_parent=is_parent, children=children, selected_child=selected_child)
 
 
 @app.route('/calm_room')
 def calm_room():
     """Render the calm room page with breathing exercises."""
     username = session.get('user') if session else None
-    return render_template("calm_room.html", username=username)
+    
+    # determine parent role so template can show parent-only links
+    is_parent = False
+    if username:
+        conn = get_db_conn()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and ('role' in row.keys() and row['role'] == 'parent'):
+                is_parent = True
+        finally:
+            conn.close()
+    
+    return render_template("calm_room.html", username=username, is_parent=is_parent)
 
 
 @app.route('/calendar')
 def calendar():
     """Render the standalone calendar page (14-day view)."""
-    calendar_tasks = get_calendar_tasks()
     username = session.get('user') if session else None
+    calendar_tasks = get_calendar_tasks(username)
     upcoming_tasks = get_upcoming_tasks(username) if username else []
 
     points = 0
@@ -1013,8 +1453,9 @@ def focus_timer():
 @app.route('/viewtasks')
 def view_tasks():
     """Render a focused view of pending tasks grouped by importance."""
-    tasks = get_tasks_grouped()
     username = session.get('user') if session else None
+    tasks = get_tasks_grouped(username)
+    recurring_tasks = get_recurring_tasks_grouped(username)
 
     points = 0
     if username:
@@ -1039,7 +1480,7 @@ def view_tasks():
         finally:
             conn.close()
 
-    return render_template('viewtasks.html', tasks=tasks, username=username, points=points, is_parent=is_parent)
+    return render_template('viewtasks.html', tasks=tasks, recurring_tasks=recurring_tasks, username=username, points=points, is_parent=is_parent)
 
 
 def clear_completed_tasks(username=None):
@@ -1087,7 +1528,7 @@ def progress():
     return render_template("progress.html", percent=prog.get('percent', 0), breakdown=AttrDict({
         'completed': AttrDict(breakdown.get('completed', {})),
         'pending': AttrDict(breakdown.get('pending', {})),
-    }), username=username, streak=streak)
+    }), username=username, streak=streak, is_parent=is_parent)
     
 
 
@@ -1106,34 +1547,46 @@ def settings():
     reminders_enabled = 0
     reminder_frequency = 'weekly'
     email_verified = 0
+    
     if username:
-        conn = get_db_conn()
-        c = conn.cursor()
-        c.execute("SELECT email, reminders_enabled, reminder_frequency, email_verified FROM users WHERE username = ?", (username,))
-        row = c.fetchone()
-        if row:
-            email = row['email']
-            reminders_enabled = row['reminders_enabled'] or 0
-            reminder_frequency = row['reminder_frequency'] or 'weekly'
-            email_verified = row['email_verified'] or 0
-        conn.close()
+        try:
+            conn = get_db_conn()
+            c = conn.cursor()
+            c.execute("SELECT email, reminders_enabled, reminder_frequency, email_verified FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row:
+                email = row.get('email')
+                reminders_enabled = row.get('reminders_enabled', 0) or 0
+                reminder_frequency = row.get('reminder_frequency', 'weekly') or 'weekly'
+                email_verified = row.get('email_verified', 0) or 0
+            conn.close()
+        except Exception as e:
+            print(f"Settings page database error: {e}")
+            # Handle error gracefully
+            return render_template('settings.html', username=username, email=None, reminders_enabled=0, reminder_frequency='weekly', email_verified=0, is_parent=False, user_badges=[])
+    
     # pass parent flag to settings template so parent link can appear in tabs
     is_parent = False
     if username:
-        conn = get_db_conn(); c = conn.cursor()
         try:
+            conn = get_db_conn(); c = conn.cursor()
             c.execute("SELECT role FROM users WHERE username = ?", (username,))
             row = c.fetchone()
-            if row and ('role' in row.keys() and row['role'] == 'parent'):
+            if row and row.get('role') == 'parent':
                 is_parent = True
-        finally:
             conn.close()
+        except Exception as e:
+            print(f"Parent role check error: {e}")
     
     # Get user's badges for display
     user_badges = []
     if username and not is_parent:  # Only children can have badges
-        user_badges = get_redeemed_rewards(username)
-        user_badges = [badge for badge in user_badges if badge.get('reward_type') == 'badge']
+        try:
+            user_badges = get_redeemed_rewards(username)
+            user_badges = [badge for badge in user_badges if badge.get('reward_type') == 'badge']
+        except Exception as e:
+            print(f"Badges error: {e}")
+            user_badges = []
 
     return render_template('settings.html', username=username, email=email, reminders_enabled=reminders_enabled, reminder_frequency=reminder_frequency, email_verified=email_verified, is_parent=is_parent, user_badges=user_badges)
 
@@ -1333,26 +1786,119 @@ def reset_custom_rewards():
     conn.close()
     return redirect(url_for('settings'))
 
+
 @app.route("/add_task", methods=["POST"])
 def add_task():
     task_name = request.form.get("task_name")
     task_date = request.form.get("task_date")
     task_time = request.form.get("task_time")
+    task_description = request.form.get("task_description")
     importance = request.form.get("importance")
+    
+    # Get repeatable task parameters
+    repeat_type = request.form.get("repeat_type", "none")
+    repeat_interval = int(request.form.get("repeat_interval", 1))
+    repeat_days = request.form.getlist("repeat_days")
+    
+    # Convert repeat_days list to comma-separated string
+    repeat_days_str = ",".join(repeat_days) if repeat_days else None
 
-    if task_name and task_date and importance in ("Major", "Medium", "Minor"):
-        # allow optional time
-        if task_time:
-            insert_task_db_with_time(task_name, task_date, task_time, importance, session.get('user') if session else None)
+    if task_name and importance in ("Major", "Medium", "Minor"):
+        username = session.get('user') if session else None
+        task_user = request.form.get("task_user") or username
+
+        # if parent and child selected, validate assignment
+        if username and task_user and task_user != username:
+            conn = get_db_conn()
+            c = conn.cursor()
+            c.execute("SELECT role FROM users WHERE username = ?", (username,))
+            role_row = c.fetchone()
+            if role_row and role_row['role'] == 'parent':
+                c.execute("SELECT 1 FROM users WHERE username = ? AND parent_username = ?", (task_user, username))
+                if not c.fetchone():
+                    task_user = username
+            else:
+                task_user = username
+            conn.close()
+
+        if not task_user:
+            task_user = username
+
+        # Check if this is a recurring task (repeatable but no due date)
+        if repeat_type != "none" and not task_date:
+            # Create recurring task
+            create_recurring_task(
+                task_name, task_description, task_time, importance, task_user,
+                repeat_type, repeat_interval, repeat_days_str
+            )
+        elif repeat_type != "none" and task_date:
+            # For repeatable tasks with date, use today's date if no date provided
+            if not task_date:
+                task_date = datetime.datetime.now().date().isoformat()
+            
+            # Use the repeatable task function
+            create_repeatable_task(
+                task_name, task_date, task_time, importance, task_user,
+                repeat_type, repeat_interval, repeat_days_str
+            )
         else:
-            insert_task_db(task_name, task_date, importance, session.get('user') if session else None)
-
-    return redirect(url_for("activities"))
+            # For non-repeatable tasks, date is required
+            if not task_date:
+                # Get all required data to re-render the page
+                tasks = get_tasks_grouped(username)
+                recurring_tasks = get_recurring_tasks_grouped(username)
+                calendar_tasks = get_calendar_tasks(username)
+                points = get_points()
+                streak = get_user_streak(username)
+                upcoming_tasks = get_upcoming_tasks(username, days=7) if username else []
+                upcoming_all_14 = get_upcoming_tasks(username, days=14) if username else []
+                today = datetime.datetime.now().date()
+                upcoming_tasks_next = [t for t in upcoming_all_14 if t.get('date') and datetime.datetime.fromisoformat(t['date']).date() > (today + datetime.timedelta(days=7))]
+                
+                # Determine if user is parent
+                is_parent = False
+                if username:
+                    conn = get_db_conn()
+                    c = conn.cursor()
+                    try:
+                        c.execute("SELECT role FROM users WHERE username = ?", (username,))
+                        row = c.fetchone()
+                        if row and ('role' in row.keys() and row['role'] == 'parent'):
+                            is_parent = True
+                    finally:
+                        conn.close()
+                
+                return render_template('activities.html', 
+                                    tasks=tasks, 
+                                    recurring_tasks=recurring_tasks,
+                                    calendar_tasks=calendar_tasks,
+                                    username=username, 
+                                    points=points, 
+                                    streak=streak,
+                                    upcoming_tasks=upcoming_tasks,
+                                    upcoming_tasks_next=upcoming_tasks_next,
+                                    today=datetime.datetime.now(),
+                                    timedelta=datetime.timedelta,
+                                    is_parent=is_parent,
+                                    error="Date is required for non-repeatable tasks")
+            
+            # Use regular task creation
+            if task_time:
+                insert_task_db_with_time(task_name, task_date, task_time, importance, task_user)
+            else:
+                insert_task_db(task_name, task_date, importance, task_user)
+        
+        if task_user and task_user != username:
+            return redirect(url_for('activities', child=task_user))
+        return redirect(url_for('activities'))
+    
+    return "Invalid task data", 400
 
 
 @app.route("/delete_task/<importance>/<int:task_index>", methods=["POST"])
 def delete_task(importance, task_index):
-    grouped = get_tasks_grouped()
+    username = session.get('user')
+    grouped = get_tasks_grouped(username)
     if importance in grouped and 0 <= task_index < len(grouped[importance]):
         task_id = grouped[importance][task_index].get('id')
         if task_id:
@@ -1362,8 +1908,8 @@ def delete_task(importance, task_index):
 
 @app.route("/complete_task/<importance>/<int:task_index>", methods=["POST"])
 def complete_task(importance, task_index):
-    grouped = get_tasks_grouped()
     username = session.get('user')
+    grouped = get_tasks_grouped(username)
     if importance in grouped and 0 <= task_index < len(grouped[importance]) and username:
         task_id = grouped[importance][task_index].get('id')
         if task_id:
@@ -1378,18 +1924,115 @@ def complete_task(importance, task_index):
             if trow and 'user' in trow.keys() and trow['user']:
                 # prefer the task's assigned user
                 target_username = trow['user']
-
             complete_task_and_award(task_id, target_username)
     return redirect(url_for("activities"))
 
 
+@app.route("/complete-card/<int:card_id>", methods=["POST"])
+def complete_card(card_id):
+    """Complete a visual task card and award points."""
+    username = session.get('user')
+    
+    print(f"DEBUG: complete_card called with card_id={card_id}, username={username}")
+    
+    if not username:
+        print("DEBUG: User not authenticated")
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        conn = get_db_conn()
+        c = conn.cursor()
+        
+        # Check if the card exists (remove parent_username check for now since cards might be shared)
+        c.execute("""
+            SELECT id, title, points, importance, completed 
+            FROM visual_task_cards 
+            WHERE id = ?
+        """, (card_id,))
+        card = c.fetchone()
+        
+        print(f"DEBUG: Card query result: {card}")
+        print(f"DEBUG: Card type: {type(card)}")
+        print(f"DEBUG: Card length: {len(card) if card else 'None'}")
+        
+        # Handle both tuple and dictionary access
+        if isinstance(card, dict):
+            print("DEBUG: Using dictionary access")
+            completed_status = card.get('completed', 0)
+            points = card.get('points', 10)
+        else:
+            print("DEBUG: Using tuple access")
+            # Convert tuple to list for safer access
+            card_list = list(card) if hasattr(card, '__len__') else card
+            if len(card_list) <= 4:
+                print(f"DEBUG: Card tuple too short: {len(card_list)}")
+                return jsonify({'success': False, 'error': 'Invalid card data'}), 400
+            completed_status = card_list[4]
+            points = card_list[2] if card_list[2] and card_list[2] != 0 else 10
+        
+        print(f"DEBUG: Completed status: {completed_status}")
+        print(f"DEBUG: Points: {points}")
+        
+        if completed_status == 1:
+            print("DEBUG: Card already completed")
+            return jsonify({'success': False, 'error': 'Card already completed'}), 400
+        
+        # Mark card as completed
+        c.execute("""
+            UPDATE visual_task_cards 
+            SET completed = 1 
+            WHERE id = ?
+        """, (card_id,))
+        print("DEBUG: Card marked as completed")
+        
+        print(f"DEBUG: Awarding {points} points to {username}")
+        
+        c.execute("""
+            UPDATE users 
+            SET points = points + ? 
+            WHERE username = ?
+        """, (points, username))
+        print("DEBUG: Points updated")
+        
+        # Also record in task_completions table
+        completed_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        c.execute("""
+            INSERT INTO task_completions (child_username, card_id, completed_at)
+            VALUES (?, ?, ?)
+        """, (username, card_id, completed_at))
+        print("DEBUG: Completion recorded")
+        
+        conn.commit()
+        conn.close()
+        
+        result = {
+            'success': True, 
+            'message': f'Card completed! Earned {points} points',
+            'points_earned': points
+        }
+        print(f"DEBUG: Success: {result}")
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"DEBUG: Exception occurred: {e}")
+        import traceback
+        traceback.print_exc()
+        if 'conn' in locals():
+            conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route("/complete_task_by_id/<int:task_id>", methods=["POST"])
 def complete_task_by_id(task_id):
-    """Complete a task by ID and return JSON (for AJAX requests)."""
+    """Complete a task by ID and handle both AJAX and form submissions."""
     username = session.get('user')
     
     if not username:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        # Check if this is an AJAX request
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        else:
+            return redirect(url_for('login'))
     
     try:
         # Get task to verify it belongs to the user
@@ -1400,7 +2043,11 @@ def complete_task_by_id(task_id):
         conn.close()
         
         if not task_row:
-            return jsonify({'success': False, 'error': 'Task not found'}), 404
+            # Check if this is an AJAX request
+            if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Task not found'}), 404
+            else:
+                return redirect(url_for('activities'))
         
         # Determine who to award points to
         target_username = username
@@ -1410,9 +2057,17 @@ def complete_task_by_id(task_id):
         # Complete the task
         complete_task_and_award(task_id, target_username)
         
-        return jsonify({'success': True, 'message': 'Task completed'})
+        # Check if this is an AJAX request
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'message': 'Task completed'})
+        else:
+            return redirect(url_for('activities'))
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # Check if this is an AJAX request
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': str(e)}), 500
+        else:
+            return redirect(url_for('activities'))
 
 
 @app.route('/get_all_tasks', methods=["GET"])
@@ -1498,13 +2153,14 @@ def edit_task(task_id):
     task_name = request.form.get("task_name")
     task_date = request.form.get("task_date")
     task_time = request.form.get("task_time")
+    task_description = request.form.get("task_description")
     importance = request.form.get("importance")
     
     if task_name and task_date and importance in ("Major", "Medium", "Minor"):
-        if task_time is not None:
-            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance)
+        if task_time:
+            edit_task_db_with_time(task_id, task_name, task_date, task_time, importance, task_description)
         else:
-            edit_task_db(task_id, task_name, task_date, importance)
+            edit_task_db(task_id, task_name, task_date, importance, task_description)
     
     return redirect(url_for("activities"))
 
@@ -1544,8 +2200,15 @@ def box_items():
     username = session.get('user') if session else None
     if not username:
         return jsonify([])
-    items = get_box_items(username)
-    return jsonify(items)
+    
+    # Get both regular and recurring tasks in box
+    regular_items = get_box_items(username)
+    recurring_items = get_recurring_box_items(username)
+    
+    # Combine them
+    all_items = regular_items + recurring_items
+    
+    return jsonify(all_items)
 
 
 @app.route('/box/stats')
@@ -1553,6 +2216,50 @@ def box_stats():
     username = session.get('user') if session else None
     stats = get_box_stats(username)
     return jsonify(stats)
+
+
+@app.route('/box/add/recurring/<int:task_id>', methods=['POST'])
+def box_add_recurring(task_id):
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+    move_recurring_task_to_box(task_id, username)
+    return redirect(url_for('view_tasks'))
+
+
+@app.route('/box/remove/recurring/<int:task_id>', methods=['POST'])
+def box_remove_recurring(task_id):
+    username = session.get('user') if session else None
+    if not username:
+        return redirect(url_for('home'))
+    restore_recurring_task_from_box(task_id, username)
+    return redirect(url_for('view_tasks'))
+
+
+@app.route("/complete_recurring_task/<int:task_id>", methods=["POST"])
+def complete_recurring_task_route(task_id):
+    """Complete a recurring task and create the next instance"""
+    username = session.get('user')
+    if username:
+        complete_recurring_task(task_id, username)
+    return redirect(url_for("activities"))
+
+
+@app.route("/delete_recurring_task/<int:task_id>", methods=["POST"])
+def delete_recurring_task_route(task_id):
+    """Delete a recurring task"""
+    delete_recurring_task(task_id)
+    return redirect(url_for("activities"))
+
+
+@app.route('/generate_repeated_tasks', methods=['POST'])
+def generate_repeated_tasks_route():
+    """Generate new instances of repeatable tasks that are due"""
+    try:
+        generate_repeated_tasks()
+        return jsonify({'success': True, 'message': 'Repeated tasks generated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 DEFAULT_REWARDS = [
@@ -1570,6 +2277,25 @@ def get_user_points(username):
     row = c.fetchone()
     conn.close()
     return row['points'] if row and row['points'] is not None else 0
+
+
+def get_user_total_earned(username):
+    conn = get_db_conn()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT total_earned FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        conn.close()
+        return row['total_earned'] if row and row['total_earned'] is not None else 0
+    except Exception as e:
+        if "no such column: total_earned" in str(e):
+            print("total_earned column doesn't exist, using current points")
+            conn.close()
+            # Fall back to current points if total_earned column doesn't exist
+            return get_user_points(username)
+        else:
+            conn.close()
+            raise e
 
 
 def get_upcoming_tasks(username=None, days=7):
@@ -1602,40 +2328,48 @@ def get_upcoming_tasks(username=None, days=7):
             AND date BETWEEN ? AND ?
             ORDER BY date ASC
         """, (today.isoformat(), future_date.isoformat()))
-    
     rows = c.fetchall()
-    conn.close()
-    
     return [dict(row) for row in rows]
 
 
 def add_points(username, amount):
-    conn = get_db_conn()
-    c = conn.cursor()
-    # increase current available points
-    c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (amount, username))
-    # also track historical total earned (not reduced when spending)
-    c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (amount, username))
-    conn.commit()
-    conn.close()
-
-
-def get_user_total_earned(username):
-    conn = get_db_conn()
-    c = conn.cursor()
-    c.execute("SELECT total_earned FROM users WHERE username = ?", (username,))
-    row = c.fetchone()
-    conn.close()
-    return row['total_earned'] if row and row['total_earned'] is not None else 0
+    """Add points to a user, with error handling"""
+    if not username:
+        print("Warning: No username provided to add_points")
+        return
+    
+    try:
+        conn = get_db_conn()
+        c = conn.cursor()
+        # increase current available points
+        c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (amount, username))
+        # also track historical total earned (not reduced when spending)
+        try:
+            c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (amount, username))
+        except Exception as e:
+            if "no such column: total_earned" in str(e):
+                print("total_earned column doesn't exist, skipping update")
+            else:
+                raise e
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error adding points for user {username}: {e}")
+        try:
+            conn.close()
+        except:
+            pass
 
 
 def has_claimed_badge(username, badge_id):
+    """Check if a user has already claimed a specific badge"""
     conn = get_db_conn()
     c = conn.cursor()
     c.execute("SELECT 1 FROM redemptions WHERE username = ? AND reward_type = 'badge' AND reward_id = ? LIMIT 1", (username, badge_id))
     r = c.fetchone()
     conn.close()
     return bool(r)
+
 
 def deduct_points(username, amount):
     conn = get_db_conn()
@@ -1733,29 +2467,66 @@ def nearest_reward_info(rewards, username):
     }
 
 
+@app.route('/test-badges')
+def test_badges():
+    print("DEBUG: TEST BADGES ROUTE CALLED!")
+    return "<h1>TEST BADGES PAGE</h1><p>If you see this, routes are working!</p>"
+
+
 @app.route('/rewards')
 def rewards():
     username = session.get('user')
+    print(f"DEBUG: Rewards page accessed, username={username}")
     if not username:
+        print("DEBUG: No username, redirecting to home")
         return redirect(url_for('home'))
-    points = get_user_points(username)
-    total_earned = get_user_total_earned(username)
-    badges = get_badges_for_display(username)
-    redeemed_rewards = get_redeemed_rewards(username)
+    
+    try:
+        points = get_user_points(username)
+        total_earned = get_user_total_earned(username)
+        print(f"DEBUG: Points={points}, Total earned={total_earned}")
+        
+        badges = get_badges_for_display(username)
+        print(f"DEBUG: Badges returned from function: {len(badges)} badges")
+        
+        redeemed_rewards = get_redeemed_rewards(username)
+        print(f"DEBUG: Redeemed rewards: {len(redeemed_rewards)} items")
 
-    # determine parent role so template can show/hide tabs
-    is_parent = False
-    if username:
-        conn = get_db_conn(); c = conn.cursor()
+        # determine parent role so template can show/hide tabs
+        is_parent = False
+        conn = get_db_conn()
+        c = conn.cursor()
         try:
             c.execute("SELECT role FROM users WHERE username = ?", (username,))
             row = c.fetchone()
-            if row and ('role' in row.keys() and row['role'] == 'parent'):
+            if row and row.get('role') == 'parent':
                 is_parent = True
         finally:
             conn.close()
 
-    return render_template('rewards.html', username=username, points=points, total_earned=total_earned, badges=badges, redeemed_rewards=redeemed_rewards, is_parent=is_parent)
+        print(f"DEBUG: Rendering template with {len(badges)} badges")
+        return render_template('rewards.html', username=username, points=points, total_earned=total_earned, badges=badges, redeemed_rewards=redeemed_rewards, is_parent=is_parent)
+    except Exception as e:
+        print(f"Rewards page error: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('rewards.html', username=username, points=0, total_earned=0, badges=[], redeemed_rewards=[], is_parent=False)
+
+
+@app.route('/rewards/clear-badges', methods=['POST'])
+def clear_badges():
+    username = session.get('user')
+    if not username:
+        return redirect(url_for('home'))
+    
+    # Delete all badge redemptions for this user
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("DELETE FROM redemptions WHERE username = ? AND reward_type = 'badge'", (username,))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('rewards'))
 
 
 @app.route('/rewards/redeem/<int:badge_id>', methods=['POST'])
@@ -1763,38 +2534,62 @@ def redeem_badge(badge_id):
     username = session.get('user')
     if not username:
         return redirect(url_for('home'))
+    
     matched = next((b for b in BADGES if b[0] == badge_id), None)
     if not matched:
         return "Unknown badge", 400
     _, title, cost, icon = matched
-    # Check historical total earned points (not current balance)
+    
     total_earned = get_user_total_earned(username)
+    print(f"DEBUG: Total earned points for {username}: {total_earned}")
+    
+    # Only allow claim if total earned points have reached required threshold
     if total_earned < cost:
-        return "Not enough total points earned to claim this badge", 400
+        print(f"DEBUG: Blocking badge claim - total earned too low: {total_earned} < {cost}")
+        return "Not enough total earned points to claim this badge", 400
+    
     # Ensure badge not already claimed
     if has_claimed_badge(username, badge_id):
         return "Badge already claimed", 400
-    # Claim the badge (no point deduction) and log redemption for record
+
+    # Claim badge (no deduction from current points)
     log_redemption(username, 'badge', badge_id, title, cost)
     return redirect(url_for('rewards'))
 
 
-# Simple badges available for children on the Rewards tab
+# Simple badges available for children on Rewards tab
 BADGES = [
-    (1, "Star", 1000, "⭐"),
-    (2, "Shield", 2000, "🛡️"),
-    (3, "Gold Trophy", 3000, "🏆"),
-    (4, "Platinum Crown", 5000, "👑"),
+    (1, "Star", 100, "⭐"),
+    (2, "Shield", 200, "🛡️"),
+    (3, "Gold Trophy", 300, "🏆"),
+    (4, "Platinum Crown", 500, "👑"),
+    (5, "Diamond", 750, "💎"),
+    (6, "Rocket", 1000, "🚀"),
+    (7, "Magic Wand", 1500, "🪄"),
+    (8, "Fire", 2000, "🔥"),
+    (9, "Lightning", 2500, "⚡"),
 ]
 
 def get_badges_for_display(username):
+    current_points = get_user_points(username)
     total_earned = get_user_total_earned(username)
     badges = []
     for bid, title, cost, icon in BADGES:
         already = has_claimed_badge(username, bid)
-        badges.append({'id': bid, 'title': title, 'cost': cost, 'icon': icon, 'claimable': (not already) and (total_earned >= cost), 'claimed': already})
+        # Badge requires total earned points threshold, not current points balance.
+        claimable = (not already) and (total_earned >= cost)
+        badge_data = {
+            'id': bid,
+            'title': title,
+            'cost': cost,
+            'icon': icon,
+            'claimable': claimable,
+            'claimed': already,
+            'current_points': current_points,
+            'total_earned': total_earned
+        }
+        badges.append(badge_data)
     return badges
-
 
 @app.route('/attitude', methods=['GET', 'POST'])
 def attitude():
@@ -1879,7 +2674,6 @@ def attitude():
                            today_emotion=today_emotion,
                            emotion_history=emotion_history,
                            is_parent=False)
-
 
 @app.route('/redeem', methods=['GET'])
 def redeem():
@@ -2011,8 +2805,36 @@ def parent_dashboard():
     # list children assigned to this parent
     c.execute("SELECT username, points FROM users WHERE parent_username = ?", (username,))
     children = [{'username': r['username'], 'points': r['points'] if r['points'] is not None else 0} for r in c.fetchall()]
+
+    # total visual task cards created by this parent
+    c.execute("SELECT COUNT(*) AS cnt FROM visual_task_cards WHERE parent_username = ?", (username,))
+    row = c.fetchone()
+    total_task_cards = row['cnt'] if row else 0
+
+    # active tasks for child accounts
+    child_usernames = [child['username'] for child in children]
+    active_tasks_count = 0
+    today_child_attitude = None
+
+    if child_usernames:
+        placeholders = ','.join(['?'] * len(child_usernames))
+        # count active tasks (not completed)
+        c.execute(f"SELECT COUNT(*) AS cnt FROM tasks WHERE completed = 0 AND user IN ({placeholders})", child_usernames)
+        active_tasks_count = c.fetchone()['cnt'] or 0
+
+        # get most recent emotion logged today for any child
+        today = datetime.datetime.now().date().isoformat()
+        c.execute(f"SELECT child_username, emotion FROM emotion_logs WHERE child_username IN ({placeholders}) AND DATE(created_at) = ? ORDER BY created_at DESC LIMIT 1", (*child_usernames, today))
+        mood_row = c.fetchone()
+        if mood_row:
+            today_child_attitude = f"{mood_row['child_username']}: {mood_row['emotion'].capitalize()}"
+
     conn.close()
-    return render_template('parent_dashboard.html', username=username, children=children)
+
+    return render_template('parent_dashboard.html', username=username, children=children, is_parent=True,
+                           total_task_cards=total_task_cards,
+                           active_tasks_count=active_tasks_count,
+                           today_child_attitude=today_child_attitude)
 
 
 @app.route('/parent/add_child', methods=['POST'])
@@ -2089,7 +2911,13 @@ def parent_attitude():
         c.execute("INSERT INTO attitude_logs (parent_username, child_username, rating, points_awarded, created_at) VALUES (?, ?, ?, ?, ?)", (parent, child_username, rating, points, created_at))
         # award points to child and increment their historical total earned
         c.execute("UPDATE users SET points = COALESCE(points,0) + ? WHERE username = ?", (points, child_username))
-        c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, child_username))
+        try:
+            c.execute("UPDATE users SET total_earned = COALESCE(total_earned,0) + ? WHERE username = ?", (points, child_username))
+        except Exception as e:
+            if "no such column: total_earned" in str(e):
+                print("total_earned column doesn't exist, skipping update")
+            else:
+                raise e
         conn.commit()
         conn.close()
         return redirect(url_for('parent_attitude'))
@@ -2127,7 +2955,7 @@ def parent_attitude():
     
     conn.close()
     # determine if any children already logged today for display (optional)
-    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes)
+    return render_template('attitude.html', username=parent, children=children, child_emotions=child_emotions, parent_attitudes=parent_attitudes, is_parent=True)
 
 
 @app.route('/parent/add_custom_reward_child', methods=['POST'])
@@ -2168,11 +2996,73 @@ def parent_add_custom_reward_child():
     return redirect(url_for('parent_dashboard'))
 
 
+@app.route('/add-recommended-card', methods=['POST'])
+def add_recommended_card():
+    parent = session.get('user') if session else None
+    if not parent:
+        return redirect(url_for('home'))
+    
+    # Verify this user actually has role = 'parent'
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (parent,))
+    row = c.fetchone()
+    if not row or row['role'] != 'parent':
+        conn.close()
+        return "Only parent accounts can add recommended task cards", 403
+    
+    # Get data from form
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    points_str = request.form.get('points', '').strip()
+    category = request.form.get('category', '').strip()
+    
+    if not title or not points_str:
+        conn.close()
+        return "Title and points are required", 400
+    
+    try:
+        points = int(points_str)
+    except ValueError:
+        conn.close()
+        return "Points must be a number", 400
+    
+    # Use a placeholder image path for recommended cards
+    image_path = f"recommended/{category}.png"  # Placeholder path
+    
+    # Store in database
+    created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    c.execute(
+        "INSERT INTO visual_task_cards (parent_username, title, description, image_path, points, created_at, is_recommended) VALUES (?, ?, ?, ?, ?, ?, 1)",
+        (parent, title, description, image_path, points, created_at)
+    )
+    
+    # Ensure id is set
+    c.execute(
+        "UPDATE visual_task_cards SET id = rowid WHERE id IS NULL AND parent_username = ? AND title = ? AND created_at = ?",
+        (parent, title, created_at)
+    )
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('visual_task_cards'))
+
+
 @app.route('/upload-task-card', methods=['POST'])
 def upload_task_card():
     parent = session.get('user') if session else None
     if not parent:
         return redirect(url_for('home'))
+    
+    # Verify this user actually has role = 'parent'
+    conn = get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (parent,))
+    row = c.fetchone()
+    conn.close()
+    
+    if not row or row['role'] != 'parent':
+        return "Only parent accounts can upload task cards", 403
     
     # Check if file and other fields are present
     if 'image' not in request.files:
@@ -2180,6 +3070,7 @@ def upload_task_card():
     
     file = request.files['image']
     title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
     points_str = request.form.get('points', '').strip()
     
     if not file or file.filename == '':
@@ -2198,16 +3089,27 @@ def upload_task_card():
         import uuid
         ext = file.filename.rsplit('.', 1)[1].lower()
         filename = f"{uuid.uuid4()}.{ext}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Use absolute path for PythonAnywhere compatibility
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        upload_dir = os.path.join(BASE_DIR, 'static', 'uploads')
+        
+        # Create upload directory if it doesn't exist
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+        
+        filepath = os.path.join(upload_dir, filename)
         file.save(filepath)
+        
+        print(f"DEBUG: Saved file to {filepath}")
         
         # Store in database
         conn = get_db_conn()
         c = conn.cursor()
         created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         c.execute(
-            "INSERT INTO visual_task_cards (parent_username, title, image_path, points, created_at) VALUES (?, ?, ?, ?, ?)",
-            (parent, title, f"/static/uploads/{filename}", points, created_at)
+            "INSERT INTO visual_task_cards (parent_username, title, description, image_path, points, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (parent, title, description, f"uploads/{filename}", points, created_at)
         )
         conn.commit()
         conn.close()
@@ -2223,25 +3125,29 @@ def visual_task_cards():
     if not parent:
         return redirect(url_for('home'))
     
-    conn = get_db_conn()
-    c = conn.cursor()
-    
-    # Get parent's custom cards
-    c.execute(
-        "SELECT id, title, image_path, points, created_at FROM visual_task_cards WHERE parent_username = ? AND is_recommended = 0 ORDER BY created_at DESC",
-        (parent,)
-    )
-    custom_cards = [dict(row) for row in c.fetchall()]
-    
-    # Get recommended cards
-    c.execute(
-        "SELECT id, title, image_path, points FROM visual_task_cards WHERE is_recommended = 1 ORDER BY title"
-    )
-    recommended_cards = [dict(row) for row in c.fetchall()]
-    
-    conn.close()
-    
-    return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards)
+    try:
+        conn = get_db_conn()
+        c = conn.cursor()
+        
+        # Get parent's custom cards
+        c.execute(
+            "SELECT id, title, description, image_path, points, created_at FROM visual_task_cards WHERE parent_username = ? AND is_recommended = 0 ORDER BY created_at DESC",
+            (parent,)
+        )
+        custom_cards = [dict(row) for row in c.fetchall()]
+        
+        # Get recommended cards
+        c.execute(
+            "SELECT id, title, description, image_path, points FROM visual_task_cards WHERE is_recommended = 1 ORDER BY title"
+        )
+        recommended_cards = [dict(row) for row in c.fetchall()]
+        
+        conn.close()
+        
+        return render_template('visual_task_cards.html', custom_cards=custom_cards, recommended_cards=recommended_cards, is_parent=True)
+    except Exception as e:
+        print(f"Visual task cards error: {e}")
+        return render_template('visual_task_cards.html', custom_cards=[], recommended_cards=[], is_parent=True)
 
 
 @app.route('/delete-task-card/<int:card_id>', methods=['POST'])
@@ -2263,10 +3169,8 @@ def delete_task_card(card_id):
     
     # Delete image file
     image_path = row['image_path']
-    if image_path.startswith('/'):
-        filepath = '.' + image_path
-    else:
-        filepath = os.path.join('static', image_path)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    filepath = os.path.join(BASE_DIR, 'static', image_path)
     
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -2281,22 +3185,53 @@ def delete_task_card(card_id):
     return redirect(url_for('visual_task_cards'))
 
 
+@app.route('/test-cards', methods=['GET'])
+def test_cards():
+    return render_template('test_cards.html')
+
+
 @app.route('/child-task-cards', methods=['GET'])
 def child_task_cards():
+    print("DEBUG: child_task_cards route called!")
     child = session.get('user') if session else None
+    print(f"DEBUG: child user: {child}")
+    
     if not child:
+        print("DEBUG: No user in session, redirecting to home")
         return redirect(url_for('home'))
     
     conn = get_db_conn()
     c = conn.cursor()
     
-    # Get all available cards (from parent and recommended)
-    c.execute("SELECT id, title, image_path, points FROM visual_task_cards ORDER BY created_at DESC")
-    cards = [dict(row) for row in c.fetchall()]
+    # Get this child's parent username
+    c.execute("SELECT parent_username FROM users WHERE username = ?", (child,))
+    parent_row = c.fetchone()
+    parent_username = parent_row['parent_username'] if parent_row else None
+    
+    if not parent_username:
+        print(f"DEBUG: No parent found for child {child}")
+        cards = []
+    else:
+        # Get task cards created by this child's parent
+        c.execute("""
+            SELECT id, COALESCE(title, '') as title, COALESCE(description, '') as description, 
+                   COALESCE(image_path, '') as image_path, COALESCE(points, 0) as points, 
+                   COALESCE(importance, 'Major') as importance
+            FROM visual_task_cards 
+            WHERE parent_username = ? 
+            ORDER BY created_at DESC
+        """, (parent_username,))
+        cards = [dict(row) for row in c.fetchall()]
+        print(f"DEBUG: Found {len(cards)} task cards for parent {parent_username}")
     
     # Get completed cards for this child
     c.execute("SELECT card_id FROM task_completions WHERE child_username = ?", (child,))
     completed_ids = set(row['card_id'] for row in c.fetchall())
+    
+    # Get child's points
+    c.execute("SELECT points FROM users WHERE username = ?", (child,))
+    points_row = c.fetchone()
+    points = (points_row['points'] or 0) if points_row else 0
     
     conn.close()
     
@@ -2304,12 +3239,17 @@ def child_task_cards():
     for card in cards:
         card['completed'] = card['id'] in completed_ids
     
-    return render_template('child_task_cards.html', cards=cards)
+    response = make_response(render_template('child_task_cards.html', cards=cards, username=child, points=points))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @app.route('/complete-task-card', methods=['POST'])
 def complete_task_card():
     child = session.get('user') if session else None
+    
     if not child:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
     
@@ -2322,13 +3262,20 @@ def complete_task_card():
     conn = get_db_conn()
     c = conn.cursor()
     
-    # Get card details
-    c.execute("SELECT id, points FROM visual_task_cards WHERE id = ?", (card_id,))
+    # Get card details and verify ownership
+    c.execute("SELECT id, points, parent_username FROM visual_task_cards WHERE id = ?", (card_id,))
     card = c.fetchone()
     
     if not card:
         conn.close()
         return jsonify({'success': False, 'error': 'Card not found'}), 404
+    
+    # Verify the card belongs to this child's parent
+    c.execute("SELECT parent_username FROM users WHERE username = ?", (child,))
+    child_row = c.fetchone()
+    if not child_row or child_row['parent_username'] != card['parent_username']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     
     # Check if already completed
     c.execute("SELECT id FROM task_completions WHERE card_id = ? AND child_username = ?", (card_id, child))
@@ -2345,7 +3292,12 @@ def complete_task_card():
     
     # Award points
     points = card['points']
-    c.execute("UPDATE users SET points = points + ? WHERE username = ?", (points, child))
+    print(f"DEBUG: Awarding {points} points to child {child} for card {card_id}")
+    c.execute("UPDATE users SET points = COALESCE(points, 0) + ? WHERE username = ?", (points, child))
+    
+    # Debug check
+    c.execute("SELECT points FROM users WHERE username = ?", (child,))
+    print('DEBUG: New points for', child, c.fetchone()['points'])
     
     conn.commit()
     conn.close()
@@ -2354,11 +3306,9 @@ def complete_task_card():
 
 
 if __name__ == "__main__":
-    # start reminder scheduler thread in this process (avoids using Flask-specific hooks)
+    port = int(os.environ.get('PORT', 5000))
     try:
         start_reminder_scheduler()
     except Exception as e:
         print('Could not start reminder scheduler:', e)
-    app.run(debug=True, port=5050)
-    
-    
+    app.run(host='0.0.0.0', port=port)

@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Visual Task Cards</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}">
   <style>
     .upload-section {
       background: white;
@@ -123,6 +124,17 @@
       display: block;
     }
     
+    .card-image-placeholder {
+      width: 100%;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: white;
+      border-radius: 8px 8px 0 0;
+    }
+    
     .card-content {
       padding: 15px;
     }
@@ -196,10 +208,13 @@
       <ul>
         <li><a href="{{ url_for('home') }}">Home</a></li>
         <li><a href="{{ url_for('about') }}">About</a></li>
-        <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
         <li><a href="{{ url_for('symptoms') }}">Neurodevelopmental Profiles</a></li>
-        <li><a href="{{ url_for('activities') }}">Activities</a></li>
-        <li><a href="{{ url_for('calm_room') }}" class="active">🧘 Calm Room</a></li>
+        <li><a href="{{ url_for('activities') }}" class="active">Activities</a></li>
+        <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+        <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
+        {% if is_parent %}
+        <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
+        {% endif %}
       </ul>
     </div>
 
@@ -209,22 +224,7 @@
           <h1>Visual Task Cards</h1>
           <p class="description">Create visual task cards for your child with images and point rewards.</p>
           
-          <ul class="Tabs">
-            <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-            <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-            <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-            <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-            <li><a href="{{ url_for('attitude') }}">Attitude</a></li>
-            <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-            {% if not is_parent %}
-            <li><a href="{{ url_for('rewards') }}">Badges</a></li>
-            {% endif %}
-            {% if is_parent %}
-            <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-            <li><a href="{{ url_for('attitude') }}">Child's Attitude</a></li>
-            {% endif %}
-            <li><a href="{{ url_for('settings') }}">Settings</a></li>
-          </ul>
+          {% include 'subtabs.html' %}
         </div>
         <div class="front-header-right">
           <h3 style="text-align:right;margin:0;padding-top:8px;">Upload Task Cards</h3>
@@ -253,6 +253,11 @@
           </div>
           
           <div class="form-group" style="grid-column:1/3;">
+            <label for="description">Task Description</label>
+            <textarea id="description" name="description" placeholder="Describe the task for your child (optional)" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-family:inherit;resize:vertical;"></textarea>
+          </div>
+          
+          <div class="form-group" style="grid-column:1/3;">
             <label for="image">Upload Image *</label>
             <div class="file-input-wrapper">
               <input type="file" id="image" name="image" accept="image/*" required onchange="updateFileName(this)">
@@ -272,9 +277,27 @@
         <div class="cards-grid">
           {% for card in custom_cards %}
             <div class="card-item">
-              <img src="{{ card.image_path }}" alt="{{ card.title }}" class="card-image">
+              {% if card.image_path.startswith('recommended/') %}
+                {% set category = card.image_path.split('/')[1].split('.')[0] %}
+                {% if category == 'morning-routine' %}
+                  <div class="card-image-placeholder" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><span style="font-size:2rem;">🎒</span></div>
+                {% elif category == 'school-work' %}
+                  <div class="card-image-placeholder" style="background:linear-gradient(135deg, #fa709a 0%, #fee140 100%);"><span style="font-size:2rem;">📚</span></div>
+                {% elif category == 'chores' %}
+                  <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"><span style="font-size:2rem;">🏠</span></div>
+                {% elif category == 'self-care' %}
+                  <div class="card-image-placeholder" style="background:linear-gradient(135deg, #f857a6 0%, #ff5858 100%);"><span style="font-size:2rem;">💚</span></div>
+                {% else %}
+                  <div class="card-image-placeholder" style="background:linear-gradient(135deg, #ddd 0%, #bbb 100%);"><span style="font-size:2rem;">📋</span></div>
+                {% endif %}
+              {% else %}
+                <img src="{{ url_for('static', filename=card.image_path) }}" alt="{{ card.title }}" class="card-image">
+              {% endif %}
               <div class="card-content">
                 <h3 class="card-title">{{ card.title }}</h3>
+                {% if card.description %}
+                <p class="card-description" style="color:#666;font-size:14px;margin:8px 0;line-height:1.4;">{{ card.description }}</p>
+                {% endif %}
                 <div class="card-points">{{ card.points }} pts</div>
                 <small style="color:#999;">Created: {{ card.created_at[:10] }}</small>
                 <div class="card-actions" style="margin-top:10px;">
@@ -558,18 +581,30 @@
     
     // Function to select recommended card
     function selectRecommendedCard(title, description, points, category) {
-      document.getElementById('customTitle').value = title;
-      document.getElementById('customDescription').value = description;
-      document.getElementById('customPoints').value = points;
+      // Create a form to submit the recommended card
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/add-recommended-card';
       
-      // Show custom creation form
-      document.getElementById('customCreationForm').style.display = 'block';
+      // Add hidden inputs
+      const inputs = [
+        { name: 'title', value: title },
+        { name: 'description', value: description },
+        { name: 'points', value: points },
+        { name: 'category', value: category }
+      ];
       
-      // Scroll to form
-      document.getElementById('customCreationForm').scrollIntoView({ behavior: 'smooth' });
+      inputs.forEach(inputData => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = inputData.name;
+        input.value = inputData.value;
+        form.appendChild(input);
+      });
       
-      // Add visual feedback
-      showSelectionFeedback(title, category);
+      // Submit the form
+      document.body.appendChild(form);
+      form.submit();
     }
     
     // Function to toggle between recommended and custom

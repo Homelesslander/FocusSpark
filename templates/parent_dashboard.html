@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Parent Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}"
   <script src="{{ url_for('static', filename='celebration.js') }}"></script>
   <style>
     /* small spacing override to keep parent page tidy */
@@ -29,8 +30,9 @@
     <ul>
       <li><a href="{{ url_for('home') }}">Home</a></li>
       <li><a href="{{ url_for('about') }}">About</a></li>
-      <li><a href="{{ url_for('symptoms') }}">Symptoms</a></li>
       <li><a href="{{ url_for('activities') }}">Activities</a></li>
+      <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+      <li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
     </ul>
   </div>
 
@@ -40,17 +42,7 @@
         <h1>Parent Dashboard</h1>
         <p class="description">Welcome, {{ username }}. Manage your child's account and add custom rewards on their behalf.</p>
 
-        <ul class="Tabs">
-          <li><a href="{{ url_for('activities') }}">Add/Delete Tasks</a></li>
-          <li><a href="{{ url_for('view_tasks') }}">View Tasks</a></li>
-          <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
-          <li><a href="{{ url_for('progress') }}">View Progress</a></li>
-          <li><a href="{{ url_for('visual_task_cards') }}">Task Cards</a></li>
-          <li><a href="{{ url_for('redeem') }}">Redeem Rewards</a></li>
-          <li><a href="{{ url_for('parent_dashboard') }}">Parent Dashboard</a></li>
-          <li><a href="{{ url_for('attitude') }}">Child's Attitude</a></li>
-          <li><a href="{{ url_for('settings') }}">Settings</a></li>
-        </ul>
+        {% include 'subtabs.html' %}
       </div>
       <div class="front-header-right">
         <!-- reserved for header-right content (stats, greeting) -->

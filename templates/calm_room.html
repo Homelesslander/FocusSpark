@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calm Room - ADHD Task Manager</title>
   
   <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='activities_adaptive.css') }}">
   
   <style>
     .page-bg {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       background-size: cover;
       background-position: center center;
@@ -94,7 +95,10 @@
     /* background slideshow layers */
     .slide-bg {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -284,7 +288,8 @@
         <li><a href="{{ url_for('about') }}">About</a></li>
         <li><a href="{{ url_for('symptoms') }}">Neurodevelompental Profiles</a></li>
         <li><a href="{{ url_for('activities') }}">Activities</a></li>
-        <li><a href="{{ url_for('calm_room') }}" class="active">🧘 Calm Room</a></li>
+        <li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+        <li><a href="{{ url_for('calm_room') }}" class="active">Calm Room</a></li>
       </ul>
     </div>
 
@@ -372,12 +377,12 @@
     /* slideshow logic for background fade */
     const imageBase = "{{ url_for('static', filename='images/') }}";
     const slideshowImages = [
-      '0d8e0215230f829053d078247b5d5bec.jpg',
-      '61FdkzF32OL._AC_UF894,1000_QL80_.jpg',
-      'closeup-dried-out-yosemite-waterfall-yosemite-national-park_181624-37045.avif',
-      'two-minecraft-backgrounds-i-made-first-time-using-shaders-v0-9co6s0m3me9d1.png',
-      '1TTw26U.jpg',
-      'nature-background-high-resolution-wallpaper-for-a-serene-and-stunning-view-photo.jpg'
+      'noncopyrightimage1.jpg',
+      'NonCopyrightimage2.jpg',
+      'noncopyrightimage3.jpg',
+      'noncopyrightimage4.jpg',
+      'noncopyrightimage5.jpg',
+      'noncopyrightimage6.jpg'
     ];
     let slideshowIndex = 0;
     let activeSlide = 1;

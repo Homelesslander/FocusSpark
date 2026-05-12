@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Symptoms of ADHD</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='symptomsstyle.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='activitiesstyle.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}"
 </head>
 <body class="symptoms-page">
 
@@ -13,9 +14,11 @@
 	<ul>
 		<li><a href="{{ url_for('home') }}">Home</a></li>
 		<li><a href="{{ url_for('about') }}">About</a></li>
-		<li><a href="{{ url_for('symptoms') }}">Neurodevelompental Profiles</a></li>
+		<li><a href="{{ url_for('symptoms') }}" class="active">Neurodevelopmental Profiles</a></li>
 		<li><a href="{{ url_for('activities') }}">Activities</a></li>
-	</ul>
+		<li><a href="{{ url_for('focus_timer') }}">Focus Timer</a></li>
+		<li><a href="{{ url_for('calm_room') }}">Calm Room</a></li>
+		</ul>
 </div>
 
 <div class="content">
@@ -39,7 +42,6 @@
 </li>
 			</ul>
 		</section>
-
 		<section class="symptom-card reveal left">
 			<h2>ADHD</h2>
 			<p>Persons with ADHD may have difficulty paying attention, planning and completing tasks. Some strategies to assist such persons include:</p>

@@ -167,10 +167,10 @@ function showAchievementNotification(message, importance) {
   const displayFor = DISPLAY_DURATIONS[importance] || 4000;
 
   setTimeout(() => {
-    notification.classList.add('fade-out');
+    notification.style.animation = 'achievementFade 1s ease-out forwards';
     setTimeout(() => {
       if (notification.parentElement) document.body.removeChild(notification);
-    }, fadeDuration);
+    }, 1000);
   }, displayFor);
 }
 
@@ -216,7 +216,9 @@ function playCompletionSound(importance) {
 
 // Main celebration function
 function celebrateTaskCompletion(importance) {
+  console.log('DEBUG: celebrateTaskCompletion called with importance:', importance);
   const message = getRandomMessage(importance);
+  console.log('DEBUG: Selected message:', message);
   
   // Play sound
   playCompletionSound(importance);

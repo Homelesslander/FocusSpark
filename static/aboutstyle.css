@@ -1,7 +1,7 @@
 /* Consistent navbar positioning across pages */
 .menu {
   position: fixed; /* keep nav at top of viewport */
-  top: -6px;
+  top: 12px;
   left: 0;
   right: 0;
   width: 100%;
@@ -16,7 +16,7 @@
 /* Ensure the top menu is positioned consistently across pages */
 .menu {
   position: fixed;
-  top: -6px;
+  top: 12px;
   left: 0;
   right: 0;
   width: 100%;
@@ -73,8 +73,8 @@ menu{
   align-items: center;
   height: 70px;
   padding: 8px 0;
-  background: rgba(255,255,255,0.95); /* solid-ish panel behind the nav links so it's distinct */
-  backdrop-filter: none; /* don't blur the nav area */
+  background: rgba(255,255,255,0.45); /* more translucent panel behind the nav links */
+  backdrop-filter: blur(4px);
 }
 /* ensure the about page nav list is centered */
 .menu ul { float: none; display: flex; justify-content:center; align-items: center; list-style: none; margin: 0 auto; padding: 0 24px; max-width: 900px; width: 100%; height: 70px; }

@@ -4,49 +4,67 @@ body {
   background-color: #f6f8fb;
   color: #333;
 }
-menu{ width: 100%;
+/* Top navigation: slightly lower than viewport top with a soft panel */
+.menu {
+  position: fixed;
+  top: 12px;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 70px;
-  background: transparent;
-  margin-top: 8px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  height: 64px;
+  padding: 6px 12px;
+  z-index: 9999;
 }
-menu ul {
+.menu::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 0;
+  height: 100%;
+  background: rgba(255,255,255,0.45);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(16,24,40,0.06);
+  z-index: -1;
+}
+
+/* Top menu link styles */
+.menu ul li a {
+  text-decoration: none;
+  color: #2b3440;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.menu ul li a:hover {
+  background: rgba(0,0,0,0.04);
+  color: #fb8500;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(16,24,40,0.06);
+}
+.menu ul li a.active {
+  background: linear-gradient(90deg,#fb8500,#f39c12);
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(251,133,0,0.12);
+}
+/* Menu list layout — use flex with wrapping and consistent spacing */
+.menu ul {
   display: flex;
   gap: 18px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 12px;
   justify-content: center;
   align-items: center;
-}
-ul {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  flex-wrap: wrap;
 }
 
-ul li {margin: 0 25px; 
-    font-size: 14px;} 
-ul li a{
-    text-decoration: none;
-    color: black;
-    font-size: 18px;
-    font-family: Arial, Helvetica, sans-serif;
-    padding: 6px 13px;
-    border-radius: 3px;
-    transition: .4s;
-}
-ul li a:hover{
-  background: rgba(251,133,0,0.08);
-  color: #fb8500;
-}
+.menu ul li { margin: 0; font-size: 14px; }
+.menu ul li a { text-decoration: none; color: #2b3440; font-size: 16px; font-family: Arial, Helvetica, sans-serif; padding: 6px 12px; border-radius: 6px; transition: .12s; white-space: nowrap; }
+.menu ul li a:hover { background: rgba(251,133,0,0.08); color: #fb8500; }
 
 /* White text for home page navigation */
 .home-page .menu ul li a {
@@ -56,31 +74,59 @@ ul li a:hover{
 }
 
 /* Active state matching the Tabs style */
-.Tabs li a {
-  display: inline-block;
-  padding: 8px 12px;
-  border: 1px solid rgba(251,133,0,0.12);
-  border-radius: 10px;
-  background: rgba(251,133,0,0.04);
-  color: #333;
-  font-weight: 700;
-  text-decoration: none;
+.Tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  margin: 12px 0 18px 0;
+  background: transparent; /* remove container background - tabs will glow instead */
+  border-radius: 0;
+  max-width: 1100px;
 }
 
-.Tabs li a:hover { background: rgba(251,133,0,0.08); }
+.Tabs li {
+  margin: 0;
+}
 
-.Tabs li a.active, .menu ul li a.active, ul li a.active{
+.Tabs li a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: transparent;
+  color: #2b3440;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+.Tabs li a:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(16,24,40,0.06);
+  background: rgba(0,0,0,0.03);
+}
+
+.Tabs li a.active, .menu ul li a.active, ul li a.active {
   background: linear-gradient(90deg,#fb8500, #f39c12);
   color: #fff;
-  border-color: #fb8500;
+  border-color: transparent;
+  box-shadow: 0 10px 26px rgba(251,133,0,0.12);
 }
-h1 {
+
+@media (max-width: 880px) {
+  .Tabs { gap: 8px; padding: 6px; }
+  .Tabs li a { padding: 7px 10px; font-size: 0.9rem; }
+}
+#page-title, h1 {
   font-size: 2.5em;
   color: #2c3e50;
-  margin-bottom: 15px;
-  position: relative;
-  top: 20px; 
-  left: 30px;
+  margin: 0 0 12px 0;
 }
 .description{
   font-size: 1.1em;
@@ -90,7 +136,8 @@ h1 {
   left: 30px;
 }
 /* Centered title/description when inside the front header */
-.front-header-left .page-title {
+.front-header-left .page-title,
+.front-header-left h1 {
   text-align: center;
   margin: 8px 0 0 0;
   position: static;
@@ -106,6 +153,9 @@ h1 {
   text-align: center;
   color: #4b5563;
   margin-top: 6px;
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .tabs, .Tabs {
   list-style-type: none;
@@ -121,66 +171,175 @@ h1 {
   margin: 20px auto;
   max-width: 1100px;
 }
+
+/* Add/Delete form — prettier, card-like layout */
+.task-input form {
+  background: rgba(255,255,255,0.92);
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(16,24,40,0.06);
+  display: block;
+}
+.task-input input[type="text"],
+.task-input input[type="date"],
+.task-input input[type="time"],
+.task-input select,
+.task-input textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(16,24,40,0.08);
+  background: rgba(250,250,252,0.9);
+  font-size: 1rem;
+  outline: none;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+.task-input input:focus,
+.task-input textarea:focus,
+.task-input select:focus {
+  box-shadow: 0 6px 20px rgba(59,130,246,0.12);
+  border-color: rgba(59,130,246,0.28);
+  transform: translateY(-2px);
+}
+.task-input .btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 1rem;
+  background: linear-gradient(90deg,#34d399,#10b981);
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(16,185,129,0.16);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+.task-input .btn-add:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 38px rgba(16,185,129,0.20);
+}
+.task-input .btn-icon { font-size: 1.05rem; }
+
+/* Smaller add-subtask button variant */
+.add-subtask-form input[type="text"] { padding: 8px 10px; border-radius: 8px; }
+.add-subtask-form .btn-add-subtask {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: linear-gradient(90deg,#60a5fa,#3b82f6);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+
+/* Ensure page content sits below the fixed top menu */
+.page-content { padding-top: 84px; }
+
+@media (max-width: 760px) {
+  .page-content { padding-top: 76px; }
+  .menu::before { left: 8px; right: 8px; }
+}
 .activities-container {
   max-width: 1200px;
   margin: 36px auto 30px auto;
   padding: 0 16px;
+}
+
+/* Normalize header spacing so subtabs align consistently across pages */
+.page-content .front {
+  margin: 0 auto;
+  padding-top: 0; /* rely on .page-content padding */
+}
+.front-header { margin-top: 0; }
+.front-header-left h1, .front-header-left .page-title {
+  margin: 10px 0 8px 0;
+}
+.front-header-left .description {
+  margin: 6px 0 14px 0;
 }
 .activities-main {
   width: 100%;
 }
 .task-sections {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
   gap: 30px;
   margin: 24px auto;
   align-items: start;
 }
 
 .task-section {
-  background: white;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.95);
+  padding: 22px;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(16,24,40,0.10);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
 }
+
 
 .task-section:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }
 
-.task-section h2 {
-  text-align: center;
-  margin-bottom: 18px;
-  font-size: 1.3rem;
-  font-weight: 600;
-  padding: 10px;
+.Tabs li a {
+  transition: transform 0.16s ease, box-shadow 0.16s ease, color 0.12s ease;
+  /* subtle neutral glow by default */
+  box-shadow: 0 6px 18px rgba(16,24,40,0.03);
+}
+
+.Tabs li a:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 36px rgba(251,133,0,0.16);
   border-radius: 8px;
   margin-top: -10px;
   margin-left: -10px;
-  margin-right: -10px;
+  /* active tab - strong colored glow instead of solid background */
+  background: transparent;
+  color: #fb8500;
+  border-color: transparent;
+  box-shadow: 0 14px 48px rgba(251,133,0,0.28), 0 6px 24px rgba(251,133,0,0.18);
+.task-section.major h2 {
+  background: linear-gradient(135deg, #ff4500, #ff6347) !important;
+  color: white !important;
+  border: 3px solid #ff4500 !important;
+  border-radius: 12px 12px 0 0 !important;
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.35) !important;
+  padding: 14px 16px !important;
+  margin: -22px -22px 12px -22px !important;
 }
 
-/* Major Tasks - Warm, calm orange */
-.task-section:nth-child(1) h2 {
-  background: linear-gradient(135deg, #ffb366, #ff9966);
-  color: white;
-  box-shadow: 0 3px 10px rgba(255, 153, 102, 0.3);
+.task-section.medium h2 {
+  background: linear-gradient(135deg, #00ced1, #20b2aa) !important;
+  color: white !important;
+  border: 3px solid #00ced1 !important;
+  border-radius: 12px 12px 0 0 !important;
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.35) !important;
+  padding: 14px 16px !important;
+  margin: -22px -22px 12px -22px !important;
 }
 
-/* Medium Tasks - Soft teal */
-.task-section:nth-child(2) h2 {
-  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
-  color: white;
-  box-shadow: 0 3px 10px rgba(94, 179, 170, 0.3);
+.task-section.minor h2 {
+  background: linear-gradient(135deg, #9370db, #8a2be2) !important;
+  color: white !important;
+  border: 3px solid #9370db !important;
+  border-radius: 12px 12px 0 0 !important;
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.35) !important;
+  padding: 14px 16px !important;
+  margin: -22px -22px 12px -22px !important;
 }
 
-/* Minor Tasks - Light lavender */
-.task-section:nth-child(3) h2 {
-  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+
+.task-section.minor h2 {
+  background: linear-gradient(135deg, #9370db, #8a2be2);
   color: white;
-  box-shadow: 0 3px 10px rgba(177, 156, 217, 0.3);
+  border: 3px solid #9370db;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.35);
 }
 
 .task-section ul {
@@ -199,40 +358,40 @@ h1 {
   font-size: 1.02rem;
 }
 
-/* Major Tasks - Warm, calm orange border and hover */
-.task-section:nth-child(1) ul li {
-  border-left-color: #ff9966;
-  background: linear-gradient(135deg, rgba(255, 153, 102, 0.08), rgba(255, 179, 102, 0.05));
+/* Major Tasks - Warm orange border and hover */
+.task-section.major ul li {
+  border-left-color: #ff4500;
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.08), rgba(255, 99, 71, 0.05));
 }
 
-.task-section:nth-child(1) ul li:hover {
-  background: linear-gradient(135deg, rgba(255, 153, 102, 0.15), rgba(255, 179, 102, 0.1));
+.task-section.major ul li:hover {
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.15), rgba(255, 99, 71, 0.12));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(255, 153, 102, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.2);
 }
 
-/* Medium Tasks - Soft teal border and hover */
-.task-section:nth-child(2) ul li {
-  border-left-color: #5eb3aa;
-  background: linear-gradient(135deg, rgba(94, 179, 170, 0.08), rgba(74, 157, 148, 0.05));
+/* Medium Tasks - Teal border and hover */
+.task-section.medium ul li {
+  border-left-color: #00ced1;
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.08), rgba(32, 178, 170, 0.05));
 }
 
-.task-section:nth-child(2) ul li:hover {
-  background: linear-gradient(135deg, rgba(94, 179, 170, 0.15), rgba(74, 157, 148, 0.1));
+.task-section.medium ul li:hover {
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.15), rgba(32, 178, 170, 0.12));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(94, 179, 170, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.2);
 }
 
-/* Minor Tasks - Light lavender border and hover */
-.task-section:nth-child(3) ul li {
-  border-left-color: #b19cd9;
-  background: linear-gradient(135deg, rgba(177, 156, 217, 0.08), rgba(155, 132, 217, 0.05));
+/* Minor Tasks - Lavender border and hover */
+.task-section.minor ul li {
+  border-left-color: #9370db;
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.08), rgba(138, 43, 226, 0.05));
 }
 
-.task-section:nth-child(3) ul li:hover {
-  background: linear-gradient(135deg, rgba(177, 156, 217, 0.15), rgba(155, 132, 217, 0.1));
+.task-section.minor ul li:hover {
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.15), rgba(138, 43, 226, 0.12));
   transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(177, 156, 217, 0.2);
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.2);
 }
 
 .task-section li {
@@ -259,43 +418,43 @@ h1 {
   margin-bottom: 5px;
 }
 
-/* Major Tasks - Warm orange buttons */
-.task-section:nth-child(1) li button {
-  background: linear-gradient(135deg, #ff9966, #ff8552);
+/* Major Tasks - Orange buttons */
+.task-section.major li button {
+  background: linear-gradient(135deg, #ff4500, #ff6347);
   color: white;
-  box-shadow: 0 2px 6px rgba(255, 153, 102, 0.3);
+  box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
 }
 
-.task-section:nth-child(1) li button:hover {
-  background: linear-gradient(135deg, #ff8552, #ff7033);
+.task-section.major li button:hover {
+  background: linear-gradient(135deg, #ff6347, #ff7f50);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 153, 102, 0.4);
+  box-shadow: 0 4px 8px rgba(255, 69, 0, 0.4);
 }
 
-/* Medium Tasks - Soft teal buttons */
-.task-section:nth-child(2) li button {
-  background: linear-gradient(135deg, #5eb3aa, #4a9d94);
+/* Medium Tasks - Teal buttons */
+.task-section.medium li button {
+  background: linear-gradient(135deg, #00ced1, #20b2aa);
   color: white;
-  box-shadow: 0 2px 6px rgba(94, 179, 170, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 206, 209, 0.3);
 }
 
-.task-section:nth-child(2) li button:hover {
-  background: linear-gradient(135deg, #4a9d94, #3d8a82);
+.task-section.medium li button:hover {
+  background: linear-gradient(135deg, #20b2aa, #008b8b);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(94, 179, 170, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 206, 209, 0.4);
 }
 
-/* Minor Tasks - Light lavender buttons */
-.task-section:nth-child(3) li button {
-  background: linear-gradient(135deg, #b19cd9, #9b84d9);
+/* Minor Tasks - Lavender buttons */
+.task-section.minor li button {
+  background: linear-gradient(135deg, #9370db, #8a2be2);
   color: white;
-  box-shadow: 0 2px 6px rgba(177, 156, 217, 0.3);
+  box-shadow: 0 2px 6px rgba(147, 112, 219, 0.3);
 }
 
-.task-section:nth-child(3) li button:hover {
-  background: linear-gradient(135deg, #9b84d9, #8a6fc7);
+.task-section.minor li button:hover {
+  background: linear-gradient(135deg, #8a2be2, #9932cc);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(177, 156, 217, 0.4);
+  box-shadow: 0 4px 8px rgba(147, 112, 219, 0.4);
 }
 
 .task-section li.empty {
@@ -341,15 +500,17 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .task-section li .task-name {
-  font-weight: bold;
-  font-size: 1em;
+  font-weight: 800;
+  font-size: 1.05em;
   margin-right: 10px;
-  flex: 1;
+  flex: 1 1 60%;
+  min-width: 0;
 }
 
 .task-section li .task-date {
@@ -375,37 +536,127 @@ h1 {
 
 .task-section li .task-actions {
   display: flex;
-  gap: 5px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 18px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.task-section li .task-actions form,
+.task-section li .task-actions button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 120px;
+  max-width: calc(100% - 20px);
+}
+
+.task-section li .auto-breakdown-form {
+  flex: 1 1 100%;
+  margin-top: 6px;
+}
+
+.task-section li .auto-breakdown-form button {
+  width: 100%;
+  justify-content: center;
+  min-width: 0;
 }
 
 .task-section li button {
-  padding: 6px 10px;
+  padding: 10px 14px;
   border: none;
-  background-color: #e74c3c;
   color: white;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.95em;
+  font-weight: 700;
   white-space: nowrap;
+  min-height: 40px;
 }
 
-.task-section li button:hover {
-  background-color: #c0392b;
+
+/* Complete / delete / edit button styling moved higher to per-importance to keep color-coding. */
+
+.btn-add-subtask {
+  background: linear-gradient(135deg,#60a5fa,#3b82f6);
+  border: 1px solid rgba(30, 100, 210, 0.8);
+  border-radius: 8px;
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.btn-add-subtask:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.35);
 }
 
 .auto-breakdown-btn {
-  background-color: #27ae60 !important;
+  background: linear-gradient(135deg,#27ae60,#1e8449) !important;
+  border: 1px solid rgba(18,120,60,0.9) !important;
+  color: #fff !important;
 }
 
 .auto-breakdown-btn:hover {
-  background-color: #229954 !important;
+  background: linear-gradient(135deg,#229954,#196f3d) !important;
+}
+
+.add-subtask-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.add-subtask-form input {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid #ccd6dd;
+  border-radius: 8px;
+  font-size: 0.95em;
+}
+
+.add-subtask-form button {
+  min-width: 80px;
+}
+
+.btn-complete {
+  background: linear-gradient(135deg, #16a085, #1abc9c) !important;
+  border: 1px solid rgba(26, 188, 156, 0.9) !important;
+}
+
+.btn-complete:hover {
+  background: linear-gradient(135deg, #138d75, #17a589) !important;
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+  border: 1px solid rgba(192, 57, 43, 0.9) !important;
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226) !important;
 }
 
 .edit-btn {
-  background-color: #3498db !important;
+  background: linear-gradient(135deg, #3498db, #2980b9) !important;
+  border: 1px solid rgba(41, 128, 185, 0.9) !important;
 }
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #2c81bd, #1f6fb7) !important;
+}
+
+.auto-breakdown-btn {
+  background: linear-gradient(135deg,#27ae60,#1e8449) !important;
+  border: 1px solid rgba(18,120,60,0.9) !important;
+  color: #fff !important;
+}
+
+.auto-breakdown-btn:hover {
+  background: linear-gradient(135deg,#229954,#196f3d) !important;
+}
+
 
 .edit-btn:hover {
   background-color: #2980b9 !important;
@@ -414,7 +665,7 @@ h1 {
 .subtasks {
   margin-top: 12px;
   padding: 10px;
-  background: white;
+  background: rgba(255,255,255,0.85);
   border-radius: 4px;
 }
 
@@ -542,7 +793,7 @@ h1 {
 
 /* Sidebar Styles */
 .upcoming-tasks-sidebar {
-  background: white;
+  background: rgba(255,255,255,0.85);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
   padding: 20px;
@@ -624,6 +875,171 @@ h1 {
   color: white;
 }
 
+/* Recurring Tasks Styling - Match Regular Task Colors */
+.recurring-task-section {
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 16px;
+  border: 2px solid #e8e8e8;
+  box-shadow: 0 8px 26px rgba(16, 24, 40, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 24px;
+}
+
+.recurring-task-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+}
+
+.recurring-major { 
+  border-left: 4px solid #ff4500 !important; 
+}
+
+.recurring-medium { 
+  border-left: 4px solid #00ced1 !important; 
+}
+
+.recurring-minor { 
+  border-left: 4px solid #9370db !important; 
+}
+
+/* Recurring Major Tasks - Orange */
+.recurring-major h2 {
+  background: linear-gradient(135deg, #ff4500, #ff6347);
+  color: white;
+  border: 3px solid #ff4500;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.35);
+}
+
+/* Recurring Medium Tasks - Teal */
+.recurring-medium h2 {
+  background: linear-gradient(135deg, #00ced1, #20b2aa);
+  color: white;
+  border: 3px solid #00ced1;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.35);
+}
+
+/* Recurring Minor Tasks - Lavender */
+.recurring-minor h2 {
+  background: linear-gradient(135deg, #9370db, #8a2be2);
+  color: white;
+  border: 3px solid #9370db;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.35);
+}
+
+.recurring-task-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recurring-task-section ul li {
+  display: block;
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 12px;
+  border-left: 5px solid;
+  font-size: 1.02rem;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(16,24,40,0.08);
+}
+
+.recurring-task-section ul li:hover {
+  transform: translateX(3px);
+  box-shadow: 0 6px 14px rgba(16,24,40,0.14);
+}
+
+/* Recurring Major Tasks - Warm, calm orange border and hover */
+.recurring-major ul li {
+  border-left-color: #ff4500;
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.08), rgba(255, 99, 71, 0.05));
+}
+
+.recurring-major ul li:hover {
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.15), rgba(255, 99, 71, 0.1));
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.2);
+}
+
+/* Recurring Medium Tasks - Soft teal border and hover */
+.recurring-medium ul li {
+  border-left-color: #00ced1;
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.08), rgba(32, 178, 170, 0.05));
+}
+
+.recurring-medium ul li:hover {
+  background: linear-gradient(135deg, rgba(0, 206, 209, 0.15), rgba(32, 178, 170, 0.1));
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 206, 209, 0.2);
+}
+
+/* Recurring Minor Tasks - Light lavender border and hover */
+.recurring-minor ul li {
+  border-left-color: #9370db;
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.08), rgba(138, 43, 226, 0.05));
+}
+
+.recurring-minor ul li:hover {
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.15), rgba(138, 43, 226, 0.1));
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.2);
+}
+
+/* Recurring Task Buttons - Match Regular Task Colors */
+.recurring-major li button {
+  background: linear-gradient(135deg, #ff4500, #ff6347);
+  color: white;
+  box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
+}
+
+.recurring-major li button:hover {
+  background: linear-gradient(135deg, #ff6347, #ff7f50);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 69, 0, 0.4);
+}
+
+.recurring-medium li button {
+  background: linear-gradient(135deg, #00ced1, #20b2aa);
+  color: white;
+  box-shadow: 0 2px 6px rgba(0, 206, 209, 0.3);
+}
+
+.recurring-medium li button:hover {
+  background: linear-gradient(135deg, #20b2aa, #008b8b);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 206, 209, 0.4);
+}
+
+.recurring-minor li button {
+  background: linear-gradient(135deg, #9370db, #8a2be2);
+  color: white;
+  box-shadow: 0 2px 6px rgba(147, 112, 219, 0.3);
+}
+
+.recurring-minor li button:hover {
+  background: linear-gradient(135deg, #8a2be2, #9932cc);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(147, 112, 219, 0.4);
+}
+
+.recurring-task-section li.empty {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  border-left: none;
+  background: rgba(255,255,255,0.85);
+}
+
+.recurring-task-section li.empty:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(255,255,255,0.85);
+}
+
 /* Layout with sidebar */
 .activities-container {
   display: flex;
@@ -659,7 +1075,7 @@ h1 {
 
 /* Edit Modal Styles */
 .modal {
-  display: none;
+  display: none !important;
   position: fixed;
   z-index: 1000;
   left: 0;
@@ -670,7 +1086,7 @@ h1 {
 }
 
 .modal.show {
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
 }
@@ -847,6 +1263,31 @@ h1 {
   max-width: 500px;
   pointer-events: none;
   border: 2px solid #45a049;
+}
+
+.achievement-notification.achievement-major {
+  background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+  color: #fff !important;
+  border: 3px solid #FF6B6B !important;
+  font-size: 24px !important;
+  font-weight: bold !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+}
+
+.achievement-notification.achievement-medium {
+  background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+  color: #fff !important;
+  border: 3px solid #2196F3 !important;
+  font-size: 20px !important;
+  font-weight: bold !important;
+}
+
+.achievement-notification.achievement-minor {
+  background: linear-gradient(135deg, #2196F3, #1976D2) !important;
+  color: #fff !important;
+  border: 3px solid #4CAF50 !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
 }
 
 .achievement-notification.fade-out {

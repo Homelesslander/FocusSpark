@@ -93,7 +93,7 @@ h1 {
 /* Dark-green navigation background when on the Symptoms page */
 .symptoms-page .menu {
   position: fixed;
-  top: -6px; /* nudge nav up a little */
+  top: 12px; /* nudge nav slightly down for breathing room */
   left: 0;
   right: 0;
   width: 100%;
@@ -101,7 +101,9 @@ h1 {
   background: linear-gradient(180deg, rgba(12,38,36,0.14), rgba(12,38,36,0.18));
   backdrop-filter: blur(3px);
   height: 70px;
-  padding: 0;
+  padding: 0 12px;
+  box-shadow: 0 8px 26px rgba(16,24,40,0.06);
+  border-radius: 10px;
 }
 
 .symptoms-page .menu ul { max-width:900px; margin:0 auto; padding: 0 24px; width:100%; height:70px; display:flex; align-items:center; justify-content:center; }

@@ -1,0 +1,21 @@
+# Enable Passenger
+PassengerEnabled on
+PassengerPython /usr/bin/python3
+
+# Set Python path
+SetEnv PYTHONPATH /usr/lib/python3/dist-packages
+
+# Static files handling
+Alias /static /home/your_username/www/static
+
+# Enable URL rewriting
+RewriteEngine On
+
+# Redirect to HTTPS (optional but recommended)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Handle Flask routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ / [L]
