@@ -1,4 +1,4 @@
-# 💙✨ FOCUS SPARK
+# ✨ FOCUS SPARK
 ### *Empowering Neurodivergent Youth Through Gamified Task Management*
 
 ---
@@ -7,7 +7,7 @@
 
 **Focus Spark** is a friendly, neurodivergent-designed web app that transforms daily routines into an interactive and rewarding experience. We combine gentle gamification with clear visual progress tracking to help neurodivergent adolescents manage tasks with confidence and ease.
 
-> *Because every task completed deserves celebration, and every neurodivergent mind deserves support.* 💙
+> *Because every task completed deserves celebration, and every neurodivergent mind deserves support.* 
 
 ---
 
@@ -185,7 +185,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Focus Spark was created in collaboration with neurodivergent advocates, educators, and students. We're grateful for the voices that shaped this platform.
 
-> *Made with 💙 for neurodivergent minds everywhere.*
+
 
 ---
 
